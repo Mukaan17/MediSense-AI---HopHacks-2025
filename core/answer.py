@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# @Author: Mukhil Sundararaj
+# @Date:   2025-09-13 12:41:23
+# @Last Modified by:   Mukhil Sundararaj
+# @Last Modified time: 2025-09-13 17:10:34
 import json
 from typing import Dict, Any
 from .config import load_prompt, load_allowed_labels
@@ -14,18 +19,49 @@ def answerer_generate(extraction: Dict[str, Any], retrieved_context: str) -> Dic
         .replace("{{ context }}", retrieved_context or "(no context provided)")
     )
 
-    resp = get_llm().invoke(prompt).content
     fallback = {
         "potential_issues_ranked": [],
         "red_flags_to_screen": [],
         "follow_up": "",
         "citations": []
     }
+    
     try:
+        resp = get_llm().invoke(prompt).content
+    except Exception as e:
+        print(f"LLM answer generation error: {e}")
+        return fallback
+    
+    try:
+        # Try to parse the response directly
         answer = json.loads(resp)
-    except Exception:
-        i, j = resp.find("{"), resp.rfind("}")
-        answer = json.loads(resp[i:j+1]) if i != -1 and j != -1 and j > i else fallback
+    except Exception as e:
+        print(f"JSON parsing error in answer generation: {e}")
+        print(f"Raw response: {resp[:200]}...")
+        
+        # Try to extract JSON from markdown code blocks
+        try:
+            # Remove markdown code block markers
+            cleaned_resp = resp.strip()
+            if cleaned_resp.startswith("```json"):
+                cleaned_resp = cleaned_resp[7:]  # Remove ```json
+            if cleaned_resp.startswith("```"):
+                cleaned_resp = cleaned_resp[3:]   # Remove ```
+            if cleaned_resp.endswith("```"):
+                cleaned_resp = cleaned_resp[:-3]  # Remove trailing ```
+            
+            # Try to find JSON object boundaries
+            start_idx = cleaned_resp.find("{")
+            end_idx = cleaned_resp.rfind("}")
+            
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                json_str = cleaned_resp[start_idx:end_idx+1]
+                answer = json.loads(json_str)
+            else:
+                answer = fallback
+        except Exception as e2:
+            print(f"Failed to extract JSON from markdown: {e2}")
+            answer = fallback
 
     # Closed-set + clamp + top-3
     cleaned = []

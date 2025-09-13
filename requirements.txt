@@ -46,3 +46,48 @@ starlette==0.47.3
 # Chromadb embeddings
 # source venv/bin/activate
 # python rag_runtime/build_kb.py --input "English Train.json" --persist_dir "./rag_store" --collection "conversations" --emb_model "sentence-transformers/all-MiniLM-L6-v2"
+
+# Core FastAPI dependencies
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+
+# Audio processing dependencies (from Voice Transcribe)
+librosa==0.10.1
+soundfile==0.12.1
+pyaudio==0.2.11
+
+# WhisperX and related
+whisperx==3.1.1
+openai-whisper==20231117
+torch==2.2.0
+torchaudio==2.2.0
+
+# Compatible versions for WhisperX
+numpy==1.24.3
+pydantic==2.5.0
+aiofiles==23.2.1
+
+# WebSocket support
+websockets==12.0
+
+# Additional utilities
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.0
+
+# RAG and LLM dependencies (existing backend)
+chromadb==0.4.15
+sentence-transformers==2.2.2
+groq==0.4.1
+langchain==0.0.350
+langchain-groq==0.3.8
+
+# Fix protobuf version conflicts - use compatible versions
+protobuf>=3.20.2,<5.0.0
+tensorflow>=2.10.0,<2.17.0
+tf-keras>=2.10.0,<2.17.0
+
+# Optional: For better speaker diarization (requires Hugging Face token)
+pyannote.audio==3.1.1
+pyannote.core==5.0.1

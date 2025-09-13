@@ -1,0 +1,693 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Upload, 
+  FileText, 
+  Stethoscope, 
+  Brain
+} from 'lucide-react';
+import { useDropzone } from 'react-dropzone';
+import toast from 'react-hot-toast';
+
+import { Patient, ClinicalReport, KnowledgeBaseMode } from '../types';
+import { clinicalAPI, futureAPI, apiUtils } from '../services/api';
+import PatientForm from './PatientForm';
+import XAIExplanation from './XAIExplanation';
+import DifferentialDiagnosis from './DifferentialDiagnosis';
+import RedFlagAlerts from './RedFlagAlerts';
+import ClinicalReportView from './ClinicalReportView';
+import EHRIntegration from './EHRIntegration';
+import KnowledgeBaseToggle from './KnowledgeBaseToggle';
+import VoiceRecorder from './VoiceRecorder';
+
+const ClinicalInterface: React.FC = () => {
+  // State management
+  const [currentView, setCurrentView] = useState<'input' | 'results' | 'report'>('input');
+  const [isLoading, setIsLoading] = useState(false);
+  const [patient, setPatient] = useState<Patient>({});
+  const [conversation, setConversation] = useState<string[]>([]);
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [clinicalReport, setClinicalReport] = useState<ClinicalReport | null>(null);
+  const [knowledgeBaseMode, setKnowledgeBaseMode] = useState<KnowledgeBaseMode>({
+    mode: 'clinical',
+    sources: ['Clinical Guidelines', 'UpToDate'],
+    lastUpdated: new Date().toISOString()
+  });
+  const [ehrPatients, setEhrPatients] = useState<any[]>([]);
+  const [selectedEhrPatient, setSelectedEhrPatient] = useState<string>('');
+
+  // Refs
+  const conversationInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Health check and load EHR patients on component mount
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // Health check
+        const healthResponse = await clinicalAPI.healthCheck();
+        if (healthResponse.success) {
+          console.log('Backend connected:', healthResponse.data);
+        } else {
+          console.warn('Backend health check failed:', healthResponse.error);
+          toast.error('Backend connection failed. Please ensure the server is running.');
+        }
+
+        // Load EHR patients
+        const ehrResponse = await futureAPI.listEHRPatients();
+        if (ehrResponse.success && ehrResponse.data?.patients) {
+          setEhrPatients(ehrResponse.data.patients);
+        }
+      } catch (error) {
+        console.error('Initialization error:', error);
+        toast.error('Cannot connect to backend. Please check if the server is running on port 8000.');
+      }
+    };
+
+    initializeApp();
+  }, []);
+
+  // Image upload handling
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.tiff']
+    },
+    maxFiles: 1,
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        setUploadedImage(acceptedFiles[0]);
+        toast.success('Image uploaded successfully');
+      }
+    },
+    onDropRejected: () => {
+      toast.error('Please upload a valid image file');
+    }
+  });
+
+  // Voice recording handling
+  const handleVoiceTranscription = (transcript: string) => {
+    setConversation(prev => [...prev, transcript]);
+    toast.success('Voice note transcribed');
+  };
+
+  // Voice inference handling
+  const handleVoiceInference = async (audioFile: File) => {
+    setIsLoading(true);
+    try {
+      let response;
+      
+      if (uploadedImage) {
+        // Multimodal voice inference (voice + image)
+        response = await clinicalAPI.multimodalVoiceInfer(audioFile, uploadedImage, patient.id);
+      } else {
+        // Voice-only inference
+        response = await clinicalAPI.voiceInfer(audioFile, patient.id);
+      }
+      
+      if (response.success) {
+        // Process the response and create a clinical report
+        const report = processAPIResponse(response.data);
+        setClinicalReport(report);
+        setCurrentView('results');
+        toast.success(uploadedImage ? 'Multimodal voice analysis completed successfully' : 'Voice-based analysis completed successfully');
+      } else {
+        toast.error(response.error || 'Voice analysis failed');
+        console.error('API Error:', response.error);
+      }
+    } catch (error) {
+      const errorMessage = apiUtils.handleAPIError(error);
+      toast.error(`Network error: ${errorMessage}`);
+      console.error('Voice inference error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Main inference function
+  const handleInference = async () => {
+    if (conversation.length === 0 && !uploadedImage) {
+      toast.error('Please provide symptoms or upload an image');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let response;
+      
+      if (uploadedImage) {
+        // Multimodal inference
+        response = await clinicalAPI.multimodalInfer({
+          utterances: conversation,
+          patient,
+          image: uploadedImage || undefined,
+          mode: knowledgeBaseMode.mode
+        });
+      } else {
+        // Text-only inference
+        response = await clinicalAPI.infer({
+          utterances: conversation,
+          patient,
+          mode: knowledgeBaseMode.mode
+        });
+      }
+
+      if (response.success) {
+        // Process the response and create a clinical report
+        const report = processAPIResponse(response.data);
+        setClinicalReport(report);
+        setCurrentView('results');
+        toast.success('Analysis completed successfully');
+      } else {
+        toast.error(response.error || 'Analysis failed');
+        console.error('API Error:', response.error);
+      }
+    } catch (error) {
+      const errorMessage = apiUtils.handleAPIError(error);
+      toast.error(`Network error: ${errorMessage}`);
+      console.error('Inference error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Structured diagnosis function
+  const handleStructuredDiagnosis = async () => {
+    if (conversation.length === 0 && !uploadedImage) {
+      toast.error('Please provide symptoms or upload an image');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await clinicalAPI.structuredDiagnosis({
+        utterances: conversation,
+        patient,
+        image: uploadedImage || undefined,
+        mode: knowledgeBaseMode.mode
+      });
+
+      if (response.success) {
+        // Process the response and create a clinical report
+        const report = processAPIResponse(response.data);
+        setClinicalReport(report);
+        setCurrentView('results');
+        toast.success('Structured diagnosis completed successfully');
+      } else {
+        toast.error(response.error || 'Structured diagnosis failed');
+        console.error('API Error:', response.error);
+      }
+    } catch (error) {
+      const errorMessage = apiUtils.handleAPIError(error);
+      toast.error(`Network error: ${errorMessage}`);
+      console.error('Structured diagnosis error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Process API response into clinical report format
+  const processAPIResponse = (data: any): ClinicalReport => {
+    // Process the actual backend response
+    const report: ClinicalReport = {
+      patientSummary: data.rag_advisory || data.structured_diagnosis?.summary || "Clinical analysis completed",
+      differentialDiagnosis: [],
+      redFlagAlerts: [],
+      recommendations: [],
+      followUp: "",
+      patientEducation: [],
+      citations: [],
+      generatedAt: new Date().toISOString(),
+      confidence: 0.0
+    };
+
+    // Process differential diagnosis from backend
+    if (data.fusion?.top10) {
+      report.differentialDiagnosis = data.fusion.top10.slice(0, 5).map((item: any) => ({
+        condition: item.condition,
+        probability: item.score || 0.0,
+        confidence: item.score || 0.0,
+        riskFactors: item.risk_factors || [],
+        redFlags: item.red_flags || [],
+        supportingEvidence: [item.why || 'Combined evidence'],
+        reasoning: item.why || 'Based on multimodal analysis'
+      }));
+    }
+
+    // Process structured diagnosis if available
+    if (data.structured_diagnosis) {
+      const structured = data.structured_diagnosis;
+      
+      // Update patient summary
+      if (structured.summary) {
+        report.patientSummary = structured.summary;
+      }
+      
+      // Process differential diagnosis from structured response
+      if (structured.differential_diagnosis) {
+        report.differentialDiagnosis = structured.differential_diagnosis.map((diag: any) => ({
+          condition: diag.condition || diag.diagnosis,
+          probability: diag.probability || diag.confidence || 0.0,
+          confidence: diag.confidence || diag.probability || 0.0,
+          riskFactors: diag.risk_factors || [],
+          redFlags: diag.red_flags || [],
+          supportingEvidence: diag.supporting_evidence || [diag.reasoning || 'Clinical evidence'],
+          reasoning: diag.reasoning || diag.explanation || 'Based on clinical analysis'
+        }));
+      }
+      
+      // Process recommendations
+      if (structured.recommendations) {
+        report.recommendations = structured.recommendations;
+      }
+      
+      // Process follow-up
+      if (structured.follow_up) {
+        report.followUp = structured.follow_up;
+      }
+    }
+
+    // Process recommendations from backend
+    if (data.answer?.first_steps_non_prescriptive) {
+      report.recommendations = data.answer.first_steps_non_prescriptive;
+    }
+
+    // Process follow-up from backend
+    if (data.answer?.follow_up) {
+      report.followUp = data.answer.follow_up;
+    }
+
+    // Process citations from backend
+    if (data.answer?.citations) {
+      report.citations = data.answer.citations;
+    }
+
+    // Process red flags from backend
+    if (data.answer?.red_flags_to_screen) {
+      report.redFlagAlerts = data.answer.red_flags_to_screen.map((flag: string) => ({
+        alert: flag,
+        severity: 'medium' as const,
+        trigger: flag,
+        action: 'Clinical assessment recommended'
+      }));
+    }
+
+    // Process risk analysis red flags
+    if (data.risk_analysis?.red_flag_alerts) {
+      report.redFlagAlerts = data.risk_analysis.red_flag_alerts.map((alert: any) => ({
+        alert: alert.alert || alert.message,
+        severity: alert.severity || 'medium',
+        trigger: alert.trigger || alert.condition,
+        action: alert.action || 'Clinical assessment recommended',
+        condition: alert.condition
+      }));
+    }
+
+    // Calculate overall confidence
+    if (report.differentialDiagnosis.length > 0) {
+      report.confidence = report.differentialDiagnosis.reduce((sum, d) => sum + d.confidence, 0) / report.differentialDiagnosis.length;
+    } else if (data.fusion?.top_confidence) {
+      report.confidence = data.fusion.top_confidence;
+    }
+
+    return report;
+  };
+
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <Stethoscope className="h-8 w-8 text-medical-primary" />
+              <h1 className="text-xl font-semibold text-gray-900">
+                Clinical AI Assistant
+              </h1>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <KnowledgeBaseToggle 
+                mode={knowledgeBaseMode}
+                onModeChange={setKnowledgeBaseMode}
+              />
+              <EHRIntegration 
+                integration={{ system: 'epic', importStatus: 'pending' }}
+                onImport={(patientId) => {
+                  toast.success(`Patient ${patientId} imported`);
+                }}
+                onExport={(report) => {
+                  toast.success('Report exported to EHR');
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <AnimatePresence mode="wait">
+          {currentView === 'input' && (
+            <motion.div
+              key="input"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="space-y-6"
+            >
+              {/* Patient Information */}
+              <div className="card">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Patient Information
+                </h2>
+                
+                {/* EHR Patient Selector */}
+                {ehrPatients.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select from EHR Patients
+                    </label>
+                    <select
+                      value={selectedEhrPatient}
+                      onChange={(e) => {
+                        setSelectedEhrPatient(e.target.value);
+                        if (e.target.value) {
+                          const selectedPatient = ehrPatients.find(p => p.patient_id === e.target.value);
+                          if (selectedPatient) {
+                            setPatient({
+                              id: selectedPatient.patient_id,
+                              age: selectedPatient.demographics?.age,
+                              gender: selectedPatient.demographics?.sex,
+                              allergies: selectedPatient.allergies || [],
+                              medications: selectedPatient.meds || [],
+                              pastMedicalHistory: selectedPatient.pmh || []
+                            });
+                          }
+                        }
+                      }}
+                      className="input-field"
+                    >
+                      <option value="">Select a patient from EHR...</option>
+                      {ehrPatients.map((ehrPatient) => (
+                        <option key={ehrPatient.patient_id} value={ehrPatient.patient_id}>
+                          {ehrPatient.patient_id} - {ehrPatient.demographics?.age}y {ehrPatient.demographics?.sex}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
+                <PatientForm 
+                  patient={patient}
+                  onPatientChange={setPatient}
+                />
+              </div>
+
+              {/* Input Methods */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Text Input */}
+                <div className="card">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Clinical Notes
+                  </h3>
+                  <div className="space-y-4">
+                    <textarea
+                      ref={conversationInputRef}
+                      className="input-field h-32 resize-none"
+                      placeholder="Enter patient symptoms, history, or clinical findings..."
+                      value={conversation.join('\n')}
+                      onChange={(e) => setConversation(e.target.value.split('\n').filter(line => line.trim()))}
+                    />
+                    
+                    <div className="flex space-x-2">
+                      <VoiceRecorder 
+                        onTranscription={handleVoiceTranscription}
+                        onVoiceInference={handleVoiceInference}
+                      />
+                      <button
+                        onClick={() => {
+                          if (conversationInputRef.current) {
+                            conversationInputRef.current.value = '';
+                            setConversation([]);
+                          }
+                        }}
+                        className="btn-secondary text-sm"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Image Upload */}
+                <div className="card">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Medical Imaging
+                  </h3>
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                      isDragActive 
+                        ? 'border-medical-primary bg-medical-primary/5' 
+                        : 'border-gray-300 hover:border-medical-primary'
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    {uploadedImage ? (
+                      <div>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {uploadedImage.name}
+                        </p>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setUploadedImage(null);
+                          }}
+                          className="text-sm text-red-600 hover:text-red-800"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-sm text-gray-600">
+                          {isDragActive 
+                            ? 'Drop the image here...' 
+                            : 'Drag & drop an image, or click to select'
+                          }
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Supports JPEG, PNG, GIF, BMP, TIFF
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Entry */}
+              <div className="card">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Quick Entry
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Common Symptoms
+                    </label>
+                    <select 
+                      className="input-field"
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setConversation(prev => [...prev, e.target.value]);
+                          e.target.value = '';
+                        }
+                      }}
+                    >
+                      <option value="">Select symptom...</option>
+                      <option value="Chest pain">Chest pain</option>
+                      <option value="Shortness of breath">Shortness of breath</option>
+                      <option value="Headache">Headache</option>
+                      <option value="Fever">Fever</option>
+                      <option value="Nausea">Nausea</option>
+                      <option value="Dizziness">Dizziness</option>
+                      <option value="Fatigue">Fatigue</option>
+                      <option value="Abdominal pain">Abdominal pain</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Blood Pressure
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="e.g., 140/90"
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setConversation(prev => [...prev, `BP ${e.target.value}`]);
+                        }
+                      }}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Heart Rate
+                    </label>
+                    <input
+                      type="number"
+                      className="input-field"
+                      placeholder="e.g., 85"
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setConversation(prev => [...prev, `HR ${e.target.value} bpm`]);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-center space-x-4">
+                <button
+                  onClick={handleInference}
+                  disabled={isLoading || (conversation.length === 0 && !uploadedImage)}
+                  className="btn-primary px-6 py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Analyzing...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <Brain className="h-5 w-5" />
+                      <span>Quick Analysis</span>
+                    </div>
+                  )}
+                </button>
+                
+                <button
+                  onClick={handleStructuredDiagnosis}
+                  disabled={isLoading || (conversation.length === 0 && !uploadedImage)}
+                  className="btn-secondary px-6 py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed border-medical-primary text-medical-primary hover:bg-medical-primary hover:text-white"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-medical-primary"></div>
+                      <span>Processing...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <FileText className="h-5 w-5" />
+                      <span>Structured Diagnosis</span>
+                    </div>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {currentView === 'results' && clinicalReport && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              {/* Results Header */}
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-semibold text-gray-900">
+                  Clinical Analysis Results
+                </h2>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setCurrentView('input')}
+                    className="btn-secondary"
+                  >
+                    New Case
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('report')}
+                    className="btn-primary"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    View Report
+                  </button>
+                </div>
+              </div>
+
+              {/* Red Flag Alerts */}
+              {clinicalReport.redFlagAlerts.length > 0 && (
+                <RedFlagAlerts alerts={clinicalReport.redFlagAlerts} />
+              )}
+
+              {/* Differential Diagnosis */}
+              <DifferentialDiagnosis diagnoses={clinicalReport.differentialDiagnosis} />
+
+              {/* XAI Explanation */}
+              <XAIExplanation 
+                explanation={{
+                  reasoningChain: [
+                    "Patient presents with elevated blood pressure readings",
+                    "Associated symptoms suggest uncontrolled hypertension",
+                    "Risk factors include age and family history"
+                  ],
+                  confidenceBreakdown: {
+                    clinicalGuidelines: 0.85,
+                    imagingEvidence: 0.0,
+                    symptomMatch: 0.78,
+                    patientHistory: 0.65
+                  },
+                  sourceAttribution: [
+                    {
+                      source: "American Heart Association Guidelines",
+                      section: "Hypertension Management",
+                      relevance: 0.9,
+                      type: "guideline"
+                    }
+                  ]
+                }}
+              />
+
+              {/* Recommendations */}
+              <div className="card">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Recommendations
+                </h3>
+                <ul className="space-y-2">
+                  {clinicalReport.recommendations.map((rec, index) => (
+                    <li key={index} className="flex items-start space-x-2">
+                      <span className="text-medical-primary font-semibold">
+                        {index + 1}.
+                      </span>
+                      <span className="text-gray-700">{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </motion.div>
+          )}
+
+          {currentView === 'report' && clinicalReport && (
+            <motion.div
+              key="report"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <ClinicalReportView report={clinicalReport} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+    </div>
+  );
+};
+
+export default ClinicalInterface;
