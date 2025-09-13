@@ -8,7 +8,7 @@ _cfg = load_rag()
 
 PERSIST_DIR = os.getenv("RAG_PERSIST_DIR", "./rag_store")
 COLLECTION  = os.getenv("RAG_COLLECTION", "conversations")
-EMB_MODEL   = os.getenv("RAG_EMB_MODEL", "sentence-transformers/all-mpnet-base-v2")
+EMB_MODEL   = os.getenv("RAG_EMB_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 
 _emb = HuggingFaceEmbeddings(model_name=EMB_MODEL)
 _vs  = Chroma(collection_name=COLLECTION, embedding_function=_emb, persist_directory=PERSIST_DIR)

@@ -1,7 +1,7 @@
 import json, requests, sys
 
 URL = "http://localhost:8000/multimodal_infer"
-IMG = sys.argv[1] if len(sys.argv) > 1 else "train/patient00005/study1/view1_frontal.jpg"
+IMG = sys.argv[1] if len(sys.argv) > 1 else "chexpert/train/patient00108/study1/view2_lateral.jpg"
 
 payload = {
   "utterances": [

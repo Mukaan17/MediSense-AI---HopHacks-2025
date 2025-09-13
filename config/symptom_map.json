@@ -1,0 +1,99 @@
+{
+  "upper_respiratory_infection": [
+    "cough", "runny nose", "rhinorrhea", "congestion", "stuffy nose", "scratchy throat",
+    "sore throat", "postnasal drip", "post-nasal drip", "sneezing", "hoarse voice"
+  ],
+  "influenza_suspected": [
+    "fever", "high fever", "chills", "rigors", "myalgia", "body aches", "fatigue",
+    "sudden onset", "seasonal flu"
+  ],
+  "covid19_suspected": [
+    "anosmia", "ageusia", "loss of smell", "loss of taste", "covid", "exposure to covid",
+    "dry cough", "shortness of breath with fever"
+  ],
+  "pneumonia_unspecified": [
+    "productive cough", "purulent sputum", "rusty sputum", "pleuritic chest pain",
+    "fever for", "crackles", "focal consolidation"
+  ],
+  "asthma_exacerbation": [
+    "wheeze", "wheezing", "nocturnal cough", "chest tightness", "triggered by allergens",
+    "albuterol helps", "inhaler helps"
+  ],
+  "copd_exacerbation": [
+    "chronic cough", "smoker", "sputum increase", "worsening dyspnea", "home oxygen"
+  ],
+  "pulmonary_embolism_suspected": [
+    "pleuritic pain", "hemoptysis", "calf swelling", "recent travel", "immobilization",
+    "hormonal therapy", "oral contraceptive", "sudden dyspnea"
+  ],
+
+  "acute_coronary_syndrome_suspected": [
+    "pressure-like chest pain", "substernal pressure", "sweats", "diaphoresis",
+    "radiates to left arm", "exertional chest pain"
+  ],
+  "heart_failure_exacerbation": [
+    "orthopnea", "paroxysmal nocturnal dyspnea", "pnd", "leg swelling", "edema",
+    "weight gain", "rales"
+  ],
+  "hypertensive_urgency_suspected": [
+    "severe headache with high blood pressure", "very high blood pressure", "vision changes with bp"
+  ],
+
+  "strep_pharyngitis": [
+    "sore throat without cough", "tonsillar exudate", "anterior cervical tenderness",
+    "painful swallowing", "fever and sore throat"
+  ],
+  "acute_sinusitis": [
+    "facial pain", "tooth pain", "purulent nasal discharge", "worse bending forward",
+    "sinus pressure"
+  ],
+
+  "gastroesophageal_reflux": [
+    "heartburn", "acid reflux", "regurgitation", "worse lying down", "after meals", "spicy food"
+  ],
+  "gastroenteritis": [
+    "diarrhea", "vomiting", "nausea", "cramps", "sick contacts", "stomach bug"
+  ],
+  "appendicitis_suspected": [
+    "right lower quadrant pain", "rlq pain", "pain migrated to rlq", "rebound tenderness",
+    "anorexia", "fever and abdominal pain"
+  ],
+  "cholecystitis_suspected": [
+    "right upper quadrant pain", "ruq pain", "after fatty meals", "murphy sign", "nausea after fatty food"
+  ],
+
+  "urinary_tract_infection": [
+    "dysuria", "burning urination", "frequency", "urgency", "suprapubic pain", "cloudy urine"
+  ],
+  "pyelonephritis_suspected": [
+    "flank pain", "fever and dysuria", "cvat", "costovertebral angle tenderness"
+  ],
+
+  "migraine": [
+    "unilateral throbbing headache", "photophobia", "phonophobia", "aura", "nausea with headache"
+  ],
+  "tension_headache": [
+    "band-like headache", "pressure around head", "worse with stress"
+  ],
+
+  "hypothyroidism_suspected": [
+    "cold intolerance", "weight gain", "constipation", "dry skin", "fatigue with cold"
+  ],
+  "hyperthyroidism_suspected": [
+    "heat intolerance", "palpitations", "weight loss", "tremor", "anxiety with heat"
+  ],
+  "type_2_diabetes_hyperglycemia": [
+    "polyuria", "polydipsia", "polyphagia", "blurred vision"
+  ],
+
+  "panic_symptoms": [
+    "panic attack", "sense of doom", "tingling hands", "hyperventilation", "sudden fear"
+  ],
+  "generalized_anxiety": [
+    "excessive worry", "restlessness", "on edge", "muscle tension"
+  ],
+  "insomnia": [
+    "trouble sleeping", "difficulty falling asleep", "frequent awakenings"
+  ]
+}
+

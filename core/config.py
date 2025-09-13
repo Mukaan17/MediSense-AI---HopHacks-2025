@@ -54,3 +54,8 @@ def load_prompt(name: str) -> str:
         return f.read()
 
 
+def load_symptom_map() -> Dict[str, Any]:
+    with open(CFG_DIR / "symptom_map.json", "r") as f:
+        return json.load(f)
+
+

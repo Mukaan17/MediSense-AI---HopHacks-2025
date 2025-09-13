@@ -21,7 +21,7 @@ def fuse(image_findings: List[Dict[str, Any]], text_findings: List[Dict[str, Any
         issue = IMG2ISSUE.get(f["label"]) or f.get("label")
         if not issue:
             continue
-        issue_logits[issue] = issue_logits.get(issue, 0.0) + w_img * _logit(f["prob"])
+        issue_logits[issue] = issue_logits.get(issue, 0.0) + w_img * _logit(f["score"])
 
     for lbl, tlog in txt_logits.items():
         issue_logits[lbl] = issue_logits.get(lbl, 0.0) + w_txt * tlog

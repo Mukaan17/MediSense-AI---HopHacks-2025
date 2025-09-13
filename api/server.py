@@ -18,6 +18,7 @@ from core.retriever import (
 from core.imaging import ImagingModel
 from core.fusion import fuse
 from core.domains import bucket_domains
+from core.config import load_allowed_labels, load_mappings, load_symptom_map
 from core.questioner_llm import propose_questions_llm
 
 # ----------------- App & Logging ------------------
@@ -44,7 +45,7 @@ EHR_JSON = os.getenv("EHR_JSON", "ehr_with_images.json")    # enriched EHR with 
 
 # --------------- Global singletons ----------------
 _retriever = get_retriever()
-_img_model = ImagingModel()
+_img_model = ImagingModel("checkpoints/biovil_vit_chexpert.pt")
 
 # --------------- EHR loading & indices ------------
 EHR_RECORDS: List[Dict[str, Any]] = []
@@ -105,16 +106,57 @@ def _summarize_ehr(ehr: Optional[Dict[str, Any]]) -> str:
     return "\n".join(parts) + "\n\n"
 
 def _scan_text_findings(extracted: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Derive simple label signals from extracted text (non-exhaustive, advisory use only)."""
+    """Derive label signals from extracted text using an expanded keyword map.
+    Only returns labels that are allowed per domain configuration.
+    """
     out: List[Dict[str, Any]] = []
-    if not extracted: return out
-    # crude BP detection for demo
+    if not extracted:
+        return out
+
+    allowed = set(load_allowed_labels().get("issues_allowed", []))
+    maps = load_mappings() or {}
+    synonyms_to_issue = {k.strip().lower(): v for k, v in (maps.get("synonyms_to_issue") or {}).items()}
+
+    # Load from JSON config file
+    ISSUE_KEYWORDS: Dict[str, List[str]] = load_symptom_map()
+
+    # Build a bag of text from extracted content
+    candidate_texts: List[str] = []
+    if extracted.get("chief_complaint"):
+        candidate_texts.append(str(extracted.get("chief_complaint")))
+    candidate_texts.extend([str(s) for s in (extracted.get("symptoms") or [])])
+    candidate_texts.extend([str(p) for p in (extracted.get("possible_pmh") or [])])
+    candidate_texts.extend([str(m) for m in (extracted.get("possible_meds") or [])])
+    haystack = "\n".join(candidate_texts).lower()
+
+    findings: Dict[str, List[str]] = {}
+
+    # 1) Direct keyword search by ISSUE_KEYWORDS
+    for issue, keywords in ISSUE_KEYWORDS.items():
+        if issue not in allowed:
+            continue
+        for kw in keywords:
+            pattern = r"\b" + re.escape(kw.lower()) + r"\b"
+            if re.search(pattern, haystack):
+                findings.setdefault(issue, []).append(kw)
+
+    # 2) Synonym map fallback (mappings.yaml)
+    for syn, issue in synonyms_to_issue.items():
+        if issue not in allowed:
+            continue
+        if re.search(r"\b" + re.escape(syn) + r"\b", haystack):
+            findings.setdefault(issue, []).append(syn)
+
+    # 3) Vital/BP heuristic
     for s in (extracted.get("symptoms") or []):
         s_low = str(s).lower()
         if "bp" in s_low or re.search(r"\b\d{2,3}/\d{2,3}\b", s_low):
-            out.append({"label": "hypertension_uncontrolled", "evidence": [s]})
-    for pmh in (extracted.get("possible_pmh") or []):
-        out.append({"label": pmh.lower().replace(" ", "_"), "evidence": [pmh]})
+            if "hypertension_uncontrolled" in allowed:
+                findings.setdefault("hypertension_uncontrolled", []).append(str(s))
+
+    # Convert to list structure
+    for issue, evid in findings.items():
+        out.append({"label": issue, "evidence": sorted(list(set(evid)))})
     return out
 
 def _confidence_and_margin(ranked: List[Dict[str, Any]]) -> (float, float):
@@ -228,10 +270,15 @@ async def multimodal_infer(
         blob = await file.read()
         filename = file.filename
         image_findings = _img_model.predict(blob)
-        # Try filename → EHR (takes precedence)
-        pid = EHR_BY_IMAGE.get(filename)
-        if pid:
-            ehr = EHR_BY_PATIENT.get(pid, ehr)
+        # If payload did NOT provide/resolve an EHR, try filename → EHR
+        pid_from_filename = EHR_BY_IMAGE.get(filename)
+        if not ehr and pid_from_filename:
+            ehr = EHR_BY_PATIENT.get(pid_from_filename, ehr)
+        # If payload DID provide EHR and filename maps to a different patient, keep payload's EHR
+        elif ehr and pid_from_filename and ehr.get("patient_id") != pid_from_filename:
+            log.info(
+                f"[EHR] Filename maps to {pid_from_filename} but payload patient_id={ehr.get('patient_id')} provided; keeping payload EHR"
+            )
 
     # 4) Text findings from extraction
     text_findings = _scan_text_findings(extracted)
@@ -309,3 +356,4 @@ def reload_ehr():
 #   export GROQ_MODEL=llama-3.1-70b-versatile
 #   export ASK_THRESH=0.70
 #   export MARGIN_THRESH=0.08
+

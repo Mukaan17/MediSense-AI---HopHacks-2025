@@ -1,0 +1,48 @@
+# ---------- Core math / arrays ----------
+numpy==1.26.4
+
+# ---------- PyTorch (pin; choose CPU or CUDA wheels at install time) ----------
+# For CPU-only: this line installs CPU wheels from the default index
+torch==2.1.2
+torchvision==0.16.2
+
+# ---------- OpenCLIP + vision utils ----------
+open_clip_torch==2.23.0
+timm==0.9.16
+pillow==10.2.0
+
+# ---------- Data / ML tools ----------
+pandas==2.2.2
+scikit-learn==1.4.2
+
+# ---------- API server ----------
+fastapi==0.116.1
+uvicorn==0.30.6
+python-dotenv==1.0.1
+requests==2.32.3
+
+# ---------- RAG stack ----------
+chromadb==0.5.11
+sentence-transformers==3.0.1
+
+# LangChain trio pinned to compatible 0.2.x
+langchain==0.2.14
+langchain-core==0.2.34
+langchain-community==0.2.12
+
+# ---------- Groq LLM client ----------
+langchain-groq==0.1.3
+groq==0.9.0
+
+# ---------- HF utils (optional but handy) ----------
+huggingface_hub==0.23.5
+safetensors==0.4.3
+accelerate==0.30.1
+
+# (transitive pins; installed via FastAPI, but listing here avoids surprises)
+pydantic==2.11.4
+starlette==0.47.3
+
+# Chromadb embeddings
+# source venv/bin/activate
+# python rag_runtime/build_kb.py --input "English Train.json" --persist_dir "./rag_store" --collection "conversations" --emb_model "sentence-transformers/all-MiniLM-L6-v2"

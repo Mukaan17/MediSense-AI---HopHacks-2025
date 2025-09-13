@@ -18,7 +18,6 @@ def answerer_generate(extraction: Dict[str, Any], retrieved_context: str) -> Dic
     fallback = {
         "potential_issues_ranked": [],
         "red_flags_to_screen": [],
-        "first_steps_non_prescriptive": [],
         "follow_up": "",
         "citations": []
     }
@@ -41,16 +40,8 @@ def answerer_generate(extraction: Dict[str, Any], retrieved_context: str) -> Dic
             cleaned.append({"condition": cond, "why": why, "confidence": max(0.0, min(conf, 1.0))})
     answer["potential_issues_ranked"] = cleaned[:3]
 
-    # Advisory-only guardrail
-    text_blob = json.dumps(answer).lower()
-    med_triggers = [
-        " prescribe", "prescrib", " mg", "dose", "tablet", "capsule",
-        "start ", "stop ", "take ", "acetaminophen", "ibuprofen", "nsaid"
-    ]
-    if any(t in text_blob for t in med_triggers):
-        answer["first_steps_non_prescriptive"] = [
-            "Provide general education only (hydration, rest, trigger avoidance); medication decisions deferred to clinician review."
-        ]
+    # Strip non-prescriptive steps from output entirely per product requirement
+    answer.pop("first_steps_non_prescriptive", None)
 
     if not answer.get("citations"):
         answer["citations"] = []
