@@ -1,23 +1,20 @@
-import requests, json
+import json, requests, sys
 
-URL = "http://localhost:8000/infer"
+URL = "http://localhost:8000/multimodal_infer"
+IMG = sys.argv[1] if len(sys.argv) > 1 else "train/patient00005/study1/view1_frontal.jpg"
 
-sample = {
+payload = {
   "utterances": [
-    "patient: hi doctor, I drank too much caffine.",
-    "doctor: any chest pain or neuro symptoms like weakness or slurred speech?",
-    "patient: no chest pain, I took 600mg caffine",
-    "doctor: that's too much",
-    "patient: I have nothing, I ate only 600 calories but burned 1200 calories by working out."
+    "patient: I’ve had fever and productive cough for 2 days.",
+    "doctor: any chest pain or shortness of breath?",
+    "patient: mild shortness of breath on exertion."
   ]
 }
 
-def main():
-    r = requests.post(URL, json=sample, timeout=60)
-    print(json.dumps(r.json(), indent=2, ensure_ascii=False))
+files = {
+  "payload": (None, json.dumps(payload), "application/json"),
+  "file": ("xray.jpg", open(IMG, "rb"), "application/octet-stream"),
+}
 
-
-if __name__ == "__main__":
-    main()
-
-
+r = requests.post(URL, files=files, timeout=120)
+print(json.dumps(r.json(), indent=2))

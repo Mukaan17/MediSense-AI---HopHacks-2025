@@ -1,0 +1,16 @@
+{
+  "P001": "train/patient00108/study1/view2_lateral.jpg",
+  "P002": "train/patient02892/study6/view2_lateral.jpg",
+  "P003": "train/patient01091/study2/view3_lateral.jpg",
+  "P004": "train/patient00011/study12/view1_frontal.jpg",
+  "P005": "train/patient04744/study1/view1_frontal.jpg",
+  "P006": "train/patient03027/study4/view1_frontal.jpg",
+  "P007": "train/patient05735/study11/view1_frontal.jpg",
+  "P008": "train/patient01671/study9/view1_frontal.jpg",
+  "P009": "train/patient04598/study2/view1_frontal.jpg",
+  "P010": "train/patient01987/study2/view2_lateral.jpg",
+  "P011": "train/patient00995/study4/view1_frontal.jpg",
+  "P012": "train/patient04381/study1/view1_frontal.jpg",
+  "P013": "train/patient04799/study2/view1_frontal.jpg",
+  "P014": "train/patient00826/study18/view1_frontal.jpg"
+}

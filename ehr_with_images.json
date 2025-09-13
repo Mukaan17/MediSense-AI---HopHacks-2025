@@ -1,0 +1,412 @@
+[
+  {
+    "patient_id": "P001",
+    "sex": "M",
+    "age": 68,
+    "vital_signs": {
+      "bp": "136/78",
+      "hr": 78,
+      "rr": 18,
+      "temp_f": 98.4,
+      "spo2_pct": 96
+    },
+    "pmh": [
+      "hypertension",
+      "hyperlipidemia"
+    ],
+    "meds": [
+      "lisinopril",
+      "atorvastatin",
+      "aspirin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "former",
+      "alcohol": "moderate"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Enlarged cardiac silhouette; consider chronic pressure/volume overload history.",
+    "ehr_notes": "Occasional exertional dyspnea, no active chest pain.",
+    "xray_path": "train/patient00108/study1/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2025-09-01"
+  },
+  {
+    "patient_id": "P002",
+    "sex": "F",
+    "age": 74,
+    "vital_signs": {
+      "bp": "142/84",
+      "hr": 82,
+      "rr": 22,
+      "temp_f": 99.5,
+      "spo2_pct": 92
+    },
+    "pmh": [
+      "heart failure",
+      "ckd stage 3"
+    ],
+    "meds": [
+      "furosemide",
+      "metoprolol",
+      "losartan"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "never",
+      "alcohol": "rare"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Blunting of costophrenic angles, possible meniscus sign.",
+    "ehr_notes": "Increased orthopnea, 2 kg weight gain this week.",
+    "xray_path": "train/patient02892/study6/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2025-08-27"
+  },
+  {
+    "patient_id": "P003",
+    "sex": "M",
+    "age": 26,
+    "vital_signs": {
+      "bp": "122/74",
+      "hr": 96,
+      "rr": 26,
+      "temp_f": 98.6,
+      "spo2_pct": 94
+    },
+    "pmh": [],
+    "meds": [],
+    "allergies": [
+      "penicillin"
+    ],
+    "social": {
+      "tobacco": "vapes",
+      "alcohol": "social"
+    },
+    "chexpert_label": "Pneumothorax",
+    "imaging_expectation": "Visceral pleural line with absent lung markings peripherally.",
+    "ehr_notes": "Sudden pleuritic chest pain after exercise; no trauma.",
+    "xray_path": "train/patient01091/study2/view3_lateral.jpg",
+    "xray_filename": "view3_lateral.jpg",
+    "encounter_date": "2025-08-14"
+  },
+  {
+    "patient_id": "P004",
+    "sex": "F",
+    "age": 59,
+    "vital_signs": {
+      "bp": "130/82",
+      "hr": 88,
+      "rr": 20,
+      "temp_f": 99.1,
+      "spo2_pct": 95
+    },
+    "pmh": [
+      "recent abdominal surgery"
+    ],
+    "meds": [
+      "acetaminophen"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "never",
+      "alcohol": "none"
+    },
+    "chexpert_label": "Atelectasis",
+    "imaging_expectation": "Linear/wedge-shaped opacities with volume loss; post-op atelectasis.",
+    "ehr_notes": "Shallow breathing, improved with incentive spirometry.",
+    "xray_path": "train/patient00011/study12/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2025-09-02"
+  },
+  {
+    "patient_id": "P005",
+    "sex": "M",
+    "age": 51,
+    "vital_signs": {
+      "bp": "126/80",
+      "hr": 102,
+      "rr": 24,
+      "temp_f": 101.3,
+      "spo2_pct": 93
+    },
+    "pmh": [
+      "type 2 diabetes"
+    ],
+    "meds": [
+      "metformin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "former",
+      "alcohol": "social"
+    },
+    "chexpert_label": "Pneumonia",
+    "imaging_expectation": "Focal/lobar consolidation with air bronchograms.",
+    "ehr_notes": "Fever, productive cough with yellow sputum x 3 days.",
+    "xray_path": "train/patient04744/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2025-09-05"
+  },
+  {
+    "patient_id": "P006",
+    "sex": "F",
+    "age": 72,
+    "vital_signs": {
+      "bp": "138/86",
+      "hr": 90,
+      "rr": 22,
+      "temp_f": 98.9,
+      "spo2_pct": 90
+    },
+    "pmh": [
+      "heart failure",
+      "hypertension"
+    ],
+    "meds": [
+      "furosemide",
+      "spironolactone",
+      "lisinopril"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "never",
+      "alcohol": "rare"
+    },
+    "chexpert_label": "Edema",
+    "imaging_expectation": "Perihilar bat-wing opacities, Kerley B lines consistent with pulmonary edema.",
+    "ehr_notes": "Exertional dyspnea, bilateral leg swelling.",
+    "xray_path": "train/patient03027/study4/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2025-08-30"
+  },
+  {
+    "patient_id": "P007",
+    "sex": "M",
+    "age": 44,
+    "vital_signs": {
+      "bp": "124/76",
+      "hr": 84,
+      "rr": 18,
+      "temp_f": 98.2,
+      "spo2_pct": 97
+    },
+    "pmh": [
+      "asthma"
+    ],
+    "meds": [
+      "albuterol inhaler"
+    ],
+    "allergies": [
+      "sulfa"
+    ],
+    "social": {
+      "tobacco": "never",
+      "alcohol": "moderate"
+    },
+    "chexpert_label": "Consolidation",
+    "imaging_expectation": "Dense alveolar opacification in a segment/lobe; air bronchograms.",
+    "ehr_notes": "Cough and pleuritic pain; worsened since last week.",
+    "xray_path": "train/patient05735/study11/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2025-09-06"
+  },
+  {
+    "patient_id": "P008",
+    "sex": "F",
+    "age": 63,
+    "vital_signs": {
+      "bp": "128/74",
+      "hr": 86,
+      "rr": 20,
+      "temp_f": 98.7,
+      "spo2_pct": 95
+    },
+    "pmh": [
+      "copd"
+    ],
+    "meds": [
+      "tiotropium",
+      "albuterol"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "current",
+      "alcohol": "rare"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Non-specific airspace opacity; correlate with symptoms.",
+    "ehr_notes": "Increased cough, mild sputum, baseline exertional dyspnea.",
+    "xray_path": "train/patient01671/study9/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2025-08-29"
+  },
+  {
+    "patient_id": "P009",
+    "sex": "M",
+    "age": 65,
+    "vital_signs": {
+      "bp": "140/88",
+      "hr": 80,
+      "rr": 18,
+      "temp_f": 98.3,
+      "spo2_pct": 98
+    },
+    "pmh": [
+      "post-op cardiac surgery"
+    ],
+    "meds": [
+      "aspirin",
+      "metoprolol",
+      "atorvastatin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "former",
+      "alcohol": "social"
+    },
+    "chexpert_label": "Enlarged Cardiomediastinum",
+    "imaging_expectation": "Widened mediastinal contours; post-operative changes possible.",
+    "ehr_notes": "Follow-up after CABG; no active symptoms.",
+    "xray_path": "train/patient04598/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2025-08-20"
+  },
+  {
+    "patient_id": "P010",
+    "sex": "F",
+    "age": 57,
+    "vital_signs": {
+      "bp": "122/70",
+      "hr": 78,
+      "rr": 17,
+      "temp_f": 98.1,
+      "spo2_pct": 98
+    },
+    "pmh": [
+      "breast cancer (in remission)"
+    ],
+    "meds": [
+      "letrozole"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "never",
+      "alcohol": "social"
+    },
+    "chexpert_label": "Lung Lesion",
+    "imaging_expectation": "Discrete nodule/mass; consider prior oncologic history.",
+    "ehr_notes": "Incidental nodule on screening CXR.",
+    "xray_path": "train/patient01987/study2/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2025-08-18"
+  },
+  {
+    "patient_id": "P011",
+    "sex": "M",
+    "age": 39,
+    "vital_signs": {
+      "bp": "118/72",
+      "hr": 74,
+      "rr": 16,
+      "temp_f": 98.0,
+      "spo2_pct": 99
+    },
+    "pmh": [],
+    "meds": [],
+    "allergies": [],
+    "social": {
+      "tobacco": "never",
+      "alcohol": "none"
+    },
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "Normal study anticipated.",
+    "ehr_notes": "Intermittent atypical chest discomfort; low-risk features.",
+    "xray_path": "train/patient00995/study4/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2025-09-07"
+  },
+  {
+    "patient_id": "P012",
+    "sex": "F",
+    "age": 61,
+    "vital_signs": {
+      "bp": "134/76",
+      "hr": 82,
+      "rr": 20,
+      "temp_f": 98.6,
+      "spo2_pct": 96
+    },
+    "pmh": [
+      "prior TB (treated)"
+    ],
+    "meds": [],
+    "allergies": [],
+    "social": {
+      "tobacco": "former",
+      "alcohol": "rare"
+    },
+    "chexpert_label": "Pleural Other",
+    "imaging_expectation": "Pleural thickening/calcification; chronic changes.",
+    "ehr_notes": "Mild exertional dyspnea; no acute symptoms.",
+    "xray_path": "train/patient04381/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2025-08-22"
+  },
+  {
+    "patient_id": "P013",
+    "sex": "M",
+    "age": 34,
+    "vital_signs": {
+      "bp": "120/78",
+      "hr": 88,
+      "rr": 18,
+      "temp_f": 98.2,
+      "spo2_pct": 99
+    },
+    "pmh": [],
+    "meds": [],
+    "allergies": [],
+    "social": {
+      "tobacco": "never",
+      "alcohol": "social"
+    },
+    "chexpert_label": "Fracture",
+    "imaging_expectation": "Acute or healing rib fracture; assess for complication.",
+    "ehr_notes": "Lateral rib pain after minor trauma; localized tenderness.",
+    "xray_path": "train/patient04799/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2025-09-03"
+  },
+  {
+    "patient_id": "P014",
+    "sex": "F",
+    "age": 77,
+    "vital_signs": {
+      "bp": "138/80",
+      "hr": 76,
+      "rr": 18,
+      "temp_f": 98.1,
+      "spo2_pct": 97
+    },
+    "pmh": [
+      "atrial fibrillation",
+      "pacemaker"
+    ],
+    "meds": [
+      "apixaban",
+      "metoprolol"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "never",
+      "alcohol": "none"
+    },
+    "chexpert_label": "Support Devices",
+    "imaging_expectation": "Lines/leads/tubes positioning; device evaluation.",
+    "ehr_notes": "Routine device follow-up; no acute symptoms.",
+    "xray_path": "train/patient00826/study18/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2025-08-25"
+  }
+]

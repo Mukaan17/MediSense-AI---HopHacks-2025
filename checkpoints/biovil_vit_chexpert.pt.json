@@ -1,0 +1,20 @@
+{
+  "best_macro_auroc": 0.8062892690151362,
+  "labels": [
+    "No Finding",
+    "Enlarged Cardiomediastinum",
+    "Cardiomegaly",
+    "Lung Opacity",
+    "Lung Lesion",
+    "Edema",
+    "Consolidation",
+    "Pneumonia",
+    "Atelectasis",
+    "Pneumothorax",
+    "Pleural Effusion",
+    "Pleural Other",
+    "Fracture",
+    "Support Devices"
+  ],
+  "repo": "microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224"
+}
