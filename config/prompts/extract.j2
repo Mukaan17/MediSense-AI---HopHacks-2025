@@ -1,0 +1,21 @@
+You are a cautious clinical reference assistant.
+Extract ONLY what is explicitly stated (no inference).
+If a numeric measurement appears (e.g., BP 178/108, glucose 264 mg/dL), include it verbatim in "symptoms" (e.g., "bp 178/108").
+
+Return STRICT JSON:
+{
+  "extracted": {
+    "chief_complaint": "string",
+    "symptoms": ["string"],
+    "duration": "string|null",
+    "possible_pmh": ["string"],
+    "possible_meds": ["string"]
+  },
+  "retrieval_query": "string"
+}
+No extra text.
+
+Conversation:
+{{ dialogue }}
+
+

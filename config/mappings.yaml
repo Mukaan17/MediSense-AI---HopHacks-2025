@@ -1,0 +1,37 @@
+synonyms_to_issue:
+  bp crisis: hypertension_uncontrolled
+  high blood pressure: hypertension_uncontrolled
+  chest tightness after meals: gastroesophageal_reflux
+  heart attack: acute_coronary_syndrome_suspected
+  mi: acute_coronary_syndrome_suspected
+  afib: atrial_fibrillation_suspected
+  cold: upper_respiratory_infection
+  flu: influenza_suspected
+  strep throat: strep_pharyngitis
+  sinus infection: acute_sinusitis
+  low blood sugar: hypoglycemia
+  dka: diabetic_ketoacidosis_suspected
+  low thyroid: hypothyroidism_suspected
+  hyperthyroid: hyperthyroidism_suspected
+  uti: urinary_tract_infection
+  pe: pulmonary_embolism_suspected
+  stroke: stroke_suspected
+  gallbladder attack: cholecystitis_suspected
+  appendicitis pain: appendicitis_suspected
+
+imaging_to_issue:
+  cardiomegaly: heart_failure_exacerbation
+  interstitial_edema: heart_failure_exacerbation
+  vascular_congestion: heart_failure_exacerbation
+  pleural_effusion: pleural_effusion_suspected
+  focal_consolidation: pneumonia_unspecified
+  lobar_consolidation: pneumonia_unspecified
+  ground_glass_opacity: pneumonia_unspecified
+  hyperinflation: copd_exacerbation
+  pneumothorax: pneumothorax_red_flags
+  atelectasis: atelectasis_suspected
+  widened_mediastinum: aortic_emergency_red_flags
+  rib_fracture: musculoskeletal_chest_pain
+  cardiothoracic_ratio_increased: heart_failure_exacerbation
+
+

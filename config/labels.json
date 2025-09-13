@@ -1,0 +1,17 @@
+{
+  "issues_allowed": [
+    "hypertension_uncontrolled","heart_failure_exacerbation","atrial_fibrillation_suspected","angina_suspected",
+    "upper_respiratory_infection","pneumonia_unspecified","asthma_exacerbation","copd_exacerbation",
+    "type_2_diabetes_hyperglycemia","hyperlipidemia_mixed","ckd_progression_suspected",
+    "migraine","gastroesophageal_reflux","gastroenteritis",
+    "covid19_suspected","urinary_tract_infection",
+    "generalized_anxiety","depressive_symptoms","noncardiac_chest_pain",
+    "hypertensive_urgency","acute_coronary_syndrome_suspected","pulmonary_embolism_suspected",
+    "community_acquired_pneumonia","influenza_suspected","strep_pharyngitis","acute_sinusitis",
+    "hypoglycemia","diabetic_ketoacidosis_suspected","hypothyroidism_suspected","hyperthyroidism_suspected",
+    "acute_kidney_injury_suspected","anemia_iron_deficiency_suspected","tension_headache","stroke_suspected",
+    "panic_symptoms","insomnia","peptic_ulcer_disease_suspected","cholecystitis_suspected","appendicitis_suspected"
+  ]
+}
+
+

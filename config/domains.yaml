@@ -1,0 +1,126 @@
+cardiac:
+  - hypertension_uncontrolled
+  - hypertensive_urgency_suspected
+  - hypertensive_emergency_red_flags
+  - heart_failure_exacerbation
+  - atrial_fibrillation_suspected
+  - other_arrhythmia_suspected
+  - angina_suspected
+  - pericarditis_suspected
+  - aortic_emergency_red_flags
+
+pulmonary:
+  - upper_respiratory_infection
+  - acute_bronchitis
+  - pneumonia_unspecified
+  - pleural_effusion_suspected
+  - asthma_exacerbation
+  - copd_exacerbation
+  - pneumothorax_red_flags
+  - sleep_apnea_suspected
+  - hemoptysis_evaluation
+
+metabolic_endocrine:
+  - type_2_diabetes_hyperglycemia
+  - type_1_diabetes_hyperglycemia
+  - hypoglycemia_suspected
+  - prediabetes_screen
+  - metabolic_syndrome_education
+  - hyperlipidemia_mixed
+  - hypothyroidism_suspected
+  - hyperthyroidism_suspected
+  - obesity_weight_management
+  - electrolyte_imbalance_suspected
+
+renal_urologic:
+  - ckd_progression_suspected
+  - acute_kidney_injury_suspected
+  - nephrolithiasis_suspected
+  - urinary_tract_infection
+  - pyelonephritis_suspected
+  - benign_prostatic_hyperplasia_symptoms
+
+neuro:
+  - migraine
+  - tension_headache
+  - cluster_headache
+  - vertigo_bppv_suspected
+  - peripheral_neuropathy_suspected
+  - seizure_first_time_evaluation
+  - stroke_red_flags
+  - transient_ischemic_attack_screen
+
+gi:
+  - gastroesophageal_reflux
+  - dyspepsia
+  - irritable_bowel_syndrome
+  - acute_diarrhea
+  - constipation_functional
+  - upper_gi_bleed_red_flags
+  - hepatitis_risk_assessment
+  - liver_enzyme_elevation_workup
+  - gastroenteritis
+
+id:
+  - covid19_suspected
+  - influenza_like_illness
+  - strep_pharyngitis_suspected
+  - otitis_media_suspected
+  - sinusitis_acute_uncomplicated
+  - cellulitis_suspected
+  - skin_abscess_suspected
+  - sepsis_red_flags
+
+psych:
+  - generalized_anxiety
+  - panic_attacks
+  - depressive_symptoms
+  - insomnia_primary
+  - ptsd_screen
+  - substance_use_risk
+
+musculoskeletal:
+  - low_back_pain_nonspecific
+  - neck_strain
+  - shoulder_impingement_suspected
+  - knee_osteoarthritis_flare
+  - gout_suspected
+  - musculoskeletal_chest_pain
+
+dermatology:
+  - eczema_flare
+  - urticaria_acute
+  - acne_moderate
+  - herpes_zoster_suspected
+  - contact_dermatitis
+
+ob_gyn:
+  - pregnancy_possible
+  - dysmenorrhea_primary
+  - pcos_suspected
+  - bacterial_vaginosis_suspected
+  - yeast_vaginitis_suspected
+  - urinary_symptoms_in_pregnancy
+
+heent:
+  - allergic_rhinitis
+  - viral_pharyngitis
+  - tonsillitis_suspected
+  - epistaxis_minor
+  - dental_infection_suspected
+
+ophthalmology:
+  - conjunctivitis
+  - acute_angle_closure_red_flags
+
+vascular:
+  - dvt_suspected
+  - peripheral_artery_disease_symptoms
+  - venous_insufficiency_symptoms
+
+toxicology:
+  - caffeine_overuse
+  - stimulant_overuse_suspected
+  - alcohol_withdrawal_risk
+
+
