@@ -12,7 +12,8 @@ export interface Patient {
   gender?: 'male' | 'female' | 'other';
   pregnant?: boolean;
   weight?: number;
-  height?: number;
+  height?: number | string; // Support both numeric (cm) and string (ft'in") formats
+  bp?: string; // Systolic/Diastolic, e.g., "136/78"
   allergies?: string[];
   medications?: string[];
   pastMedicalHistory?: string[];

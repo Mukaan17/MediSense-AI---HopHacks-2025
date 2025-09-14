@@ -11,7 +11,7 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -25,13 +25,16 @@ from core.retriever import (
 from core.imaging import ImagingModel
 from core.fusion import fuse
 from core.domains import bucket_domains
+import uuid
 from core.config import load_allowed_labels, load_mappings, load_symptom_map
 from core.questioner_llm import propose_questions_llm
+from core.summarize import summarize_live
 from core.voice_transcription import voice_service
 from core.clinical_diagnosis import (
     generate_structured_differential_diagnosis,
     analyze_risk_factors,
-    generate_red_flag_alerts
+    generate_red_flag_alerts,
+    generate_brief_diagnosis_summary,
 )
 from core.ehr_integration import create_ehr_integration_summary
 
@@ -68,7 +71,6 @@ EHR_JSON = os.getenv("EHR_JSON", "ehr_with_images.json")    # enriched EHR with 
 
 # --------------- Global singletons ----------------
 _retriever = get_retriever()
-_img_model = ImagingModel(ckpt_path=CXR_CKPT)
 
 # --------------- EHR loading & indices ------------
 EHR_RECORDS: List[Dict[str, Any]] = []
@@ -95,6 +97,19 @@ def _load_ehr() -> None:
         log.warning(f"[EHR] Failed to load {EHR_JSON}: {e}")
 
 _load_ehr()
+
+# --- CheXpert -> domain ontology aliases (extend as needed) ---
+ALIASES = {
+    "Pleural Effusion": "pleural_effusion_suspected",
+    "Atelectasis": "atelectasis",
+    "Consolidation": "pneumonia_unspecified",
+    "Enlarged Cardiomediastinum": "cardiomegaly",
+    "Lung Lesion": "lung_lesion_suspected",
+    "Pleural Other": "pleural_other_suspected",
+}
+
+# --- in-memory case store for hackathon flow ---
+_CASES: Dict[str, Dict[str, Any]] = {}
 
 # ----------------- Schemas ------------------------
 class InferRequest(BaseModel):
@@ -196,6 +211,42 @@ def _scope_hint(c: float) -> str:
     if c < 0.70: return "mixed"
     return "chest"
 
+def _quick_facts(ehr: Optional[Dict[str, Any]]) -> Optional[str]:
+    if not ehr: return None
+    vs = ehr.get("vital_signs", {})
+    return f"{ehr.get('sex','?')} {ehr.get('age','?')} | SpO2 {vs.get('spo2_pct','?')}% | HR {vs.get('hr','?')} | BP {vs.get('bp','?')}"
+
+def _pick_question(questions: List[Dict[str, Any]]) -> Optional[str]:
+    if not questions: return None
+    red = [q for q in questions if q.get("priority") == "red-flag"]
+    return (red[0] if red else questions[0]).get("q")
+
+def _compact_live(
+    ranked: List[Dict[str, Any]],
+    top_conf: float,
+    margin: float,
+    ehr: Optional[Dict[str, Any]],
+    questions: List[Dict[str, Any]],
+    max_candidates: int,
+    min_conf: float
+) -> Dict[str, Any]:
+    dx = ranked[0]["condition"] if ranked else None
+    alts = []
+    for r in ranked[1:]:
+        if len(alts) >= (max_candidates - 1): break
+        if r.get("score", 0.0) >= min_conf:
+            alts.append(f"{r['condition']} {r['score']:.2f}")
+    return {
+        "dx": dx,
+        "conf": round(float(top_conf or 0.0), 2),
+        "quick_facts": _quick_facts(ehr),
+        "why": "combined image+EHR" if ranked else None,
+        "next_question": _pick_question(questions),
+        "alts": alts,
+        "alerts": {"red_flag": bool(questions and questions[0].get("priority") == "red-flag"),
+                   "margin": round(float(margin or 0.0), 2)}
+    }
+
 # ----------------- Endpoints ----------------------
 
 @app.get("/health")
@@ -237,6 +288,40 @@ async def image_infer(file: UploadFile = File(...)):
     preds = _img_model.predict(raw)  # expected: [{"label": "...", "score": 0.xx}, ...]
     return {"image_findings": preds, "filename": file.filename}
 
+@app.post("/quick_analysis")
+async def quick_analysis(
+    payload: str = Form(None),
+    file: UploadFile = File(None)
+):
+    """
+    Return only potential issues with scores (top-k fused candidates).
+    Accepts optional utterances + optional image; fuses and returns a compact list.
+    """
+    utterances: List[str] = []
+    try:
+        if payload:
+            data = json.loads(payload)
+            utterances = data.get("utterances", []) or []
+    except Exception:
+        pass
+
+    conversation = "\n".join(utterances)
+    extraction = extractor_generate(conversation) if utterances else {"extracted": {}}
+    text_findings = _scan_text_findings(extraction.get("extracted", {}) or {})
+
+    image_findings: List[Dict[str, Any]] = []
+    if file is not None:
+        blob = await file.read()
+        image_findings = _img_model.predict(blob)
+
+    ranked = fuse(image_findings, text_findings, topk=10)
+    # Return minimal: potential issues with scores
+    return {
+        "potential_issues": [
+            {"condition": r.get("condition"), "score": r.get("score", 0.0)} for r in ranked
+        ]
+    }
+
 @app.post("/infer_from_image_only")
 async def infer_from_image_only(file: UploadFile = File(...)):
     """
@@ -246,7 +331,9 @@ async def infer_from_image_only(file: UploadFile = File(...)):
     """
     raw = await file.read()
     preds = _img_model.predict(raw)
-    pid = EHR_BY_IMAGE.get(file.filename)
+    # Normalize to basename before lookup to avoid path mismatches
+    fname = os.path.basename(file.filename) if file and file.filename else None
+    pid = EHR_BY_IMAGE.get(fname) if fname else None
     ehr = EHR_BY_PATIENT.get(pid) if pid else None
 
     if ehr is None and preds:
@@ -306,10 +393,11 @@ async def structured_diagnosis(
     final = ranked[0] if ranked else None
     domains = bucket_domains([r["condition"] for r in ranked]) if ranked else {}
 
-    # 6) Generate structured differential diagnosis
+    # 6) Generate structured differential diagnosis + brief summary
     structured_diagnosis = generate_structured_differential_diagnosis(
         extraction, ctx, ehr, ranked
     )
+    brief_summary = generate_brief_diagnosis_summary(extraction, ranked, max_sentences=2)
 
     # 7) Generate additional risk analysis
     risk_factors = analyze_risk_factors(extraction, ehr)
@@ -351,6 +439,7 @@ async def structured_diagnosis(
             "top_confidence": top_conf,
             "margin": margin
         },
+        "summary": brief_summary,
         "structured_diagnosis": structured_diagnosis,
         "risk_analysis": {
             "risk_factors": risk_factors,
@@ -432,7 +521,8 @@ async def multimodal_infer(
     filename = None
     if file is not None:
         blob = await file.read()
-        filename = file.filename
+        # Normalize to basename for consistent EHR mapping
+        filename = os.path.basename(file.filename) if file.filename else None
         image_findings = _img_model.predict(blob)
         # If payload did NOT provide/resolve an EHR, try filename → EHR
         pid_from_filename = EHR_BY_IMAGE.get(filename)
@@ -450,7 +540,20 @@ async def multimodal_infer(
     # 5) Fusion
     ranked = fuse(image_findings, text_findings, topk=10)
     final = ranked[0] if ranked else None
-    domains = bucket_domains([r["condition"] for r in ranked]) if ranked else {}
+    # Normalize fused labels (imaging CheXpert classes → domain ontology keys)
+    if ranked:
+        ALIASES = {
+            "Pleural Effusion": "pleural_effusion_suspected",
+            "Atelectasis": "atelectasis",
+            "Consolidation": "pneumonia_unspecified",
+            "Enlarged Cardiomediastinum": "cardiomegaly",
+            "Lung Lesion": "lung_lesion_suspected",
+            "Pleural Other": "pleural_other_suspected",
+        }
+        names = [ALIASES.get(r["condition"], r["condition"].lower().replace(" ", "_")) for r in ranked]
+        domains = bucket_domains(names)
+    else:
+        domains = {}
 
     # 6) Context assembly (EHR summary + fused header + retrieved KB)
     fused_header = ""
@@ -613,24 +716,24 @@ async def voice_infer(
                 questions = propose_questions_llm(state, max_questions=4)
             except Exception as e:
                 log.warning(f"[coach] question generation failed: {e}")
-        
+
         return {
-            "transcription": transcription_result,
-            "filename": file.filename,
-            "ehr": ehr,
-            "image_findings": image_findings,
-            "text_findings": text_findings,
-            "domains": domains,
-            "fusion": {
-                "top10": ranked,
-                "final_suggested_issue": final,
-                "top_confidence": top_conf,
-                "margin": margin
-            },
-            "rag_advisory": advisory,
-            "coach": {"suggested": questions}
-        }
-        
+                "transcription": transcription_result,
+                "filename": file.filename,
+                "ehr": ehr,
+                "image_findings": image_findings,
+                "text_findings": text_findings,
+                "domains": domains,
+                "fusion": {
+                    "top10": ranked,
+                    "final_suggested_issue": final,
+                    "top_confidence": top_conf,
+                    "margin": margin
+                },
+                "rag_advisory": advisory,
+                "coach": {"suggested": questions}
+            }
+            
     except Exception as e:
         log.error(f"Error during voice inference: {e}")
         raise HTTPException(status_code=500, detail=f"Voice inference failed: {str(e)}")
@@ -735,7 +838,7 @@ async def multimodal_voice_infer(
                 questions = propose_questions_llm(state, max_questions=4)
             except Exception as e:
                 log.warning(f"[coach] question generation failed: {e}")
-        
+
         return {
             "transcription": transcription_result,
             "audio_filename": audio_file.filename,
@@ -753,7 +856,7 @@ async def multimodal_voice_infer(
             "rag_advisory": advisory,
             "coach": {"suggested": questions}
         }
-        
+         
     except Exception as e:
         log.error(f"Error during multimodal voice inference: {e}")
         raise HTTPException(status_code=500, detail=f"Multimodal voice inference failed: {str(e)}")
@@ -888,4 +991,233 @@ def reload_ehr():
 #   export GROQ_MODEL=llama-3.1-70b-versatile
 #   export ASK_THRESH=0.70
 #   export MARGIN_THRESH=0.08
+
+# --------------- Live Case Management ----------
+
+@app.post("/api/case")
+async def create_case(
+    file: UploadFile = File(...),
+    live: bool = Query(True),
+    max_candidates: int = Query(3, ge=1, le=5),
+    min_conf: float = Query(0.60, ge=0.0, le=1.0),
+    min_margin: float = Query(0.03, ge=0.0, le=0.2)
+):
+    raw = await file.read()
+    preds = _img_model.predict(raw)  # [{"label": "...", "score": 0.xx}, ...]
+    for p in preds:
+        if "prob" not in p and "score" in p:
+            p["prob"] = float(p["score"])
+
+    filename = file.filename
+    pid = EHR_BY_IMAGE.get(filename)
+    ehr = EHR_BY_PATIENT.get(pid) if pid else None
+    if ehr is None and preds:
+        top = max(preds, key=lambda x: x.get("prob", x.get("score", 0.0)))
+        cxl = top.get("label")
+        candidates = [r for r in EHR_RECORDS if r.get("chexpert_label") == cxl]
+        ehr = candidates[0] if candidates else None
+
+    ranked = fuse(preds, [], topk=10)
+    top_conf, margin = _confidence_and_margin(ranked)
+
+    normalized = []
+    for r in (ranked or []):
+        c = r.get("condition")
+        if not c: continue
+        normalized.append(ALIASES.get(c, c.lower().replace(" ", "_")))
+    domains = bucket_domains(normalized) if normalized else {}
+
+    case_id = str(uuid.uuid4())
+    _CASES[case_id] = {
+        "filename": filename,
+        "image_findings": preds,
+        "ehr": ehr,
+        "ranked": ranked,
+        "domains": domains,
+        "utterances": [],
+    }
+
+    if live:
+        return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, ehr, [], max_candidates, min_conf)}
+    return {"case_id": case_id, "filename": filename, "ehr": ehr, "image_findings": preds,
+            "fusion": {"top10": ranked, "top_confidence": top_conf, "margin": margin},
+            "domains": domains}
+
+class TranscribeIn(BaseModel):
+    utterance: str
+
+@app.post("/api/case/{case_id}/transcribe")
+def transcribe_step(
+    case_id: str,
+    body: TranscribeIn,
+    live: bool = Query(True),
+    max_candidates: int = Query(3, ge=1, le=5),
+    min_conf: float = Query(0.60, ge=0.0, le=1.0),
+    min_margin: float = Query(0.03, ge=0.0, le=0.2)
+):
+    case = _CASES.get(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="case_id not found")
+
+    case["utterances"].append(body.utterance)
+    conversation = "\n".join(case["utterances"])
+
+    extraction = extractor_generate(conversation)
+    q = extraction.get("retrieval_query") or conversation
+    docs = _retriever.get_relevant_documents(q)
+    ctx = render_docs(docs) or ""
+
+    text_findings = _scan_text_findings(extraction.get("extracted", {}) or {})
+    ranked = fuse(case["image_findings"], text_findings, topk=10)
+    final = ranked[0] if ranked else None
+    top_conf, margin = _confidence_and_margin(ranked)
+
+    normalized = []
+    for r in (ranked or []):
+        c = r.get("condition")
+        if not c: continue
+        normalized.append(ALIASES.get(c, c.lower().replace(" ", "_")))
+    domains = bucket_domains(normalized) if normalized else {}
+
+    fused_header = ""
+    if ranked:
+        fused_header = "Source=FUSED §Top candidates\n" + "\n".join(
+            [f"{i+1}. {r['condition']} ({r.get('score',0.0):.2f}) – {r.get('why','')}" for i, r in enumerate(ranked)]
+        ) + "\n\n"
+    ehr_ctx = _summarize_ehr(case["ehr"]) if case["ehr"] else ""
+    ctx_full = (ehr_ctx + fused_header + ctx)[:MAX_CTX_CHARS]
+
+    advisory = answerer_generate(extraction, ctx_full)
+
+    questions = []
+    if (top_conf < ASK_THRESH) or (margin < MARGIN_THRESH and top_conf < 0.95):
+        state = {
+            "top_candidates": ranked[:5],
+            "image_findings": case["image_findings"],
+            "ehr_summary": case["ehr"] or {},
+            "text_findings": text_findings,
+            "extraction": extraction.get("extracted", {}),
+            "retrieved_context": ctx[:MAX_CTX_CHARS],
+            "top_confidence": top_conf,
+            "margin": margin,
+            "scope_hint": _scope_hint(top_conf),
+        }
+        try:
+            questions = propose_questions_llm(state, max_questions=3)
+        except Exception as e:
+            log.warning(f"[coach] question generation failed: {e}")
+
+    case.update({"ranked": ranked, "domains": domains})
+
+    if live:
+        if (top_conf >= 0.95) and (margin >= min_margin):
+            questions = questions[:1]
+        return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, case["ehr"], questions, max_candidates, min_conf)}
+
+    return {
+        "case_id": case_id,
+        "fusion": {"top10": ranked, "final_suggested_issue": final, "top_confidence": top_conf, "margin": margin},
+        "domains": domains,
+        "rag_advisory": advisory,
+        "coach": {"suggested": questions}
+    }
+
+# ----------------- WebSocket Live Transcribing ----------------------
+
+@app.websocket("/ws/case/{case_id}")
+async def ws_case(ws: WebSocket, case_id: str):
+    await ws.accept()
+    if case_id not in _CASES:
+        await ws.send_json({"error": "case_id not found"})
+        await ws.close()
+        return
+
+    case = _CASES[case_id]
+
+    async def _send_update(latest_utterance: Optional[str] = None, latest_speaker: Optional[str] = None):
+        utterances = case.get("utterances", [])
+        conversation = "\n".join(utterances)
+
+        extraction = extractor_generate(conversation) if conversation else {"extracted": {}}
+        q = (extraction.get("retrieval_query") or conversation) if conversation else ""
+        docs = _retriever.get_relevant_documents(q) if q else []
+        ctx = render_docs(docs) or ""
+
+        text_findings = _scan_text_findings(extraction.get("extracted", {}) or {})
+        ranked = fuse(case["image_findings"], text_findings, topk=10)
+        top_conf, margin = _confidence_and_margin(ranked)
+
+        normalized = []
+        for r in (ranked or []):
+            c = r.get("condition")
+            if not c: continue
+            normalized.append(ALIASES.get(c, c.lower().replace(" ", "_")))
+        domains = bucket_domains(normalized) if normalized else {}
+
+        fused_header = ""
+        if ranked:
+            fused_header = "Source=FUSED §Top candidates\n" + "\n".join(
+                [f"{i+1}. {r['condition']} ({r.get('score',0.0):.2f}) – {r.get('why','')}" for i, r in enumerate(ranked)]
+            ) + "\n\n"
+        ehr_ctx = _summarize_ehr(case["ehr"]) if case["ehr"] else ""
+        ctx_full = (ehr_ctx + fused_header + (ctx or ""))[:MAX_CTX_CHARS]
+
+        questions = []
+        if (top_conf < ASK_THRESH) or (margin < MARGIN_THRESH and top_conf < 0.95):
+            state = {
+                "top_candidates": ranked[:5],
+                "image_findings": case["image_findings"],
+                "ehr_summary": case["ehr"] or {},
+                "text_findings": text_findings,
+                "extraction": extraction.get("extracted", {}),
+                "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
+                "top_confidence": top_conf,
+                "margin": margin,
+                "scope_hint": _scope_hint(top_conf),
+            }
+            try:
+                questions = propose_questions_llm(state, max_questions=3)
+            except Exception as e:
+                log.warning(f"[coach] question generation failed: {e}")
+
+        summary = summarize_live(utterances, max_words=40) if utterances else ""
+        hud = _compact_live(ranked, top_conf, margin, case["ehr"], questions, max_candidates=3, min_conf=0.6)
+        hud["summary"] = summary
+        if latest_utterance:
+            hud["transcript_chunk"] = {"speaker": (latest_speaker or "unknown"), "text": latest_utterance}
+
+        await ws.send_json(hud)
+
+    await _send_update()
+
+    try:
+        while True:
+            msg = await ws.receive_json()
+            utt = msg.get("utterance")
+            speaker = msg.get("speaker")
+            if isinstance(utt, str) and utt.strip():
+                # Store with speaker prefix so downstream LLM sees roles
+                prefixed = f"{speaker}: {utt.strip()}" if speaker in ("patient","doctor") else utt.strip()
+                case.setdefault("utterances", []).append(prefixed)
+                await _send_update(latest_utterance=utt.strip(), latest_speaker=speaker)
+    except WebSocketDisconnect:
+        return
+    except Exception as e:
+        await ws.send_json({"error": str(e)})
+        await ws.close()
+
+# --------------- Missing Frontend Endpoints ----------
+
+@app.get("/ehr/patients")
+def list_ehr_patients():
+    """List all EHR patients for frontend compatibility."""
+    return {"patients": list(EHR_BY_PATIENT.keys()), "count": len(EHR_BY_PATIENT)}
+
+@app.get("/ehr/patients/{patient_id}")
+def get_ehr_patient(patient_id: str):
+    """Get specific EHR patient for frontend compatibility."""
+    patient = EHR_BY_PATIENT.get(patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return patient
 

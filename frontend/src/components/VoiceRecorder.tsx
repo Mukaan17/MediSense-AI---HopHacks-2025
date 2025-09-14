@@ -3,14 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, Square, Play, Pause, Trash2, Brain } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { clinicalAPI } from '../services/api';
+import { startBrowserTranscriber } from '../lib/transcriber';
 
 interface VoiceRecorderProps {
   onTranscription: (transcript: string) => void;
   onVoiceInference?: (audioFile: File) => void;
+  onStartLive?: () => ((text: string) => void) | void; // returns send function
+  onStopLive?: () => void;
   className?: string;
 }
 
-const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceInference, className = '' }) => {
+const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceInference, onStartLive, onStopLive, className = '' }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -18,6 +21,8 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcript, setTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const stopSTTRef = useRef<(() => void) | null>(null);
+  const liveSendRef = useRef<((text: string) => void) | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -41,8 +46,12 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
       mediaRecorderRef.current = mediaRecorder;
 
       const chunks: BlobPart[] = [];
-      mediaRecorder.ondataavailable = (event) => {
-        chunks.push(event.data);
+      mediaRecorder.ondataavailable = async (event) => {
+        if (event.data && event.data.size > 0) {
+          chunks.push(event.data);
+          // Stream small chunks to backend for near-real-time transcription (optional future)
+          // For now, create an object URL and show rolling time only.
+        }
       };
 
       mediaRecorder.onstop = () => {
@@ -61,6 +70,21 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
         setRecordingTime(prev => prev + 1);
       }, 1000);
 
+      // Start browser STT immediately and push final chunks live
+      try {
+        if (onStartLive) {
+          const sender = onStartLive();
+          if (typeof sender === 'function') liveSendRef.current = sender;
+        }
+        stopSTTRef.current = startBrowserTranscriber((txt) => {
+          onTranscription(txt);
+          liveSendRef.current?.(txt);
+        });
+      } catch (e) {
+        // Fallback: will only do post-stop transcription
+        console.warn('Live STT not available:', e);
+      }
+
       toast.success('Recording started');
     } catch (error) {
       toast.error('Microphone access denied');
@@ -75,6 +99,9 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      // Stop live STT + WS
+      if (stopSTTRef.current) { try { stopSTTRef.current(); } catch {} stopSTTRef.current = null; }
+      if (onStopLive) onStopLive();
       toast.success('Recording stopped');
     }
   };
@@ -188,20 +215,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
               <span>{isPlaying ? 'Pause' : 'Play'}</span>
             </motion.button>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={transcribeRecording}
-              disabled={isTranscribing}
-              className="flex items-center space-x-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              {isTranscribing ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              ) : (
-                <Mic className="h-4 w-4" />
-              )}
-              <span>{isTranscribing ? 'Transcribing...' : 'Transcribe'}</span>
-            </motion.button>
+            {/* Removed standalone Transcribe button - live mode handles this */}
 
             {onVoiceInference && (
               <motion.button

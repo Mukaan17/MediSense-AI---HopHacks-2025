@@ -17,8 +17,12 @@ import DifferentialDiagnosis from './DifferentialDiagnosis';
 import RedFlagAlerts from './RedFlagAlerts';
 import ClinicalReportView from './ClinicalReportView';
 import EHRIntegration from './EHRIntegration';
+import LiveCoach from './LiveCoach';
 import KnowledgeBaseToggle from './KnowledgeBaseToggle';
 import VoiceRecorder from './VoiceRecorder';
+import { startBrowserTranscriber } from '../lib/transcriber';
+import { API_CONFIG } from '../config/api';
+import { connectCaseWS } from '../lib/wsClient';
 
 const ClinicalInterface: React.FC = () => {
   // State management
@@ -35,6 +39,11 @@ const ClinicalInterface: React.FC = () => {
   });
   const [ehrPatients, setEhrPatients] = useState<any[]>([]);
   const [selectedEhrPatient, setSelectedEhrPatient] = useState<string>('');
+  const [activeCaseId, setActiveCaseId] = useState<string>('');
+  const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
+  const sttStopRef = useRef<(() => void) | null>(null);
+  const wsRef = useRef<ReturnType<typeof connectCaseWS> | null>(null);
+  const pendingUtterancesRef = useRef<string[]>([]);
 
   // Refs
   const conversationInputRef = useRef<HTMLTextAreaElement>(null);
@@ -371,19 +380,58 @@ const ClinicalInterface: React.FC = () => {
                       value={selectedEhrPatient}
                       onChange={(e) => {
                         setSelectedEhrPatient(e.target.value);
-                        if (e.target.value) {
-                          const selectedPatient = ehrPatients.find(p => p.patient_id === e.target.value);
-                          if (selectedPatient) {
-                            setPatient({
-                              id: selectedPatient.patient_id,
-                              age: selectedPatient.demographics?.age,
-                              gender: selectedPatient.demographics?.sex,
-                              allergies: selectedPatient.allergies || [],
-                              medications: selectedPatient.meds || [],
-                              pastMedicalHistory: selectedPatient.pmh || []
-                            });
-                          }
+                        if (!e.target.value) return;
+                        const selectedPatient = ehrPatients.find(p => p.patient_id === e.target.value);
+                        if (!selectedPatient) return;
+
+                        const demo = selectedPatient.demographics || {};
+                        const vs = selectedPatient.vital_signs || {};
+
+                        // Derive weight in lbs
+                        let weight: number | undefined = undefined;
+                        if (typeof vs.weight_lbs === 'number') {
+                          weight = vs.weight_lbs;
+                        } else if (typeof vs.weight_kg === 'number') {
+                          weight = Math.round(vs.weight_kg * 2.20462 * 10) / 10;
                         }
+
+                        // Derive height in ft'in format (string)
+                        const toFeetInches = (cm: number): string => {
+                          const totalInches = Math.round(cm / 2.54);
+                          const feet = Math.floor(totalInches / 12);
+                          const inches = totalInches % 12;
+                          return `${feet}'${inches}`;
+                        };
+                        let height: number | string | undefined = undefined;
+                        if (typeof vs.height_cm === 'number') {
+                          height = toFeetInches(vs.height_cm);
+                        } else if (typeof vs.height_in === 'number') {
+                          const feet = Math.floor(vs.height_in / 12);
+                          const inches = Math.round(vs.height_in % 12);
+                          height = `${feet}'${inches}`;
+                        } else if (typeof vs.height_ft_in === 'string') {
+                          height = vs.height_ft_in; // e.g., 5'8
+                        }
+
+                        // Derive pregnancy flag best-effort
+                        let gender = (demo.sex || '').toLowerCase();
+                        if (gender === 'm') gender = 'male';
+                        if (gender === 'f') gender = 'female';
+                        const pmh: string[] = selectedPatient.pmh || [];
+                        const pregnant = gender === 'female' && pmh.some((s: string) => s?.toLowerCase().includes('pregnan'));
+
+                        setPatient({
+                          id: selectedPatient.patient_id,
+                          age: demo.age,
+                          gender: (gender as any),
+                          pregnant: Boolean(pregnant),
+                          weight,
+                          height,
+                          bp: typeof vs.bp === 'string' ? vs.bp : undefined,
+                          allergies: selectedPatient.allergies || [],
+                          medications: selectedPatient.meds || [],
+                          pastMedicalHistory: pmh
+                        });
                       }}
                       className="input-field"
                     >
@@ -418,11 +466,84 @@ const ClinicalInterface: React.FC = () => {
                       value={conversation.join('\n')}
                       onChange={(e) => setConversation(e.target.value.split('\n').filter(line => line.trim()))}
                     />
+                    <div className="p-3 bg-gray-50 border rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-sm font-medium text-gray-700">Live transcript</div>
+                        {sttStopRef.current ? (
+                          <button
+                            className="text-xs text-red-600 hover:underline"
+                            onClick={() => { sttStopRef.current?.(); sttStopRef.current = null; }}
+                          >Stop</button>
+                        ) : (
+                          <button
+                            className="text-xs text-medical-primary hover:underline"
+                            onClick={() => {
+                              try {
+                                sttStopRef.current = startBrowserTranscriber((txt) => {
+                                  setLiveTranscript(prev => [...prev, txt]);
+                                  setConversation(prev => [...prev, txt]);
+                                });
+                              } catch (e) {
+                                toast.error('Live STT not supported in this browser');
+                              }
+                            }}
+                          >Start live STT</button>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-700 space-y-1 max-h-32 overflow-auto">
+                        {liveTranscript.slice(-10).map((line, idx) => (
+                          <div key={idx}>• {line}</div>
+                        ))}
+                      </div>
+                    </div>
                     
                     <div className="flex space-x-2">
                       <VoiceRecorder 
                         onTranscription={handleVoiceTranscription}
                         onVoiceInference={handleVoiceInference}
+                        onStartLive={() => {
+                          // Return a sender that queues until WS is ready
+                          const sender = (txt: string) => {
+                            if (wsRef.current) wsRef.current.sendUtterance(txt);
+                            else pendingUtterancesRef.current.push(txt);
+                          };
+
+                          const ensureCaseAndConnect = async () => {
+                            let id = activeCaseId;
+                            try {
+                              if (!id) {
+                                if (!uploadedImage) {
+                                  toast.error('Upload an X-ray to start a live case');
+                                  return;
+                                }
+                                const fd = new FormData();
+                                fd.append('file', uploadedImage);
+                                const res = await fetch(`${API_CONFIG.BASE_URL}/api/case?live=1`, { method: 'POST', body: fd });
+                                if (!res.ok) throw new Error('Failed to create case');
+                                const data = await res.json();
+                                id = data?.case_id;
+                                if (id) setActiveCaseId(id);
+                              }
+                              if (!id) return;
+                              wsRef.current = connectCaseWS(id, () => {});
+                              // Flush any queued utterances
+                              if (pendingUtterancesRef.current.length) {
+                                pendingUtterancesRef.current.forEach(t => wsRef.current?.sendUtterance(t));
+                                pendingUtterancesRef.current = [];
+                              }
+                            } catch (e) {
+                              console.error(e);
+                              toast.error('Could not start live session');
+                            }
+                          };
+                          void ensureCaseAndConnect();
+                          return sender;
+                        }}
+                        onStopLive={() => {
+                          wsRef.current?.close();
+                          wsRef.current = null;
+                          pendingUtterancesRef.current = [];
+                        }}
                       />
                       <button
                         onClick={() => {
@@ -485,6 +606,11 @@ const ClinicalInterface: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Live Coach bubble (shows when a case is active) */}
+              {activeCaseId && (
+                <LiveCoach caseId={activeCaseId} />
+              )}
 
               {/* Quick Entry */}
               <div className="card">

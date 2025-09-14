@@ -11,6 +11,12 @@ def _logit(p: float, eps=1e-6):
 
 def fuse(image_findings: List[Dict[str, Any]], text_findings: List[Dict[str, Any]],
          w_img: float = 0.7, w_txt: float = 0.5, bias: float = 0.0, topk: int = 10):
+    def _get_prob(d):
+        p = d.get("prob")
+        if p is None:
+            p = d.get("score")
+        return p
+
     txt_logits: Dict[str, float] = {}
     for tf in text_findings:
         lbl = tf["label"]
@@ -18,10 +24,11 @@ def fuse(image_findings: List[Dict[str, Any]], text_findings: List[Dict[str, Any
 
     issue_logits: Dict[str, float] = {}
     for f in image_findings:
-        issue = IMG2ISSUE.get(f["label"]) or f.get("label")
-        if not issue:
+        issue = IMG2ISSUE.get(f.get("label")) or f.get("label")
+        p = _get_prob(f)
+        if not issue or p is None:
             continue
-        issue_logits[issue] = issue_logits.get(issue, 0.0) + w_img * _logit(f["score"])
+        issue_logits[issue] = issue_logits.get(issue, 0.0) + w_img * _logit(float(p))
 
     for lbl, tlog in txt_logits.items():
         issue_logits[lbl] = issue_logits.get(lbl, 0.0) + w_txt * tlog

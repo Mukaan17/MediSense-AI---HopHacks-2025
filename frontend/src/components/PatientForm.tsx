@@ -92,9 +92,28 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
     return { label: 'Adult', color: 'text-green-600 bg-green-50' };
   };
 
-  const getBMICategory = (weight?: number, height?: number) => {
+  const convertHeightToMeters = (height: number | string): number | null => {
+    if (typeof height === 'number') {
+      // Height is in cm, convert to meters
+      return height / 100;
+    } else if (typeof height === 'string') {
+      // Height is in ft'in" format, convert to meters
+      const match = height.match(/^(\d+)'(\d+)(?:"|'')?$/);
+      if (match) {
+        const feet = parseInt(match[1]);
+        const inches = parseInt(match[2]);
+        const totalInches = feet * 12 + inches;
+        return totalInches * 0.0254; // Convert inches to meters
+      }
+    }
+    return null;
+  };
+
+  const getBMICategory = (weight?: number, height?: number | string) => {
     if (!weight || !height) return null;
-    const heightInMeters = height / 100;
+    const heightInMeters = convertHeightToMeters(height);
+    if (!heightInMeters) return null;
+    
     const bmi = weight / (heightInMeters * heightInMeters);
     
     if (bmi < 18.5) return { label: 'Underweight', color: 'text-blue-600 bg-blue-50' };
@@ -227,7 +246,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <Weight className="h-4 w-4 inline mr-1" />
-                      Weight (kg)
+                      Weight (lbs)
                     </label>
                     <input
                       type="number"
@@ -243,18 +262,34 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <Ruler className="h-4 w-4 inline mr-1" />
-                      Height (cm)
+                      Height (ft'in")
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       value={patient.height || ''}
-                      onChange={(e) => updatePatient({ height: parseFloat(e.target.value) || undefined })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Parse feet and inches format (e.g., "5'8" or "5'8\"")
+                        const match = value.match(/^(\d+)'(\d+)(?:"|'')?$/);
+                        if (match) {
+                          const feet = parseInt(match[1]);
+                          const inches = parseInt(match[2]);
+                          if (feet >= 0 && inches >= 0 && inches < 12) {
+                            updatePatient({ height: `${feet}'${inches}` });
+                          }
+                        } else if (value === '') {
+                          updatePatient({ height: undefined });
+                        } else {
+                          // Keep the current value for partial input
+                          updatePatient({ height: value });
+                        }
+                      }}
                       className="input-field"
-                      placeholder="Enter height"
-                      min="0"
+                      placeholder="e.g., 5'8"
                       step="0.1"
                     />
                   </div>
+
                 </div>
               </div>
             </motion.div>
