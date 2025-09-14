@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, Square, Play, Pause, Trash2, Brain } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { clinicalAPI } from '../services/api';
 import { startBrowserTranscriber } from '../lib/transcriber';
 
 interface VoiceRecorderProps {
@@ -20,7 +19,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcript, setTranscript] = useState('');
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const stopSTTRef = useRef<(() => void) | null>(null);
   const liveSendRef = useRef<((text: string) => void) | null>(null);
 
@@ -129,45 +127,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
     toast.success('Recording deleted');
   };
 
-  const transcribeRecording = async () => {
-    if (!audioBlob) return;
-
-    setIsTranscribing(true);
-    try {
-      // Convert blob to File for API call
-      const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
-      
-      const response = await clinicalAPI.voiceTranscribe(audioFile, 'Clinical voice note');
-      
-      if (response.success && response.data) {
-        // Extract transcript from the response
-        let transcriptText = '';
-        
-        if (response.data.conversation && response.data.conversation.length > 0) {
-          // Extract all utterances from the conversation
-          const utterances = response.data.conversation.flatMap((entry: any) => 
-            entry.utterances ? entry.utterances.map((u: any) => u.text) : []
-          );
-          transcriptText = utterances.join(' ');
-        } else if (response.data.transcript) {
-          transcriptText = response.data.transcript;
-        } else {
-          transcriptText = 'Transcription completed but no text extracted';
-        }
-        
-        setTranscript(transcriptText);
-        onTranscription(transcriptText);
-        toast.success('Voice note transcribed successfully');
-      } else {
-        throw new Error(response.error || 'Transcription failed');
-      }
-    } catch (error: any) {
-      console.error('Transcription error:', error);
-      toast.error(`Transcription failed: ${error.message || 'Unknown error'}`);
-    } finally {
-      setIsTranscribing(false);
-    }
-  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

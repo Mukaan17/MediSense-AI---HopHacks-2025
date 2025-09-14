@@ -178,3 +178,19 @@ export interface EHRIntegrationProps {
   onExport: (report: ClinicalReport) => void;
   className?: string;
 }
+
+// Conversation Chat Types
+export interface ChatMessage {
+  id: string;
+  speaker: 'doctor' | 'patient';
+  text: string;
+  timestamp: Date;
+  isTranscribing?: boolean;
+  confidence?: number;
+}
+
+export interface ConversationChatProps {
+  caseId: string;
+  className?: string;
+  onMinimize?: () => void;
+}

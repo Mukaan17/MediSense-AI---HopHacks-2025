@@ -20,6 +20,7 @@ import EHRIntegration from './EHRIntegration';
 import LiveCoach from './LiveCoach';
 import KnowledgeBaseToggle from './KnowledgeBaseToggle';
 import VoiceRecorder from './VoiceRecorder';
+import ConversationChat from './ConversationChat';
 import { API_CONFIG } from '../config/api';
 import { connectCaseWS, disconnectCaseWS, sendUtterance, HUD } from '../lib/wsClient';
 
@@ -529,6 +530,13 @@ const ClinicalInterface: React.FC = () => {
                       onChange={(e) => setConversation(e.target.value.split('\n').filter(line => line.trim()))}
                     />
                     
+                    {/* Chat Interface */}
+                    <div className="mt-4">
+                      <div className="shadow-lg rounded-2xl border border-gray-200 bg-white w-full h-[400px] overflow-hidden">
+                        <ConversationChat caseId={activeCaseId || 'no-case'} hud={liveHUD} className="h-full" />
+                      </div>
+                    </div>
+                    
                     {/* RAG Analysis Section */}
                     {liveHUD && (
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -685,46 +693,69 @@ const ClinicalInterface: React.FC = () => {
                 </div>
 
                 {/* Image Upload */}
-                <div className="card">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <div className="card h-full flex flex-col">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex-shrink-0">
                     Medical Imaging
                   </h3>
-                  <div
-                    {...getRootProps()}
-                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                      isDragActive 
-                        ? 'border-medical-primary bg-medical-primary/5' 
-                        : 'border-gray-300 hover:border-medical-primary'
-                    }`}
-                  >
-                    <input {...getInputProps()} />
-                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <div className="flex-1 flex flex-col min-h-0">
                     {uploadedImage ? (
-                      <div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {uploadedImage.name}
-                        </p>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setUploadedImage(null);
-                          }}
-                          className="text-sm text-red-600 hover:text-red-800"
-                        >
-                          Remove
-                        </button>
+                      <div className="flex-1 flex flex-col min-h-0">
+                        {/* Image Preview */}
+                        <div className="flex-1 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 p-4 mb-4 min-h-0">
+                          <img
+                            src={URL.createObjectURL(uploadedImage)}
+                            alt="Uploaded medical file"
+                            className="w-full h-full object-contain rounded-lg"
+                          />
+                        </div>
+                        
+                        {/* File Info and Actions */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex-shrink-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <FileText className="h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-900">Uploaded Image</span>
+                            </div>
+                            <button
+                              onClick={() => setUploadedImage(null)}
+                              className="text-sm text-red-600 hover:text-red-800 font-medium"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <p className="text-sm text-blue-700 mb-1">
+                            <strong>File:</strong> {uploadedImage.name}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            <strong>Size:</strong> {(uploadedImage.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
                       </div>
                     ) : (
-                      <div>
-                        <p className="text-sm text-gray-600">
-                          {isDragActive 
-                            ? 'Drop the image here...' 
-                            : 'Drag & drop an image, or click to select'
-                          }
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Supports JPEG, PNG, GIF, BMP, TIFF
-                        </p>
+                      <div
+                        {...getRootProps()}
+                        className={`flex-1 border-2 border-dashed rounded-lg p-2 text-center cursor-pointer transition-colors flex flex-col items-center justify-center min-h-0 ${
+                          isDragActive 
+                            ? 'border-medical-primary bg-medical-primary/5' 
+                            : 'border-gray-300 hover:border-medical-primary hover:bg-gray-50'
+                        }`}
+                      >
+                        <input {...getInputProps()} />
+                        <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-gray-700">
+                            {isDragActive 
+                              ? 'Drop the image here...' 
+                              : 'Upload Medical Image'
+                            }
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Drag & drop an image, or click to select
+                          </p>
+                          <p className="text-xs text-gray-400 mt-2">
+                            Supports JPEG, PNG, GIF, BMP, TIFF
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
