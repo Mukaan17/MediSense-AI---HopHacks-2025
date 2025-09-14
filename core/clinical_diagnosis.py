@@ -106,18 +106,41 @@ def generate_structured_differential_diagnosis(
         result = json.loads(resp)
     except json.JSONDecodeError as e:
         print(f"⚠️  JSON parsing error: {e}")
-        print(f"⚠️  Raw response: {resp[:200]}...")
-        # Try to extract JSON from the response
-        i, j = resp.find("{"), resp.rfind("}")
-        if i != -1 and j != -1 and j > i:
-            try:
-                result = json.loads(resp[i:j+1])
-            except json.JSONDecodeError:
-                print("⚠️  Failed to extract valid JSON, using fallback")
+        print(f"⚠️  Raw response (first 200 chars): {resp[:200]}...")
+        print(f"⚠️  Response length: {len(resp)} chars")
+        
+        # Try to extract JSON from markdown code blocks first
+        try:
+            # Remove markdown code block markers
+            cleaned_resp = resp.strip()
+            if cleaned_resp.startswith("```json"):
+                cleaned_resp = cleaned_resp[7:]  # Remove ```json
+            if cleaned_resp.startswith("```"):
+                cleaned_resp = cleaned_resp[3:]   # Remove ```
+            if cleaned_resp.endswith("```"):
+                cleaned_resp = cleaned_resp[:-3]  # Remove trailing ```
+            
+            # Try to find JSON object boundaries
+            start_idx = cleaned_resp.find("{")
+            end_idx = cleaned_resp.rfind("}")
+            
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                json_str = cleaned_resp[start_idx:end_idx+1]
+                result = json.loads(json_str)
+            else:
+                raise json.JSONDecodeError("No JSON found in cleaned response", cleaned_resp, 0)
+        except json.JSONDecodeError:
+            # Fallback to original method
+            i, j = resp.find("{"), resp.rfind("}")
+            if i != -1 and j != -1 and j > i:
+                try:
+                    result = json.loads(resp[i:j+1])
+                except json.JSONDecodeError:
+                    print("⚠️  Failed to extract valid JSON, using fallback")
+                    result = fallback
+            else:
+                print("⚠️  No JSON found in response, using fallback")
                 result = fallback
-        else:
-            print("⚠️  No JSON found in response, using fallback")
-            result = fallback
     
     # Validate and clean the results
     result = _validate_and_clean_diagnosis(result)

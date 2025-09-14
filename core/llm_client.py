@@ -26,9 +26,9 @@ def get_llm(model: str = None, temperature: float = None):
             _llm = ChatGroq(
                 model=model_name, 
                 temperature=temp,
-                max_tokens=1024,  # Reduce response length to avoid JSON parsing issues
-                timeout=20.0,     # Reduce timeout
-                max_retries=1     # Reduce retries
+                max_tokens=2048,  # Increase for structured diagnosis responses
+                timeout=30.0,     # Increase timeout for longer responses
+                max_retries=2     # Increase retries
             )
         except Exception as e:
             print(f"Error initializing LLM: {e}")
@@ -36,9 +36,9 @@ def get_llm(model: str = None, temperature: float = None):
             _llm = ChatGroq(
                 model="llama-3.1-8b-instant",  # Use smaller, faster model
                 temperature=temp,
-                max_tokens=512,
-                timeout=15.0,
-                max_retries=1
+                max_tokens=1024,  # Increase fallback tokens too
+                timeout=20.0,
+                max_retries=2
             )
     return _llm
 

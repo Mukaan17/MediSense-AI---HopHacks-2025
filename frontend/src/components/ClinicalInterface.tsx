@@ -249,8 +249,8 @@ const ClinicalInterface: React.FC = () => {
       }
       
       // Process differential diagnosis from structured response
-      if (structured.differential_diagnosis) {
-        report.differentialDiagnosis = structured.differential_diagnosis.map((diag: any) => ({
+      if (structured.differential_diagnosis && structured.differential_diagnosis.top_3_diagnoses) {
+        report.differentialDiagnosis = structured.differential_diagnosis.top_3_diagnoses.map((diag: any) => ({
           condition: diag.condition || diag.diagnosis,
           probability: diag.probability || diag.confidence || 0.0,
           confidence: diag.confidence || diag.probability || 0.0,
@@ -267,8 +267,8 @@ const ClinicalInterface: React.FC = () => {
       } else {
         // Fallback: extract recommendations from next_steps in diagnoses
         const nextStepsRecommendations: string[] = [];
-        if (structured.differential_diagnosis) {
-          structured.differential_diagnosis.forEach((diag: any) => {
+        if (structured.differential_diagnosis && structured.differential_diagnosis.top_3_diagnoses) {
+          structured.differential_diagnosis.top_3_diagnoses.forEach((diag: any) => {
             if (diag.next_steps && Array.isArray(diag.next_steps)) {
               nextStepsRecommendations.push(...diag.next_steps);
             }
@@ -844,12 +844,12 @@ const ClinicalInterface: React.FC = () => {
               </div>
 
               {/* Red Flag Alerts */}
-              {clinicalReport.redFlagAlerts.length > 0 && (
+              {clinicalReport.redFlagAlerts && clinicalReport.redFlagAlerts.length > 0 && (
                 <RedFlagAlerts alerts={clinicalReport.redFlagAlerts} />
               )}
 
               {/* Differential Diagnosis */}
-              <DifferentialDiagnosis diagnoses={clinicalReport.differentialDiagnosis} />
+              <DifferentialDiagnosis diagnoses={clinicalReport.differentialDiagnosis || []} />
 
               {/* XAI Explanation */}
               <XAIExplanation 
@@ -902,7 +902,13 @@ const ClinicalInterface: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <ClinicalReportView report={clinicalReport} />
+              {clinicalReport && typeof clinicalReport === 'object' ? (
+                <ClinicalReportView report={clinicalReport} />
+              ) : (
+                <div className="p-6 text-center">
+                  <div className="text-gray-500">Report data is not available or corrupted.</div>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

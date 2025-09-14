@@ -127,13 +127,34 @@ def generate_diagnostic_suggestions(
         try:
             data = json.loads(response)
         except json.JSONDecodeError:
-            # Try to extract JSON from response
-            start = response.find('{')
-            end = response.rfind('}') + 1
-            if start >= 0 and end > start:
-                data = json.loads(response[start:end])
-            else:
-                data = _generate_fallback_suggestions(state)
+            # Try to extract JSON from markdown code blocks first
+            try:
+                # Remove markdown code block markers
+                cleaned_resp = response.strip()
+                if cleaned_resp.startswith("```json"):
+                    cleaned_resp = cleaned_resp[7:]  # Remove ```json
+                if cleaned_resp.startswith("```"):
+                    cleaned_resp = cleaned_resp[3:]   # Remove ```
+                if cleaned_resp.endswith("```"):
+                    cleaned_resp = cleaned_resp[:-3]  # Remove trailing ```
+                
+                # Try to find JSON object boundaries
+                start_idx = cleaned_resp.find("{")
+                end_idx = cleaned_resp.rfind("}")
+                
+                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                    json_str = cleaned_resp[start_idx:end_idx+1]
+                    data = json.loads(json_str)
+                else:
+                    raise json.JSONDecodeError("No JSON found in cleaned response", cleaned_resp, 0)
+            except json.JSONDecodeError:
+                # Fallback to original method
+                start = response.find('{')
+                end = response.rfind('}') + 1
+                if start >= 0 and end > start:
+                    data = json.loads(response[start:end])
+                else:
+                    data = _generate_fallback_suggestions(state)
         
         # Validate and clean the response
         return _validate_and_clean_suggestions(data, state)

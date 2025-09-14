@@ -24,6 +24,15 @@ interface ClinicalReportViewProps {
 const ClinicalReportView: React.FC<ClinicalReportViewProps> = ({ report, className = '' }) => {
   const [activeTab, setActiveTab] = useState<'summary' | 'diagnosis' | 'recommendations' | 'education'>('summary');
 
+  // Safety check for malformed report data
+  if (!report || typeof report !== 'object') {
+    return (
+      <div className={`p-6 text-center ${className}`}>
+        <div className="text-red-500">Error: Invalid report data</div>
+      </div>
+    );
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -200,20 +209,20 @@ const ClinicalReportView: React.FC<ClinicalReportViewProps> = ({ report, classNa
               <div key={index} className="card">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {index + 1}. {diagnosis.condition.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {index + 1}. {diagnosis.condition ? diagnosis.condition.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown Condition'}
                   </h3>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-500">
-                      {Math.round(diagnosis.probability * 100)}% probability
+                      {Math.round((diagnosis.probability || 0) * 100)}% probability
                     </span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${getConfidenceColor(diagnosis.confidence)}`}>
-                      {Math.round(diagnosis.confidence * 100)}% confidence
+                    <span className={`text-xs px-2 py-1 rounded-full ${getConfidenceColor(diagnosis.confidence || 0)}`}>
+                      {Math.round((diagnosis.confidence || 0) * 100)}% confidence
                     </span>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
-                  <p className="text-gray-700">{diagnosis.reasoning}</p>
+                  <p className="text-gray-700">{diagnosis.reasoning || 'No reasoning provided.'}</p>
                   
                   {diagnosis.riskFactors && diagnosis.riskFactors.length > 0 && (
                     <div>

@@ -71,9 +71,30 @@ def propose_questions_llm(state: Dict[str, Any], max_questions: int = 4) -> List
     try:
         data = json.loads(out)
     except Exception:
-        # brace-recovery fallback
-        start, end = out.find("{"), out.rfind("}")
-        data = json.loads(out[start:end+1]) if start >= 0 and end > start else {"questions":[]}
+        # Try to extract JSON from markdown code blocks first
+        try:
+            # Remove markdown code block markers
+            cleaned_resp = out.strip()
+            if cleaned_resp.startswith("```json"):
+                cleaned_resp = cleaned_resp[7:]  # Remove ```json
+            if cleaned_resp.startswith("```"):
+                cleaned_resp = cleaned_resp[3:]   # Remove ```
+            if cleaned_resp.endswith("```"):
+                cleaned_resp = cleaned_resp[:-3]  # Remove trailing ```
+            
+            # Try to find JSON object boundaries
+            start_idx = cleaned_resp.find("{")
+            end_idx = cleaned_resp.rfind("}")
+            
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                json_str = cleaned_resp[start_idx:end_idx+1]
+                data = json.loads(json_str)
+            else:
+                raise json.JSONDecodeError("No JSON found in cleaned response", cleaned_resp, 0)
+        except Exception:
+            # brace-recovery fallback
+            start, end = out.find("{"), out.rfind("}")
+            data = json.loads(out[start:end+1]) if start >= 0 and end > start else {"questions":[]}
 
     qs = data.get("questions", [])[:max_questions]
     # light guardrails

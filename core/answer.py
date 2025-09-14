@@ -37,7 +37,8 @@ def answerer_generate(extraction: Dict[str, Any], retrieved_context: str) -> Dic
         answer = json.loads(resp)
     except Exception as e:
         print(f"JSON parsing error in answer generation: {e}")
-        print(f"Raw response: {resp[:200]}...")
+        print(f"Raw response (first 200 chars): {resp[:200]}...")
+        print(f"Response length: {len(resp)} chars")
         
         # Try to extract JSON from markdown code blocks
         try:

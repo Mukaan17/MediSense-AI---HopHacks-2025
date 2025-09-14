@@ -28,18 +28,42 @@ def extractor_generate(dialogue_text: str) -> Dict[str, Any]:
         data = json.loads(resp)
     except Exception as e:
         print(f"JSON parsing error in extraction: {e}")
-        print(f"Response: {resp[:200]}...")
-        i, j = resp.find("{"), resp.rfind("}")
+        print(f"Response (first 200 chars): {resp[:200]}...")
+        print(f"Response length: {len(resp)} chars")
+        
+        # Try to extract JSON from markdown code blocks first
         try:
-            data = json.loads(resp[i:j+1]) if i != -1 and j != -1 and j > i else {
-                "extracted": {"chief_complaint": "", "symptoms": [], "duration": None, "possible_pmh": [], "possible_meds": []},
-                "retrieval_query": dialogue_text[:200]
-            }
+            # Remove markdown code block markers
+            cleaned_resp = resp.strip()
+            if cleaned_resp.startswith("```json"):
+                cleaned_resp = cleaned_resp[7:]  # Remove ```json
+            if cleaned_resp.startswith("```"):
+                cleaned_resp = cleaned_resp[3:]   # Remove ```
+            if cleaned_resp.endswith("```"):
+                cleaned_resp = cleaned_resp[:-3]  # Remove trailing ```
+            
+            # Try to find JSON object boundaries
+            start_idx = cleaned_resp.find("{")
+            end_idx = cleaned_resp.rfind("}")
+            
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                json_str = cleaned_resp[start_idx:end_idx+1]
+                data = json.loads(json_str)
+            else:
+                raise json.JSONDecodeError("No JSON found in cleaned response", cleaned_resp, 0)
         except Exception:
-            data = {
-                "extracted": {"chief_complaint": "", "symptoms": [], "duration": None, "possible_pmh": [], "possible_meds": []},
-                "retrieval_query": dialogue_text[:200]
-            }
+            # Fallback to original method
+            i, j = resp.find("{"), resp.rfind("}")
+            try:
+                data = json.loads(resp[i:j+1]) if i != -1 and j != -1 and j > i else {
+                    "extracted": {"chief_complaint": "", "symptoms": [], "duration": None, "possible_pmh": [], "possible_meds": []},
+                    "retrieval_query": dialogue_text[:200]
+                }
+            except Exception:
+                data = {
+                    "extracted": {"chief_complaint": "", "symptoms": [], "duration": None, "possible_pmh": [], "possible_meds": []},
+                    "retrieval_query": dialogue_text[:200]
+                }
 
     # Ensure numeric vitals appear verbatim in symptoms
     symptoms = data.get("extracted", {}).get("symptoms", []) or []
