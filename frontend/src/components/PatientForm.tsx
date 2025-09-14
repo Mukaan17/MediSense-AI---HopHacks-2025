@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
-  Weight, 
+  Scale, 
   Ruler, 
   Heart, 
   AlertTriangle,
@@ -251,7 +251,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Weight className="h-4 w-4 inline mr-1" />
+                      <Scale className="h-4 w-4 inline mr-1" />
                       Weight (lbs)
                     </label>
                     <input

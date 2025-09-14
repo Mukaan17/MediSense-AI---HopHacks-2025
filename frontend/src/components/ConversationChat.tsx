@@ -10,17 +10,37 @@ interface ConversationChatPropsWithHUD extends ConversationChatProps {
 
 const ConversationChat: React.FC<ConversationChatPropsWithHUD> = ({ caseId, hud, onMinimize, className = '' }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      // Find the scrollable container (the messages area)
+      const messagesContainer = messagesEndRef.current.closest('.overflow-y-auto');
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      } else {
+        // Fallback to scrollIntoView with more specific options
+        messagesEndRef.current.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end',
+          inline: 'nearest'
+        });
+      }
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Only scroll if there are messages and component is initialized
+    if (messages.length > 0 && isInitialized) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
+  }, [messages, isInitialized]);
 
   // Initialize with iOS call screening style messages
   useEffect(() => {
@@ -33,6 +53,10 @@ const ConversationChat: React.FC<ConversationChatPropsWithHUD> = ({ caseId, hud,
           timestamp: new Date()
         }
       ]);
+      // Mark as initialized after setting initial message
+      setTimeout(() => {
+        setIsInitialized(true);
+      }, 500);
     }
   }, [messages.length]);
 
