@@ -8,7 +8,9 @@
       "hr": 78,
       "rr": 18,
       "temp_f": 98.4,
-      "spo2_pct": 96
+      "spo2_pct": 96,
+      "weight_lbs": 185,
+      "height_ft_in": "5'10\""
     },
     "pmh": [
       "hypertension",
@@ -40,7 +42,9 @@
       "hr": 82,
       "rr": 22,
       "temp_f": 99.5,
-      "spo2_pct": 92
+      "spo2_pct": 92,
+      "weight_lbs": 165,
+      "height_ft_in": "5'6\""
     },
     "pmh": [
       "heart failure",
@@ -72,7 +76,9 @@
       "hr": 96,
       "rr": 26,
       "temp_f": 98.6,
-      "spo2_pct": 94
+      "spo2_pct": 94,
+      "weight_lbs": 175,
+      "height_ft_in": "6'0\""
     },
     "pmh": [],
     "meds": [],
@@ -99,7 +105,9 @@
       "hr": 88,
       "rr": 20,
       "temp_f": 99.1,
-      "spo2_pct": 95
+      "spo2_pct": 95,
+      "weight_lbs": 140,
+      "height_ft_in": "5'4\""
     },
     "pmh": [
       "recent abdominal surgery"

@@ -8,7 +8,11 @@ import {
   AlertTriangle,
   Plus,
   X,
-  ChevronDown
+  ChevronDown,
+  Activity,
+  Thermometer,
+  Wind,
+  Droplets
 } from 'lucide-react';
 import { Patient } from '../types';
 
@@ -92,18 +96,18 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
     return { label: 'Adult', color: 'text-green-600 bg-green-50' };
   };
 
-  const convertHeightToMeters = (height: number | string): number | null => {
+  const convertHeightToInches = (height: number | string): number | null => {
     if (typeof height === 'number') {
-      // Height is in cm, convert to meters
-      return height / 100;
+      // Height is in cm, convert to inches (legacy support)
+      return height / 2.54;
     } else if (typeof height === 'string') {
-      // Height is in ft'in" format, convert to meters
+      // Height is in ft'in" format, convert to inches
       const match = height.match(/^(\d+)'(\d+)(?:"|'')?$/);
       if (match) {
         const feet = parseInt(match[1]);
         const inches = parseInt(match[2]);
         const totalInches = feet * 12 + inches;
-        return totalInches * 0.0254; // Convert inches to meters
+        return totalInches;
       }
     }
     return null;
@@ -111,10 +115,11 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
 
   const getBMICategory = (weight?: number, height?: number | string) => {
     if (!weight || !height) return null;
-    const heightInMeters = convertHeightToMeters(height);
-    if (!heightInMeters) return null;
+    const heightInInches = convertHeightToInches(height);
+    if (!heightInInches) return null;
     
-    const bmi = weight / (heightInMeters * heightInMeters);
+    // BMI formula for imperial units: (weight in pounds / (height in inches)²) × 703
+    const bmi = (weight / (heightInInches * heightInInches)) * 703;
     
     if (bmi < 18.5) return { label: 'Underweight', color: 'text-blue-600 bg-blue-50' };
     if (bmi < 25) return { label: 'Normal', color: 'text-green-600 bg-green-50' };
@@ -219,10 +224,10 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
         >
           <div className="flex items-center space-x-2">
             <Heart className="h-4 w-4 text-medical-primary" />
-            <span className="font-medium text-gray-900">Vital Signs</span>
+            <span className="font-medium text-gray-900">Vital Signs & Measurements</span>
             {bmiCategory && (
               <span className={`text-xs px-2 py-1 rounded-full ${bmiCategory.color}`}>
-                BMI: {bmiCategory.label}
+                {bmiCategory.label}
               </span>
             )}
           </div>
@@ -242,6 +247,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
               className="overflow-hidden"
             >
               <div className="px-4 pb-4 border-t border-gray-100">
+                {/* Basic Measurements */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -275,7 +281,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
                           const feet = parseInt(match[1]);
                           const inches = parseInt(match[2]);
                           if (feet >= 0 && inches >= 0 && inches < 12) {
-                            updatePatient({ height: `${feet}'${inches}` });
+                            updatePatient({ height: `${feet}'${inches}"` });
                           }
                         } else if (value === '') {
                           updatePatient({ height: undefined });
@@ -285,12 +291,133 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
                         }
                       }}
                       className="input-field"
-                      placeholder="e.g., 5'8"
+                      placeholder="e.g., 5'8&quot;"
+                      step="0.1"
+                    />
+                    <div className="text-xs text-gray-500 mt-1">
+                      Format: feet'inches" (e.g., 5'8" for 5 feet 8 inches)
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vital Signs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Heart className="h-4 w-4 inline mr-1" />
+                      Blood Pressure
+                    </label>
+                    <input
+                      type="text"
+                      value={patient.bp || ''}
+                      onChange={(e) => updatePatient({ bp: e.target.value })}
+                      className="input-field"
+                      placeholder="e.g., 120/80"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Activity className="h-4 w-4 inline mr-1" />
+                      Heart Rate (BPM)
+                    </label>
+                    <input
+                      type="number"
+                      value={patient.heartRate || ''}
+                      onChange={(e) => updatePatient({ heartRate: parseInt(e.target.value) || undefined })}
+                      className="input-field"
+                      placeholder="Enter heart rate"
+                      min="0"
+                      max="300"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Wind className="h-4 w-4 inline mr-1" />
+                      Respiratory Rate
+                    </label>
+                    <input
+                      type="number"
+                      value={patient.respiratoryRate || ''}
+                      onChange={(e) => updatePatient({ respiratoryRate: parseInt(e.target.value) || undefined })}
+                      className="input-field"
+                      placeholder="Enter RR"
+                      min="0"
+                      max="60"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Thermometer className="h-4 w-4 inline mr-1" />
+                      Temperature (°F)
+                    </label>
+                    <input
+                      type="number"
+                      value={patient.temperature || ''}
+                      onChange={(e) => updatePatient({ temperature: parseFloat(e.target.value) || undefined })}
+                      className="input-field"
+                      placeholder="Enter temperature"
+                      min="90"
+                      max="110"
                       step="0.1"
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Droplets className="h-4 w-4 inline mr-1" />
+                      Oxygen Saturation (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={patient.oxygenSaturation || ''}
+                      onChange={(e) => updatePatient({ oxygenSaturation: parseInt(e.target.value) || undefined })}
+                      className="input-field"
+                      placeholder="Enter SpO2"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
                 </div>
+
+                {/* Social History */}
+                {patient.socialHistory && (
+                  <div className="pt-4 border-t border-gray-100">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Social History</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Tobacco Use
+                        </label>
+                        <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">
+                          {patient.socialHistory.tobacco || 'Not specified'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Alcohol Use
+                        </label>
+                        <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">
+                          {patient.socialHistory.alcohol || 'Not specified'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Encounter Date */}
+                {patient.encounterDate && (
+                  <div className="pt-4 border-t border-gray-100">
+                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                      Encounter Date
+                    </label>
+                    <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">
+                      {new Date(patient.encounterDate).toLocaleDateString()}
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

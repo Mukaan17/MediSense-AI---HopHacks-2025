@@ -29,6 +29,7 @@ import uuid
 from core.config import load_allowed_labels, load_mappings, load_symptom_map
 from core.questioner_llm import propose_questions_llm
 from core.summarize import summarize_live
+from core.diagnostic_suggestions import generate_diagnostic_suggestions
 from core.voice_transcription import voice_service
 from core.clinical_diagnosis import (
     generate_structured_differential_diagnosis,
@@ -228,7 +229,8 @@ def _compact_live(
     ehr: Optional[Dict[str, Any]],
     questions: List[Dict[str, Any]],
     max_candidates: int,
-    min_conf: float
+    min_conf: float,
+    diagnostic_suggestions: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     dx = ranked[0]["condition"] if ranked else None
     alts = []
@@ -236,7 +238,8 @@ def _compact_live(
         if len(alts) >= (max_candidates - 1): break
         if r.get("score", 0.0) >= min_conf:
             alts.append(f"{r['condition']} {r['score']:.2f}")
-    return {
+    
+    result = {
         "dx": dx,
         "conf": round(float(top_conf or 0.0), 2),
         "quick_facts": _quick_facts(ehr),
@@ -246,6 +249,12 @@ def _compact_live(
         "alerts": {"red_flag": bool(questions and questions[0].get("priority") == "red-flag"),
                    "margin": round(float(margin or 0.0), 2)}
     }
+    
+    # Add enhanced diagnostic suggestions if available
+    if diagnostic_suggestions:
+        result.update(diagnostic_suggestions)
+    
+    return result
 
 # ----------------- Endpoints ----------------------
 
@@ -994,29 +1003,20 @@ def reload_ehr():
 
 # --------------- Live Case Management ----------
 
-@app.post("/api/case")
-async def create_case(
-    file: UploadFile = File(...),
+@app.post("/api/case/voice")
+async def create_voice_case(
     live: bool = Query(True),
     max_candidates: int = Query(3, ge=1, le=5),
     min_conf: float = Query(0.60, ge=0.0, le=1.0),
     min_margin: float = Query(0.03, ge=0.0, le=0.2)
 ):
-    raw = await file.read()
-    preds = _img_model.predict(raw)  # [{"label": "...", "score": 0.xx}, ...]
-    for p in preds:
-        if "prob" not in p and "score" in p:
-            p["prob"] = float(p["score"])
-
-    filename = file.filename
-    pid = EHR_BY_IMAGE.get(filename)
-    ehr = EHR_BY_PATIENT.get(pid) if pid else None
-    if ehr is None and preds:
-        top = max(preds, key=lambda x: x.get("prob", x.get("score", 0.0)))
-        cxl = top.get("label")
-        candidates = [r for r in EHR_RECORDS if r.get("chexpert_label") == cxl]
-        ehr = candidates[0] if candidates else None
-
+    """Create a case for voice-only transcription (no image)"""
+    # No image processing for voice-only cases
+    preds = []
+    filename = None
+    ehr = None
+    
+    # Fuse empty image findings with empty text findings
     ranked = fuse(preds, [], topk=10)
     top_conf, margin = _confidence_and_margin(ranked)
 
@@ -1038,7 +1038,63 @@ async def create_case(
     }
 
     if live:
-        return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, ehr, [], max_candidates, min_conf)}
+        return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, ehr, [], max_candidates, min_conf, None)}
+    return {"case_id": case_id, "filename": filename, "ehr": ehr, "image_findings": preds,
+            "fusion": {"top10": ranked, "top_confidence": top_conf, "margin": margin},
+            "domains": domains}
+
+@app.post("/api/case")
+async def create_case(
+    live: bool = Query(True),
+    max_candidates: int = Query(3, ge=1, le=5),
+    min_conf: float = Query(0.60, ge=0.0, le=1.0),
+    min_margin: float = Query(0.03, ge=0.0, le=0.2),
+    file: UploadFile = File(None)
+):
+    # Handle optional image upload
+    preds = []
+    filename = None
+    ehr = None
+    
+    if file is not None:
+        raw = await file.read()
+        preds = _img_model.predict(raw)  # [{"label": "...", "score": 0.xx}, ...]
+        for p in preds:
+            if "prob" not in p and "score" in p:
+                p["prob"] = float(p["score"])
+
+        filename = file.filename
+        pid = EHR_BY_IMAGE.get(filename)
+        ehr = EHR_BY_PATIENT.get(pid) if pid else None
+        if ehr is None and preds:
+            top = max(preds, key=lambda x: x.get("prob", x.get("score", 0.0)))
+            cxl = top.get("label")
+            candidates = [r for r in EHR_RECORDS if r.get("chexpert_label") == cxl]
+            ehr = candidates[0] if candidates else None
+
+    # Fuse image findings with empty text findings (no conversation yet)
+    ranked = fuse(preds, [], topk=10)
+    top_conf, margin = _confidence_and_margin(ranked)
+
+    normalized = []
+    for r in (ranked or []):
+        c = r.get("condition")
+        if not c: continue
+        normalized.append(ALIASES.get(c, c.lower().replace(" ", "_")))
+    domains = bucket_domains(normalized) if normalized else {}
+
+    case_id = str(uuid.uuid4())
+    _CASES[case_id] = {
+        "filename": filename,
+        "image_findings": preds,
+        "ehr": ehr,
+        "ranked": ranked,
+        "domains": domains,
+        "utterances": [],
+    }
+
+    if live:
+        return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, ehr, [], max_candidates, min_conf, None)}
     return {"case_id": case_id, "filename": filename, "ehr": ehr, "image_findings": preds,
             "fusion": {"top10": ranked, "top_confidence": top_conf, "margin": margin},
             "domains": domains}
@@ -1112,7 +1168,7 @@ def transcribe_step(
     if live:
         if (top_conf >= 0.95) and (margin >= min_margin):
             questions = questions[:1]
-        return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, case["ehr"], questions, max_candidates, min_conf)}
+        return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, case["ehr"], questions, max_candidates, min_conf, None)}
 
     return {
         "case_id": case_id,
@@ -1163,6 +1219,8 @@ async def ws_case(ws: WebSocket, case_id: str):
         ctx_full = (ehr_ctx + fused_header + (ctx or ""))[:MAX_CTX_CHARS]
 
         questions = []
+        diagnostic_suggestions = None
+        
         if (top_conf < ASK_THRESH) or (margin < MARGIN_THRESH and top_conf < 0.95):
             state = {
                 "top_candidates": ranked[:5],
@@ -1179,9 +1237,25 @@ async def ws_case(ws: WebSocket, case_id: str):
                 questions = propose_questions_llm(state, max_questions=3)
             except Exception as e:
                 log.warning(f"[coach] question generation failed: {e}")
+        
+        # Generate enhanced diagnostic suggestions
+        try:
+            diagnostic_state = {
+                "top_candidates": ranked[:5],
+                "image_findings": case["image_findings"],
+                "ehr_summary": case["ehr"] or {},
+                "text_findings": text_findings,
+                "extraction": extraction.get("extracted", {}),
+                "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
+                "top_confidence": top_conf,
+                "margin": margin,
+            }
+            diagnostic_suggestions = generate_diagnostic_suggestions(diagnostic_state, max_suggestions=4)
+        except Exception as e:
+            log.warning(f"[coach] diagnostic suggestions generation failed: {e}")
 
         summary = summarize_live(utterances, max_words=40) if utterances else ""
-        hud = _compact_live(ranked, top_conf, margin, case["ehr"], questions, max_candidates=3, min_conf=0.6)
+        hud = _compact_live(ranked, top_conf, margin, case["ehr"], questions, max_candidates=3, min_conf=0.6, diagnostic_suggestions=diagnostic_suggestions)
         hud["summary"] = summary
         if latest_utterance:
             hud["transcript_chunk"] = {"speaker": (latest_speaker or "unknown"), "text": latest_utterance}

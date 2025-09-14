@@ -20,9 +20,8 @@ import EHRIntegration from './EHRIntegration';
 import LiveCoach from './LiveCoach';
 import KnowledgeBaseToggle from './KnowledgeBaseToggle';
 import VoiceRecorder from './VoiceRecorder';
-import { startBrowserTranscriber } from '../lib/transcriber';
 import { API_CONFIG } from '../config/api';
-import { connectCaseWS } from '../lib/wsClient';
+import { connectCaseWS, disconnectCaseWS, sendUtterance, HUD } from '../lib/wsClient';
 
 const ClinicalInterface: React.FC = () => {
   // State management
@@ -40,9 +39,8 @@ const ClinicalInterface: React.FC = () => {
   const [ehrPatients, setEhrPatients] = useState<any[]>([]);
   const [selectedEhrPatient, setSelectedEhrPatient] = useState<string>('');
   const [activeCaseId, setActiveCaseId] = useState<string>('');
-  const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
-  const sttStopRef = useRef<(() => void) | null>(null);
-  const wsRef = useRef<ReturnType<typeof connectCaseWS> | null>(null);
+  const [liveHUD, setLiveHUD] = useState<HUD | null>(null);
+  const wsRef = useRef<boolean>(false);
   const pendingUtterancesRef = useRef<string[]>([]);
 
   // Refs
@@ -266,17 +264,69 @@ const ClinicalInterface: React.FC = () => {
       // Process recommendations
       if (structured.recommendations) {
         report.recommendations = structured.recommendations;
+      } else {
+        // Fallback: extract recommendations from next_steps in diagnoses
+        const nextStepsRecommendations: string[] = [];
+        if (structured.differential_diagnosis) {
+          structured.differential_diagnosis.forEach((diag: any) => {
+            if (diag.next_steps && Array.isArray(diag.next_steps)) {
+              nextStepsRecommendations.push(...diag.next_steps);
+            }
+          });
+        }
+        
+        // Also extract from follow_up_plan if available
+        if (structured.clinical_workflow?.follow_up_plan) {
+          structured.clinical_workflow.follow_up_plan.forEach((plan: any) => {
+            if (plan.actions && Array.isArray(plan.actions)) {
+              nextStepsRecommendations.push(...plan.actions);
+            }
+          });
+        }
+        
+        if (nextStepsRecommendations.length > 0) {
+          report.recommendations = nextStepsRecommendations;
+        }
       }
       
       // Process follow-up
       if (structured.follow_up) {
         report.followUp = structured.follow_up;
+      } else if (structured.clinical_workflow?.follow_up_plan) {
+        // Fallback: format follow_up_plan as text
+        const followUpText = structured.clinical_workflow.follow_up_plan
+          .map((plan: any) => `${plan.timeline}: ${plan.reason}`)
+          .join('; ');
+        if (followUpText) {
+          report.followUp = followUpText;
+        }
       }
     }
 
-    // Process recommendations from backend
+    // Process recommendations from backend (note: first_steps_non_prescriptive is stripped from answer endpoint)
     if (data.answer?.first_steps_non_prescriptive) {
       report.recommendations = data.answer.first_steps_non_prescriptive;
+    }
+    
+    // Fallback: if no recommendations found, generate basic ones from differential diagnosis
+    if (report.recommendations.length === 0 && report.differentialDiagnosis.length > 0) {
+      const fallbackRecommendations: string[] = [];
+      
+      // Add basic recommendations based on top diagnoses
+      report.differentialDiagnosis.slice(0, 3).forEach((diag, index) => {
+        if (diag.confidence > 0.5) {
+          fallbackRecommendations.push(`Consider evaluation for ${diag.condition.replace(/_/g, ' ')}`);
+        }
+      });
+      
+      // Add general recommendations
+      if (fallbackRecommendations.length === 0) {
+        fallbackRecommendations.push("Obtain detailed history and physical examination");
+        fallbackRecommendations.push("Consider appropriate diagnostic workup based on clinical presentation");
+        fallbackRecommendations.push("Monitor patient response to initial interventions");
+      }
+      
+      report.recommendations = fallbackRecommendations;
     }
 
     // Process follow-up from backend
@@ -353,6 +403,9 @@ const ClinicalInterface: React.FC = () => {
         </div>
       </header>
 
+      {/* Live Coach HUD - Always show, minimized when no case */}
+      <LiveCoach caseId={activeCaseId || 'no-case'} />
+
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <AnimatePresence mode="wait">
@@ -400,7 +453,7 @@ const ClinicalInterface: React.FC = () => {
                           const totalInches = Math.round(cm / 2.54);
                           const feet = Math.floor(totalInches / 12);
                           const inches = totalInches % 12;
-                          return `${feet}'${inches}`;
+                          return `${feet}'${inches}"`;
                         };
                         let height: number | string | undefined = undefined;
                         if (typeof vs.height_cm === 'number') {
@@ -408,9 +461,9 @@ const ClinicalInterface: React.FC = () => {
                         } else if (typeof vs.height_in === 'number') {
                           const feet = Math.floor(vs.height_in / 12);
                           const inches = Math.round(vs.height_in % 12);
-                          height = `${feet}'${inches}`;
+                          height = `${feet}'${inches}"`;
                         } else if (typeof vs.height_ft_in === 'string') {
-                          height = vs.height_ft_in; // e.g., 5'8
+                          height = vs.height_ft_in; // e.g., 5'8"
                         }
 
                         // Derive pregnancy flag best-effort
@@ -428,9 +481,18 @@ const ClinicalInterface: React.FC = () => {
                           weight,
                           height,
                           bp: typeof vs.bp === 'string' ? vs.bp : undefined,
+                          heartRate: typeof vs.hr === 'number' ? vs.hr : undefined,
+                          respiratoryRate: typeof vs.rr === 'number' ? vs.rr : undefined,
+                          temperature: typeof vs.temp_f === 'number' ? vs.temp_f : undefined,
+                          oxygenSaturation: typeof vs.spo2_pct === 'number' ? vs.spo2_pct : undefined,
                           allergies: selectedPatient.allergies || [],
                           medications: selectedPatient.meds || [],
-                          pastMedicalHistory: pmh
+                          pastMedicalHistory: pmh,
+                          socialHistory: selectedPatient.social ? {
+                            tobacco: selectedPatient.social.tobacco,
+                            alcohol: selectedPatient.social.alcohol
+                          } : undefined,
+                          encounterDate: selectedPatient.encounter_date
                         });
                       }}
                       className="input-field"
@@ -466,45 +528,103 @@ const ClinicalInterface: React.FC = () => {
                       value={conversation.join('\n')}
                       onChange={(e) => setConversation(e.target.value.split('\n').filter(line => line.trim()))}
                     />
-                    <div className="p-3 bg-gray-50 border rounded">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm font-medium text-gray-700">Live transcript</div>
-                        {sttStopRef.current ? (
-                          <button
-                            className="text-xs text-red-600 hover:underline"
-                            onClick={() => { sttStopRef.current?.(); sttStopRef.current = null; }}
-                          >Stop</button>
-                        ) : (
-                          <button
-                            className="text-xs text-medical-primary hover:underline"
-                            onClick={() => {
-                              try {
-                                sttStopRef.current = startBrowserTranscriber((txt) => {
-                                  setLiveTranscript(prev => [...prev, txt]);
-                                  setConversation(prev => [...prev, txt]);
-                                });
-                              } catch (e) {
-                                toast.error('Live STT not supported in this browser');
-                              }
-                            }}
-                          >Start live STT</button>
-                        )}
+                    
+                    {/* RAG Analysis Section */}
+                    {liveHUD && (
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <Brain className="h-4 w-4 text-blue-600" />
+                            <h3 className="text-sm font-semibold text-blue-900">Live RAG Analysis</h3>
+                          </div>
+                          {liveHUD.alerts?.red_flag && (
+                            <div className="flex items-center space-x-1 text-red-600 text-xs">
+                              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                              <span>Red Flag Alert</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {/* Current Diagnosis */}
+                          {liveHUD.dx && (
+                            <div className="p-3 bg-white rounded border">
+                              <div className="text-xs font-medium text-gray-600 mb-1">Current Diagnosis</div>
+                              <div className="text-sm font-semibold text-gray-900">{liveHUD.dx}</div>
+                              {liveHUD.conf && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Confidence: {(liveHUD.conf * 100).toFixed(1)}%
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Quick Facts */}
+                          {liveHUD.quick_facts && (
+                            <div className="p-3 bg-white rounded border">
+                              <div className="text-xs font-medium text-gray-600 mb-1">Key Findings</div>
+                              <div className="text-sm text-gray-800">{liveHUD.quick_facts}</div>
+                            </div>
+                          )}
+                          
+                          {/* Next Question */}
+                          {liveHUD.next_question && (
+                            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+                              <div className="text-xs font-medium text-yellow-800 mb-1">Suggested Next Question</div>
+                              <div className="text-sm text-yellow-900">{liveHUD.next_question}</div>
+                            </div>
+                          )}
+                          
+                          {/* Alternatives */}
+                          {liveHUD.alts && liveHUD.alts.length > 0 && (
+                            <div className="p-3 bg-white rounded border">
+                              <div className="text-xs font-medium text-gray-600 mb-1">Alternative Diagnoses</div>
+                              <div className="text-sm text-gray-800">
+                                {liveHUD.alts.join(' • ')}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Live Summary */}
+                          {liveHUD.summary && (
+                            <div className="p-3 bg-gray-50 rounded border">
+                              <div className="text-xs font-medium text-gray-600 mb-1">Conversation Summary</div>
+                              <div className="text-sm text-gray-700">{liveHUD.summary}</div>
+                            </div>
+                          )}
+                          
+                          {/* Ranked Conditions */}
+                          {liveHUD.ranked && liveHUD.ranked.length > 0 && (
+                            <div className="p-3 bg-white rounded border">
+                              <div className="text-xs font-medium text-gray-600 mb-2">Top Conditions</div>
+                              <div className="space-y-1">
+                                {liveHUD.ranked.slice(0, 3).map((condition, idx) => (
+                                  <div key={idx} className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-800">{condition.condition}</span>
+                                    <span className="text-gray-500 text-xs">
+                                      {(condition.confidence * 100).toFixed(1)}%
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-700 space-y-1 max-h-32 overflow-auto">
-                        {liveTranscript.slice(-10).map((line, idx) => (
-                          <div key={idx}>• {line}</div>
-                        ))}
-                      </div>
+                    )}
+                    
+                    <div className="text-xs text-gray-600 mb-2">
+                      💡 <strong>Live Transcribing:</strong> Start recording to begin real-time analysis. Works with or without X-ray images.
                     </div>
                     
-                    <div className="flex space-x-2">
+                    <div className="flex items-center space-x-2">
                       <VoiceRecorder 
                         onTranscription={handleVoiceTranscription}
                         onVoiceInference={handleVoiceInference}
                         onStartLive={() => {
                           // Return a sender that queues until WS is ready
                           const sender = (txt: string) => {
-                            if (wsRef.current) wsRef.current.sendUtterance(txt);
+                            if (wsRef.current) sendUtterance(txt);
                             else pendingUtterancesRef.current.push(txt);
                           };
 
@@ -512,23 +632,27 @@ const ClinicalInterface: React.FC = () => {
                             let id = activeCaseId;
                             try {
                               if (!id) {
-                                if (!uploadedImage) {
-                                  toast.error('Upload an X-ray to start a live case');
-                                  return;
+                                let res;
+                                if (uploadedImage) {
+                                  // Create case with image
+                                  const fd = new FormData();
+                                  fd.append('file', uploadedImage);
+                                  res = await fetch(`${API_CONFIG.BASE_URL}/api/case?live=1`, { method: 'POST', body: fd });
+                                } else {
+                                  // Create voice-only case
+                                  res = await fetch(`${API_CONFIG.BASE_URL}/api/case/voice?live=1`, { method: 'POST' });
                                 }
-                                const fd = new FormData();
-                                fd.append('file', uploadedImage);
-                                const res = await fetch(`${API_CONFIG.BASE_URL}/api/case?live=1`, { method: 'POST', body: fd });
                                 if (!res.ok) throw new Error('Failed to create case');
                                 const data = await res.json();
                                 id = data?.case_id;
                                 if (id) setActiveCaseId(id);
                               }
                               if (!id) return;
-                              wsRef.current = connectCaseWS(id, () => {});
+                              await connectCaseWS(id, setLiveHUD);
+                              wsRef.current = true;
                               // Flush any queued utterances
                               if (pendingUtterancesRef.current.length) {
-                                pendingUtterancesRef.current.forEach(t => wsRef.current?.sendUtterance(t));
+                                pendingUtterancesRef.current.forEach(t => sendUtterance(t));
                                 pendingUtterancesRef.current = [];
                               }
                             } catch (e) {
@@ -540,8 +664,8 @@ const ClinicalInterface: React.FC = () => {
                           return sender;
                         }}
                         onStopLive={() => {
-                          wsRef.current?.close();
-                          wsRef.current = null;
+                          disconnectCaseWS();
+                          wsRef.current = false;
                           pendingUtterancesRef.current = [];
                         }}
                       />
@@ -552,7 +676,7 @@ const ClinicalInterface: React.FC = () => {
                             setConversation([]);
                           }
                         }}
-                        className="btn-secondary text-sm"
+                        className="btn-secondary text-sm px-4 py-2"
                       >
                         Clear
                       </button>
@@ -607,72 +731,43 @@ const ClinicalInterface: React.FC = () => {
                 </div>
               </div>
 
-              {/* Live Coach bubble (shows when a case is active) */}
-              {activeCaseId && (
-                <LiveCoach caseId={activeCaseId} />
-              )}
 
               {/* Quick Entry */}
               <div className="card">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Quick Entry
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Common Symptoms
-                    </label>
-                    <select 
-                      className="input-field"
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setConversation(prev => [...prev, e.target.value]);
-                          e.target.value = '';
-                        }
-                      }}
-                    >
-                      <option value="">Select symptom...</option>
-                      <option value="Chest pain">Chest pain</option>
-                      <option value="Shortness of breath">Shortness of breath</option>
-                      <option value="Headache">Headache</option>
-                      <option value="Fever">Fever</option>
-                      <option value="Nausea">Nausea</option>
-                      <option value="Dizziness">Dizziness</option>
-                      <option value="Fatigue">Fatigue</option>
-                      <option value="Abdominal pain">Abdominal pain</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Blood Pressure
-                    </label>
-                    <input
-                      type="text"
-                      className="input-field"
-                      placeholder="e.g., 140/90"
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setConversation(prev => [...prev, `BP ${e.target.value}`]);
-                        }
-                      }}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Heart Rate
-                    </label>
-                    <input
-                      type="number"
-                      className="input-field"
-                      placeholder="e.g., 85"
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setConversation(prev => [...prev, `HR ${e.target.value} bpm`]);
-                        }
-                      }}
-                    />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Common Symptoms
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {[
+                      "Chest pain",
+                      "Shortness of breath", 
+                      "Headache",
+                      "Fever",
+                      "Nausea",
+                      "Dizziness",
+                      "Fatigue",
+                      "Abdominal pain"
+                    ].map((symptom) => (
+                      <button
+                        key={symptom}
+                        onClick={() => {
+                          setConversation(prev => {
+                            // Check if the symptom already exists in the conversation
+                            if (prev.includes(symptom)) {
+                              return prev; // Don't add duplicate
+                            }
+                            return [...prev, symptom]; // Add new symptom
+                          });
+                        }}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-medical-primary focus:border-transparent transition-colors"
+                      >
+                        {symptom}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

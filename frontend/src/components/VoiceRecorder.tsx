@@ -178,7 +178,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Recording Controls */}
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2">
         {!isRecording && !audioBlob && (
           <motion.button
             whileHover={{ scale: 1.05 }}

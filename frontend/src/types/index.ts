@@ -14,9 +14,18 @@ export interface Patient {
   weight?: number;
   height?: number | string; // Support both numeric (cm) and string (ft'in") formats
   bp?: string; // Systolic/Diastolic, e.g., "136/78"
+  heartRate?: number; // HR in BPM
+  respiratoryRate?: number; // RR in breaths per minute
+  temperature?: number; // Temperature in Fahrenheit
+  oxygenSaturation?: number; // SpO2 percentage
   allergies?: string[];
   medications?: string[];
   pastMedicalHistory?: string[];
+  socialHistory?: {
+    tobacco?: string;
+    alcohol?: string;
+  };
+  encounterDate?: string;
 }
 
 export interface Symptom {

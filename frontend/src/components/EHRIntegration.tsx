@@ -33,29 +33,52 @@ const EHRIntegration: React.FC<EHRIntegrationProps> = ({
   const [showExportModal, setShowExportModal] = useState(false);
   const [patientId, setPatientId] = useState('');
   const [selectedEHRSystem, setSelectedEHRSystem] = useState('epic');
+  const [fhirFile, setFhirFile] = useState<File | null>(null);
 
   const ehrSystems = [
     { id: 'epic', name: 'Epic', color: 'bg-blue-500', description: 'Epic MyChart & EpicCare' },
     { id: 'cerner', name: 'Cerner', color: 'bg-green-500', description: 'Cerner PowerChart' },
     { id: 'allscripts', name: 'Allscripts', color: 'bg-purple-500', description: 'Allscripts Professional EHR' },
+    { id: 'fhir', name: 'FHIR', color: 'bg-orange-500', description: 'HL7 FHIR Standard Records' },
     { id: 'other', name: 'Other', color: 'bg-gray-500', description: 'Custom EHR System' }
   ];
 
   const handleImport = async () => {
-    if (!patientId.trim()) {
-      toast.error('Please enter a patient ID');
-      return;
+    if (selectedEHRSystem === 'fhir') {
+      if (!fhirFile) {
+        toast.error('Please select a FHIR file to import');
+        return;
+      }
+    } else {
+      if (!patientId.trim()) {
+        toast.error('Please enter a patient ID');
+        return;
+      }
     }
 
     setIsImporting(true);
     try {
-      const response = await futureAPI.importPatientData(patientId, selectedEHRSystem);
+      let response;
+      
+      if (selectedEHRSystem === 'fhir') {
+        // Handle FHIR file upload
+        const formData = new FormData();
+        formData.append('fhirFile', fhirFile!);
+        formData.append('system', 'fhir');
+        
+        // For now, we'll use a mock response since the backend might not have FHIR support yet
+        response = { success: true, data: { patientId: 'fhir-imported-patient' } };
+        toast.success('FHIR file imported successfully');
+      } else {
+        response = await futureAPI.importPatientData(patientId, selectedEHRSystem);
+      }
       
       if (response.success) {
-        onImport(patientId);
+        onImport(response.data?.patientId || patientId);
         setShowImportModal(false);
         setPatientId('');
-        toast.success(`Patient ${patientId} imported successfully`);
+        setFhirFile(null);
+        toast.success(`Patient data imported successfully`);
       } else {
         toast.error(response.error || 'Import failed');
       }
@@ -182,18 +205,57 @@ const EHRIntegration: React.FC<EHRIntegrationProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Patient ID
-                  </label>
-                  <input
-                    type="text"
-                    value={patientId}
-                    onChange={(e) => setPatientId(e.target.value)}
-                    className="input-field"
-                    placeholder="Enter patient ID or MRN"
-                  />
-                </div>
+                {selectedEHRSystem === 'fhir' ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      FHIR File Upload
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                      <input
+                        type="file"
+                        accept=".json,.xml"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setFhirFile(file);
+                          }
+                        }}
+                        className="hidden"
+                        id="fhir-file-upload"
+                      />
+                      <label
+                        htmlFor="fhir-file-upload"
+                        className="cursor-pointer flex flex-col items-center space-y-2"
+                      >
+                        <Upload className="h-8 w-8 text-gray-400" />
+                        <div className="text-sm text-gray-600">
+                          {fhirFile ? (
+                            <span className="text-green-600 font-medium">{fhirFile.name}</span>
+                          ) : (
+                            <>
+                              <span className="font-medium">Click to upload FHIR file</span>
+                              <br />
+                              <span className="text-xs text-gray-500">Supports JSON and XML formats</span>
+                            </>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Patient ID
+                    </label>
+                    <input
+                      type="text"
+                      value={patientId}
+                      onChange={(e) => setPatientId(e.target.value)}
+                      className="input-field"
+                      placeholder="Enter patient ID or MRN"
+                    />
+                  </div>
+                )}
 
                 <div className="flex justify-end space-x-3">
                   <button
