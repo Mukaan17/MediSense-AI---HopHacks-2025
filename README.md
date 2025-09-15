@@ -1,4 +1,4 @@
-# Multimodal Clinical Copilot - HopHacks 2025
+# MediSense AI - HopHacks 2025
 
 A comprehensive clinical decision support system that combines multimodal data analysis, AI-powered diagnostics, and real-time clinical assistance for healthcare professionals.
 
