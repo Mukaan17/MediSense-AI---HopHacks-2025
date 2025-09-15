@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Minimize2 } from 'lucide-react';
 import { HUD } from '../lib/wsClient';
@@ -8,7 +8,12 @@ interface ConversationChatPropsWithHUD extends ConversationChatProps {
   hud?: HUD | null;
 }
 
-const ConversationChat: React.FC<ConversationChatPropsWithHUD> = ({ caseId, hud, onMinimize, className = '' }) => {
+export interface ConversationChatRef {
+  addTranscriptMessage: (text: string, speaker?: 'patient' | 'doctor') => void;
+  resetChat: () => void;
+}
+
+const ConversationChat = forwardRef<ConversationChatRef, ConversationChatPropsWithHUD>(({ caseId, hud, onMinimize, className = '' }, ref) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   
@@ -95,6 +100,37 @@ const ConversationChat: React.FC<ConversationChatPropsWithHUD> = ({ caseId, hud,
     }
   }, [hud?.transcript_chunk, messages]);
 
+  // Add a function to receive direct transcript updates from VoiceRecorder
+  const addTranscriptMessage = (text: string, speaker: 'patient' | 'doctor' = 'patient') => {
+    const newMessage: ChatMessage = {
+      id: `direct-transcript-${Date.now()}`,
+      speaker,
+      text,
+      timestamp: new Date(),
+      confidence: 0.9
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
+
+  // Reset chat to initial state
+  const resetChat = () => {
+    setMessages([
+      {
+        id: 'system-welcome',
+        speaker: 'doctor',
+        text: 'Hi, if you record your name and reason for calling, I\'ll see if this person is available.',
+        timestamp: new Date()
+      }
+    ]);
+    setIsInitialized(true);
+  };
+
+  // Expose the functions to parent component
+  useImperativeHandle(ref, () => ({
+    addTranscriptMessage,
+    resetChat
+  }));
+
 
   return (
     <div className={`flex flex-col h-full bg-gray-900 ${className}`}>
@@ -166,6 +202,6 @@ const ConversationChat: React.FC<ConversationChatPropsWithHUD> = ({ caseId, hud,
 
     </div>
   );
-};
+});
 
 export default ConversationChat;

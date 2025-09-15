@@ -20,7 +20,7 @@ import EHRIntegration from './EHRIntegration';
 import LiveCoach from './LiveCoach';
 import KnowledgeBaseToggle from './KnowledgeBaseToggle';
 import VoiceRecorder from './VoiceRecorder';
-import ConversationChat from './ConversationChat';
+import ConversationChat, { ConversationChatRef } from './ConversationChat';
 import { API_CONFIG } from '../config/api';
 import { connectCaseWS, disconnectCaseWS, sendUtterance, HUD } from '../lib/wsClient';
 
@@ -46,6 +46,7 @@ const ClinicalInterface: React.FC = () => {
 
   // Refs
   const conversationInputRef = useRef<HTMLTextAreaElement>(null);
+  const conversationChatRef = useRef<ConversationChatRef>(null);
 
   // Health check and load EHR patients on component mount
   useEffect(() => {
@@ -94,6 +95,8 @@ const ClinicalInterface: React.FC = () => {
   // Voice recording handling
   const handleVoiceTranscription = (transcript: string) => {
     setConversation(prev => [...prev, transcript]);
+    // Also add to chat for real-time display
+    conversationChatRef.current?.addTranscriptMessage(transcript, 'patient');
     toast.success('Voice note transcribed');
   };
 
@@ -533,7 +536,7 @@ const ClinicalInterface: React.FC = () => {
                     {/* Chat Interface */}
                     <div className="mt-4">
                       <div className="shadow-lg rounded-2xl border border-gray-200 bg-white w-full h-[400px] overflow-hidden">
-                        <ConversationChat caseId={activeCaseId || 'no-case'} hud={liveHUD} className="h-full" />
+                        <ConversationChat ref={conversationChatRef} caseId={activeCaseId || 'no-case'} hud={liveHUD} className="h-full" />
                       </div>
                     </div>
                     
@@ -629,6 +632,10 @@ const ClinicalInterface: React.FC = () => {
                       <VoiceRecorder 
                         onTranscription={handleVoiceTranscription}
                         onVoiceInference={handleVoiceInference}
+                        onInterimTranscript={(txt) => {
+                          // Send interim results to chat for real-time display
+                          conversationChatRef.current?.addTranscriptMessage(txt, 'patient');
+                        }}
                         onStartLive={() => {
                           // Return a sender that queues until WS is ready
                           const sender = (txt: string) => {
@@ -859,7 +866,32 @@ const ClinicalInterface: React.FC = () => {
                 </h2>
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => setCurrentView('input')}
+                    onClick={() => {
+                      // Reset all state for a new case
+                      setCurrentView('input');
+                      setPatient({});
+                      setConversation([]);
+                      setUploadedImage(null);
+                      setClinicalReport(null);
+                      setActiveCaseId('');
+                      setLiveHUD(null);
+                      setSelectedEhrPatient('');
+                      
+                      // Disconnect WebSocket
+                      disconnectCaseWS();
+                      wsRef.current = false;
+                      pendingUtterancesRef.current = [];
+                      
+                      // Clear conversation input
+                      if (conversationInputRef.current) {
+                        conversationInputRef.current.value = '';
+                      }
+                      
+                      // Reset chat to initial state
+                      conversationChatRef.current?.resetChat();
+                      
+                      toast.success('New case started');
+                    }}
                     className="btn-secondary"
                   >
                     New Case
