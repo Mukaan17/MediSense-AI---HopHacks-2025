@@ -113,7 +113,8 @@ curl -X POST "http://localhost:8000/multimodal_voice_infer" \
 export HUGGINGFACE_HUB_TOKEN="your_token_here"
 
 # Existing backend configuration
-export GROQ_API_KEY="your_groq_key"
+export GEMINI_API_KEY="your_google_ai_studio_key"
+export GEMINI_MODEL="gemini-2.5-flash-lite"
 export EHR_JSON="ehr_with_images.json"
 export RAG_PERSIST_DIR="./rag_store"
 ```
@@ -258,4 +259,3 @@ If you encounter any issues:
 4. Verify all dependencies are installed correctly
 
 The integration maintains full backward compatibility with your existing API while adding powerful voice transcription capabilities!
-

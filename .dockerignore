@@ -1,0 +1,23 @@
+**/*.pyc
+__pycache__/
+.git/
+.github/
+.gitignore
+venv_new/
+.env
+
+# Large dataset archives
+*.tar
+*.tar.gz
+*.zip
+
+# Training files the user requested not to be dockerized
+English Dev.json
+English Test.json
+English Train.json
+Synthetic English Train Data.json
+
+# Local data and logs
+data/
+logs/
+checkpoints/

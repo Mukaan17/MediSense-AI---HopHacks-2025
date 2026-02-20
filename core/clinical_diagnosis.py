@@ -25,7 +25,6 @@ def generate_brief_diagnosis_summary(
     Produce a concise 1–2 line diagnostic summary using LLM knowledge, grounded in
     extracted findings and (optionally) fused image/text candidates.
     """
-    llm = get_llm()
     extracted_json = json.dumps(extraction.get("extracted", {}))
     top_lines = []
     for i, r in enumerate((fusion_results or [])[:3], 1):
@@ -44,6 +43,7 @@ def generate_brief_diagnosis_summary(
         "Summary:"
     )
     try:
+        llm = get_llm()
         out = llm.invoke(prompt)
         text = (getattr(out, "content", None) or str(out)).strip()
         # Hard truncate to ~300 chars for safety
@@ -82,8 +82,6 @@ def generate_structured_differential_diagnosis(
         .replace("{{ fusion_context }}", fusion_context)
     )
 
-    resp = get_llm().invoke(prompt).content
-    
     fallback = {
         "differential_diagnosis": {
             "top_3_diagnoses": [],
@@ -101,6 +99,11 @@ def generate_structured_differential_diagnosis(
         },
         "citations": []
     }
+    try:
+        resp = get_llm().invoke(prompt).content
+    except Exception as e:
+        print(f"⚠️  Structured diagnosis generation error: {e}")
+        return fallback
     
     try:
         result = json.loads(resp)

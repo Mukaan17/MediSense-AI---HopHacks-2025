@@ -203,7 +203,8 @@ This will test:
 export EHR_JSON="ehr_with_images.json"
 export RAG_PERSIST_DIR=./rag_store
 export RAG_COLLECTION=conversations
-export GROQ_API_KEY=your_key_here
+export GEMINI_API_KEY=your_key_here
+export GEMINI_MODEL=gemini-2.5-flash-lite
 
 # New variables for structured diagnosis
 export ASK_THRESH=0.70          # Confidence threshold for questions

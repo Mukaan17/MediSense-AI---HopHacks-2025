@@ -440,9 +440,9 @@ export const futureAPI = {
   async processVoiceNote(audioFile: File): Promise<APIResponse<{ transcript: string; confidence: number }>> {
     try {
       const formData = new FormData();
-      formData.append('audio', audioFile);
+      formData.append('file', audioFile);
       
-      const response = await api.post('/voice/transcribe', formData, {
+      const response = await api.post('/voice_transcribe', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
