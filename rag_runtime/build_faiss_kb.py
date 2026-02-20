@@ -1,25 +1,18 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""Build Chroma KB for RAG with a single canonical implementation.
+"""Build FAISS KB for RAG (avoids ChromaDB SQLite lock issues on macOS).
 
 Usage:
-  python -m rag_runtime.build_kb --reset \
-    --embeddings sentence-transformers/all-MiniLM-L6-v2 \
-    --persist_dir ./rag_store \
-    --collection conversations \
+  python3 -m rag_runtime.build_faiss_kb --reset \
     --files "English Train.json" "ehr_with_images.json"
 """
 
 import argparse
 import json
 import os
+import pickle
 import shutil
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
-
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from typing import Any, Dict, List, Tuple
 
 
 def _default_files(repo_root: Path) -> List[Path]:
@@ -27,6 +20,7 @@ def _default_files(repo_root: Path) -> List[Path]:
         repo_root / "English Train.json",
         repo_root / "English Dev.json",
         repo_root / "English Test.json",
+        repo_root / "Synthetic English Train Data.json",
         repo_root / "ehr_with_images.json",
     ]
     return [p for p in candidates if p.exists()]
@@ -40,19 +34,13 @@ def _flatten(obj: Any, sep: str = "\n") -> str:
     if isinstance(obj, (int, float, bool)):
         return str(obj)
     if isinstance(obj, list):
-        parts = [_flatten(x, sep) for x in obj]
-        return sep.join([p for p in parts if p])
+        return sep.join([_flatten(x, sep) for x in obj if _flatten(x, sep)])
     if isinstance(obj, dict):
-        lines = []
-        for k, v in obj.items():
-            t = _flatten(v, sep)
-            if t:
-                lines.append(f"{k}: {t}")
-        return sep.join(lines)
+        return sep.join([f"{k}: {_flatten(v, sep)}" for k, v in obj.items() if _flatten(v, sep)])
     return str(obj)
 
 
-def _read_json_docs(path: Path) -> Iterable[Tuple[str, Dict[str, Any]]]:
+def _read_json_docs(path: Path) -> List[Tuple[str, Dict[str, Any]]]:
     try:
         with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
@@ -60,7 +48,7 @@ def _read_json_docs(path: Path) -> Iterable[Tuple[str, Dict[str, Any]]]:
         print(f"[WARN] Failed to read {path.name}: {e}")
         return []
 
-    docs: List[Tuple[str, Dict[str, Any]]] = []
+    docs = []
     if isinstance(data, list):
         for i, item in enumerate(data):
             text = _flatten(item)
@@ -71,32 +59,28 @@ def _read_json_docs(path: Path) -> Iterable[Tuple[str, Dict[str, Any]]]:
             text = _flatten(v)
             if text.strip():
                 docs.append((text, {"source": path.name, "section": str(k)}))
-    else:
-        text = _flatten(data)
-        if text.strip():
-            docs.append((text, {"source": path.name}))
     return docs
 
 
-def build_kb(files: List[Path], emb_model: str, persist_dir: Path, collection: str, reset: bool) -> None:
+def build_kb(files: List[Path], emb_model: str, persist_dir: Path, reset: bool) -> None:
+    # Lazy imports to avoid issues at module level
+    import numpy as np
+    try:
+        import faiss
+    except ImportError:
+        raise RuntimeError("Please install faiss-cpu: pip install faiss-cpu")
+    from sentence_transformers import SentenceTransformer
+
     if reset and persist_dir.exists():
         print(f"[KB] Resetting store at {persist_dir}")
         shutil.rmtree(persist_dir)
-
     persist_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"[KB] Embedding model: {emb_model}")
     print(f"[KB] Persist dir    : {persist_dir}")
-    print(f"[KB] Collection     : {collection}")
     print(f"[KB] Files          : {[p.name for p in files]}")
 
-    embeddings = HuggingFaceEmbeddings(model_name=emb_model)
-    vs = Chroma(
-        collection_name=collection,
-        embedding_function=embeddings,
-        persist_directory=str(persist_dir),
-    )
-
+    # Collect documents
     texts: List[str] = []
     metas: List[Dict[str, Any]] = []
     for fp in files:
@@ -117,48 +101,44 @@ def build_kb(files: List[Path], emb_model: str, persist_dir: Path, collection: s
         print("[KB] Nothing to index. Aborting.")
         return
 
-    print(f"[KB] Adding {len(texts)} documents …")
-    vs.add_texts(texts=texts, metadatas=metas)
-    vs.persist()
-    try:
-        count = vs._collection.count()
-    except Exception:
-        count = -1
-    print(f"[KB] Done. Indexed documents: {count if count >= 0 else 'unknown'}")
+    print(f"[KB] Encoding {len(texts)} documents …")
+    model = SentenceTransformer(emb_model)
+    embeddings = model.encode(texts, show_progress_bar=True, batch_size=64)
+    embeddings = np.array(embeddings, dtype="float32")
+
+    # Normalize for cosine similarity
+    faiss.normalize_L2(embeddings)
+
+    # Build FAISS index (Inner Product on normalized vectors = cosine similarity)
+    dim = embeddings.shape[1]
+    index = faiss.IndexFlatIP(dim)
+    index.add(embeddings)
+
+    # Save index, texts, and metadata
+    faiss.write_index(index, str(persist_dir / "index.faiss"))
+    with open(persist_dir / "texts.pkl", "wb") as f:
+        pickle.dump(texts, f)
+    with open(persist_dir / "metas.pkl", "wb") as f:
+        pickle.dump(metas, f)
+    with open(persist_dir / "config.json", "w") as f:
+        json.dump({"emb_model": emb_model, "dim": dim, "count": len(texts)}, f, indent=2)
+
+    print(f"[KB] Done. Indexed {len(texts)} documents (dim={dim}) → {persist_dir}")
 
 
 def main() -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    parser = argparse.ArgumentParser(description="Build Chroma KB for RAG")
-    parser.add_argument(
-        "--embeddings",
-        default=os.getenv("RAG_EMB_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
-        help="HuggingFace embeddings model name",
-    )
-    parser.add_argument(
-        "--persist_dir",
-        default=os.getenv("RAG_PERSIST_DIR", str(repo_root / "rag_store")),
-        help="Directory to persist Chroma store",
-    )
-    parser.add_argument(
-        "--collection",
-        default=os.getenv("RAG_COLLECTION", "conversations"),
-        help="Chroma collection name",
-    )
-    parser.add_argument(
-        "--files",
-        nargs="*",
-        default=[str(p) for p in _default_files(repo_root)],
-        help="List of files to ingest (JSON or TXT)",
-    )
-    parser.add_argument("--reset", action="store_true", help="Wipe store before building")
+    parser = argparse.ArgumentParser(description="Build FAISS KB for RAG")
+    parser.add_argument("--embeddings", default=os.getenv("RAG_EMB_MODEL", "sentence-transformers/all-MiniLM-L6-v2"))
+    parser.add_argument("--persist_dir", default=os.getenv("RAG_PERSIST_DIR", str(repo_root / "rag_store")))
+    parser.add_argument("--files", nargs="*", default=[str(p) for p in _default_files(repo_root)])
+    parser.add_argument("--reset", action="store_true")
     args = parser.parse_args()
 
     build_kb(
         files=[Path(x) for x in args.files],
         emb_model=args.embeddings,
         persist_dir=Path(args.persist_dir),
-        collection=args.collection,
         reset=args.reset,
     )
 
