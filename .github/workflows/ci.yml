@@ -6,10 +6,7 @@ on:
 #  pull_request:
 #    branches: [ full-application ]
 
-# Required for AWS OIDC authentication (Best Practice - No Long-Lived Credentials)
-permissions:
-  id-token: write
-  contents: read
+
 
 jobs:
   build-and-push:
@@ -23,9 +20,9 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        # REPLACE THESE WITH YOUR ACTUAL AWS DETAILS
-        role-to-assume: arn:aws:iam::111122223333:role/GitHubActionsECRRole
-        aws-region: us-east-1
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Login to Amazon ECR
       id: login-ecr
