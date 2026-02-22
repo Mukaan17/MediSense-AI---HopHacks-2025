@@ -2,9 +2,9 @@ name: Build and Push to Amazon ECR
 
 on:
   push:
-    branches: [ main ]
+    branches: [ full-application ]
 #  pull_request:
-#    branches: [ main ]
+#    branches: [ full-application ]
 
 # Required for AWS OIDC authentication (Best Practice - No Long-Lived Credentials)
 permissions:
