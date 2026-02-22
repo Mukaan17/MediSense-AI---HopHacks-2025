@@ -314,6 +314,9 @@ data/
 datasets/
 *.csv
 *.json
+!package.json
+!package-lock.json
+!tsconfig.json
 *.jsonl
 *.tsv
 
