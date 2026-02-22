@@ -21,3 +21,10 @@ Synthetic English Train Data.json
 data/
 logs/
 checkpoints/
+
+# Frontend build artifacts
+frontend/node_modules/
+frontend/build/
+
+# Datasets
+chexpert/
