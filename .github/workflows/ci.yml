@@ -1,41 +1,60 @@
-name: CI Pipeline
+name: Build and Push to Amazon ECR
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
+#  pull_request:
+#    branches: [ main ]
+
+# Required for AWS OIDC authentication (Best Practice - No Long-Lived Credentials)
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  build-and-test:
+  build-and-push:
+    name: Build & Push Images
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        python-version: '3.10'
-        
-    - name: Install Dependencies
+        # REPLACE THESE WITH YOUR ACTUAL AWS DETAILS
+        role-to-assume: arn:aws:iam::111122223333:role/GitHubActionsECRRole
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+      
+    - name: Free up disk space on Runner
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        # Install dev dependencies if any, otherwise just basic test runners
-        pip install pytest flake8
-        
-    - name: Lint with flake8
+        # Ubuntu runners often run out of disk space when building huge ML containers.
+        # This clears ~30GB of pre-installed software we don't need.
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+    - name: Build, tag, and push Backend Image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: clinical-ai-backend
+        IMAGE_TAG: ${{ github.sha }} 
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings.
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        # Using Docker Buildx helps with caching and larger builds
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         
-    - name: Docker Build (Backend)
+    - name: Build, tag, and push Frontend Image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: clinical-ai-frontend
+        IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t medical-ai-backend -f Dockerfile .
-        
-    - name: Docker Build (Frontend)
-      run: |
-        docker build -t medical-ai-frontend -f Dockerfile.frontend .
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile.frontend .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
