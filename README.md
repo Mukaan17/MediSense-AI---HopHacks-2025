@@ -1,11 +1,27 @@
-# Multimodal Clinical Copilot (HopHacks)
+# MediSense AI — Multimodal Clinical Copilot
 
-Clinical decision-support backend and frontend that combine:
-- text extraction and clinical reasoning
-- voice transcription
-- chest X-ray inference
-- EHR context + retrieval
-- multimodal fusion (Python baseline, optional CUDA path)
+<p>
+  <img alt="HopHacks 2025" src="https://img.shields.io/badge/HopHacks-2025-6A1B9A">
+  <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?logo=fastapi&logoColor=white">
+  <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white">
+  <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white">
+  <img alt="CUDA" src="https://img.shields.io/badge/CUDA-optional-76B900?logo=nvidia&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-compose-2496ED?logo=docker&logoColor=white">
+</p>
+
+> A clinical decision-support copilot that fuses **text reasoning, voice transcription, chest X-ray inference, EHR retrieval, and RAG-grounded LLM summaries** behind a single FastAPI backend and a React clinician UI.
+
+**Branch:** `full-application` — production-oriented integration of the frontend, backend, CI/CD and Docker deployment on top of the research `main` branch.
+
+### What this system does
+
+- Clinician types or dictates a case → backend transcribes and extracts symptoms, vitals, history
+- EHR loader attaches patient context from MIMIC-IV Demo-derived records linked to CheXpert images
+- Image module runs BioMedCLIP/BioViL-T on the chest X-ray
+- Fusion engine combines text + image signals (Python baseline, optional CUDA kernel)
+- RAG retriever grounds the LLM advisory in a local Chroma vector store
+- Gemini-2.5 produces a structured differential + narrative summary streamed back to the UI
 
 This README reflects the current codebase state after backend/frontend/data cleanup.
 
@@ -250,3 +266,22 @@ Endpoints:
 - `POST /api/case/voice`
 - `POST /api/case`
 - websocket: `/ws/case/{id}`
+
+---
+
+## Branches
+
+| Branch | Purpose |
+|--------|---------|
+| `main` | Original research / model-training codebase |
+| `full-application` | End-to-end deployable app: React UI + FastAPI backend + Docker + CI/CD. **This branch.** |
+
+## Built at HopHacks 2025
+
+Originally prototyped at Johns Hopkins HopHacks and hardened afterwards into a full application.
+
+**Team:** [@Mukaan17](https://github.com/Mukaan17) · [@Vishak25](https://github.com/Vishak25)
+
+## License
+
+MIT — see `LICENSE` if present, otherwise covered under the HopHacks 2025 submission terms.
