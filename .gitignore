@@ -389,3 +389,8 @@ deployment_architecture.md
 DEPLOYMENT_STRATEGY_README.md
 DETAILED_CHANGES_DOCUMENTATION.md
 VOICE_INTEGRATION_README.md
+
+# Claude Code / internal dev notes
+.claude/
+CLAUDE_MEMORY.md
+**/CLAUDE_MEMORY.md
