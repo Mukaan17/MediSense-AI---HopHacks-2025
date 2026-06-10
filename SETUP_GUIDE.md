@@ -22,12 +22,13 @@ source .venv/bin/activate
 ```
 
 ### 2. Set Your API Key
-Edit `.env` file and replace `YOUR_GROQ_KEY_HERE` with your actual Groq API key:
+Edit `.env` file and set your Google AI Studio key:
 ```bash
-GROQ_API_KEY=your_actual_groq_api_key_here
+GEMINI_API_KEY=your_actual_google_ai_studio_key_here
+GEMINI_MODEL=gemini-2.5-flash-lite
 ```
 
-Get a free API key from: https://console.groq.com/
+Create an API key from Google AI Studio.
 
 ### 3. Start the Server
 ```bash
@@ -111,8 +112,8 @@ RAG_COLLECTION=conversations
 RAG_EMB_MODEL=sentence-transformers/all-MiniLM-L6-v2
 
 # LLM
-GROQ_API_KEY=your_key_here
-GROQ_MODEL=llama-3.1-70b-versatile
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-2.5-flash-lite
 
 # Question thresholds
 ASK_THRESH=0.70      # Ask questions if confidence < 70%
@@ -127,7 +128,7 @@ MARGIN_THRESH=0.08   # Ask if margin between top 2 < 8%
 - Check `.env` file exists and has correct paths
 
 ### API errors
-- Ensure GROQ_API_KEY is set correctly
+- Ensure GEMINI_API_KEY is set correctly
 - Check server logs for detailed error messages
 - Test with `python clients/simple_test.py` first
 

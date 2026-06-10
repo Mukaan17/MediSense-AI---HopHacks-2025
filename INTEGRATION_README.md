@@ -7,7 +7,7 @@ This document describes the complete integration between the React frontend and 
 ### 1. Start the Backend
 ```bash
 # From project root
-python run_integrated_server.py
+uvicorn api.server:app --host 0.0.0.0 --port 8000
 ```
 
 ### 2. Start the Frontend
@@ -120,8 +120,8 @@ export EHR_JSON="ehr_with_images.json"
 export RAG_PERSIST_DIR=./rag_store
 export RAG_COLLECTION=conversations
 export RAG_EMB_MODEL=sentence-transformers/all-mpnet-base-v2
-export GROQ_API_KEY=your_groq_key
-export GROQ_MODEL=llama-3.1-70b-versatile
+export GEMINI_API_KEY=your_google_ai_studio_key
+export GEMINI_MODEL=gemini-2.5-flash-lite
 export ASK_THRESH=0.70
 export MARGIN_THRESH=0.08
 ```
@@ -222,7 +222,7 @@ export REACT_APP_LOG_LEVEL=debug
 ```bash
 # Backend
 pip install -r requirements.txt
-python run_integrated_server.py
+uvicorn api.server:app --host 0.0.0.0 --port 8000
 
 # Frontend
 cd frontend

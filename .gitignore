@@ -14,8 +14,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -122,6 +122,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+venv_new/
 env/
 venv/
 ENV/
@@ -313,6 +314,9 @@ data/
 datasets/
 *.csv
 *.json
+!package.json
+!package-lock.json
+!tsconfig.json
 *.jsonl
 *.tsv
 
@@ -370,3 +374,23 @@ secrets/
 # Test outputs
 test_outputs/
 test_results/
+
+
+# data
+chexpert_clean.tar
+chexpert_data.tar
+chexpert_data.tar.gz
+chexpert.zip
+dataset_unzip.py
+
+
+# ReadMe files
+deployment_architecture.md
+DEPLOYMENT_STRATEGY_README.md
+DETAILED_CHANGES_DOCUMENTATION.md
+VOICE_INTEGRATION_README.md
+
+# Claude Code / internal dev notes
+.claude/
+CLAUDE_MEMORY.md
+**/CLAUDE_MEMORY.md

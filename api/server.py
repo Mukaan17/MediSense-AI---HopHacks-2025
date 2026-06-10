@@ -7,6 +7,7 @@
 import os
 import re
 import json
+import hashlib
 import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
@@ -22,8 +23,14 @@ from core.retriever import (
     get_retriever, render_docs, get_doc_count, get_top_k,
     PERSIST_DIR, COLLECTION, EMB_MODEL
 )
-from core.imaging import ImagingModel
+try:
+    from core.imaging import ImagingModel
+    _IMAGING_IMPORT_ERROR = None
+except Exception as _img_import_exc:  # pragma: no cover - optional dependency fallback
+    ImagingModel = None
+    _IMAGING_IMPORT_ERROR = str(_img_import_exc)
 from core.fusion import fuse
+from core.evidence_engine import build_evidence
 from core.domains import bucket_domains
 import uuid
 from core.config import load_allowed_labels, load_mappings, load_symptom_map
@@ -46,19 +53,33 @@ from dotenv import load_dotenv
 load_dotenv()
 
 CXR_CKPT = os.getenv("CXR_CKPT", "checkpoints/biovil_vit_chexpert.pt")
-_img_model = ImagingModel(ckpt_path=CXR_CKPT)
-
-if not os.path.exists(CXR_CKPT):
-    raise FileNotFoundError(f"CXR checkpoint not found at {CXR_CKPT}. "
-                            f"Set CXR_CKPT env var or place the file there.")
+_img_model: Optional[ImagingModel] = None
+if ImagingModel is None:
+    log.warning(f"[IMG] Imaging dependencies unavailable: {_IMAGING_IMPORT_ERROR}")
+elif os.path.exists(CXR_CKPT):
+    try:
+        _img_model = ImagingModel(ckpt_path=CXR_CKPT)
+    except Exception as e:
+        log.warning(f"[IMG] Failed to initialize imaging model from {CXR_CKPT}: {e}")
+else:
+    log.warning(
+        f"[IMG] Checkpoint not found at {CXR_CKPT}. "
+        "Image endpoints will be unavailable until CXR_CKPT is configured."
+    )
 
 
 app = FastAPI(title="Multimodal Clinical Reference (Advisory)")
 
-# Add CORS middleware
+# Add CORS middleware (configurable via FRONTEND_ORIGINS env var)
+origins_env = os.getenv(
+    "FRONTEND_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
+)
+ALLOWED_ORIGINS = [o.strip() for o in origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Frontend URLs
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,16 +92,150 @@ MAX_CTX_CHARS = int(os.getenv("MAX_CTX_CHARS", "2000"))     # trim retrieved con
 EHR_JSON = os.getenv("EHR_JSON", "ehr_with_images.json")    # enriched EHR with xray_path/xray_filename
 
 # --------------- Global singletons ----------------
-_retriever = get_retriever()
+_retriever = None
+
+
+def _retriever_instance():
+    global _retriever
+    if _retriever is None:
+        _retriever = get_retriever()
+    return _retriever
 
 # --------------- EHR loading & indices ------------
 EHR_RECORDS: List[Dict[str, Any]] = []
 EHR_BY_PATIENT: Dict[str, Dict[str, Any]] = {}
-EHR_BY_IMAGE: Dict[str, str] = {}  # basename -> patient_id
+EHR_BY_IMAGE_PATH: Dict[str, str] = {}          # normalized xray_path -> patient_id
+EHR_BY_IMAGE_BASENAME: Dict[str, List[str]] = {}  # basename -> [patient_id...]
+EHR_BY_IMAGE_HASH: Dict[str, str] = {}          # sha256(image bytes) -> patient_id
+
+
+def _normalize_image_relpath(path: Optional[str]) -> str:
+    if not path:
+        return ""
+    p = str(path).strip().replace("\\", "/")
+    p = re.sub(r"^(\./)+", "", p)
+    prefix = "CheXpert-v1.0-small/"
+    if p.startswith(prefix):
+        p = p[len(prefix):]
+    if p.startswith("chexpert/"):
+        p = p[len("chexpert/"):]
+    return p.lstrip("/")
+
+
+def _sha256_bytes(blob: bytes) -> str:
+    return hashlib.sha256(blob).hexdigest()
+
+
+def _sha256_file(path: str) -> Optional[str]:
+    try:
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(chunk)
+        return h.hexdigest()
+    except Exception:
+        return None
+
+
+def _candidate_local_image_paths(rel_or_abs_path: str) -> List[str]:
+    normalized = _normalize_image_relpath(rel_or_abs_path)
+    candidates = [rel_or_abs_path, normalized, os.path.join("chexpert", normalized)]
+    out = []
+    seen = set()
+    for c in candidates:
+        if not c or c in seen:
+            continue
+        seen.add(c)
+        out.append(c)
+    return out
+
+
+def _append_basename_index(path_like: Optional[str], patient_id: str) -> None:
+    if not path_like:
+        return
+    base = os.path.basename(_normalize_image_relpath(path_like))
+    if not base:
+        return
+    EHR_BY_IMAGE_BASENAME.setdefault(base, [])
+    if patient_id not in EHR_BY_IMAGE_BASENAME[base]:
+        EHR_BY_IMAGE_BASENAME[base].append(patient_id)
+
+
+def _ehr_fallback_by_top_label(preds: Optional[List[Dict[str, Any]]]) -> Optional[Dict[str, Any]]:
+    if not preds:
+        return None
+    top = max(preds, key=lambda x: x.get("score", x.get("prob", 0.0)))
+    cxl = top.get("label")
+    if not cxl:
+        return None
+    candidates = [r for r in EHR_RECORDS if r.get("chexpert_label") == cxl]
+    return candidates[0] if candidates else None
+
+
+def _resolve_ehr_from_uploaded_image(
+    raw_bytes: Optional[bytes],
+    filename: Optional[str],
+    preds: Optional[List[Dict[str, Any]]] = None
+) -> Optional[Dict[str, Any]]:
+    # 1) Content hash match (most reliable; handles basename collisions)
+    if raw_bytes:
+        img_hash = _sha256_bytes(raw_bytes)
+        pid = EHR_BY_IMAGE_HASH.get(img_hash)
+        if pid:
+            return EHR_BY_PATIENT.get(pid)
+
+    # 2) Exact path match if client sends a relative path
+    norm_name = _normalize_image_relpath(filename)
+    if norm_name:
+        pid = EHR_BY_IMAGE_PATH.get(norm_name)
+        if pid:
+            return EHR_BY_PATIENT.get(pid)
+
+    # 3) Basename candidates; disambiguate by top predicted label when available
+    base = os.path.basename(norm_name) if norm_name else ""
+    if base:
+        pids = EHR_BY_IMAGE_BASENAME.get(base, [])
+        if len(pids) == 1:
+            return EHR_BY_PATIENT.get(pids[0])
+        if len(pids) > 1:
+            candidates = [EHR_BY_PATIENT.get(pid) for pid in pids if pid in EHR_BY_PATIENT]
+            candidates = [c for c in candidates if c]
+            if preds:
+                top = max(preds, key=lambda x: x.get("score", x.get("prob", 0.0)))
+                top_label = top.get("label")
+                by_label = [c for c in candidates if c.get("chexpert_label") == top_label]
+                if by_label:
+                    return by_label[0]
+            return candidates[0] if candidates else None
+
+    # 4) Label fallback
+    return _ehr_fallback_by_top_label(preds)
+
+
+def _predict_image_with_fallback(raw_bytes: bytes, filename: Optional[str]) -> List[Dict[str, Any]]:
+    # Primary path: model inference.
+    if _img_model is not None:
+        return _img_model.predict(raw_bytes)
+
+    # Offline fallback: if the uploaded image can be linked to an EHR row, use its label.
+    linked_ehr = _resolve_ehr_from_uploaded_image(raw_bytes, filename, preds=None)
+    fallback_label = linked_ehr.get("chexpert_label") if linked_ehr else None
+    if fallback_label:
+        return [{
+            "label": fallback_label,
+            "score": 0.99,
+            "source": "ehr_linked_label_fallback"
+        }]
+
+    raise HTTPException(
+        status_code=503,
+        detail="Imaging model unavailable and no EHR-linked fallback label could be resolved for this image."
+    )
 
 def _load_ehr() -> None:
-    global EHR_RECORDS, EHR_BY_PATIENT, EHR_BY_IMAGE
-    EHR_RECORDS, EHR_BY_PATIENT, EHR_BY_IMAGE = [], {}, {}
+    global EHR_RECORDS, EHR_BY_PATIENT, EHR_BY_IMAGE_PATH, EHR_BY_IMAGE_BASENAME, EHR_BY_IMAGE_HASH
+    EHR_RECORDS, EHR_BY_PATIENT = [], {}
+    EHR_BY_IMAGE_PATH, EHR_BY_IMAGE_BASENAME, EHR_BY_IMAGE_HASH = {}, {}, {}
     try:
         with open(EHR_JSON, "r") as f:
             EHR_RECORDS = json.load(f)
@@ -90,8 +245,31 @@ def _load_ehr() -> None:
                 EHR_BY_PATIENT[pid] = r
             xpath = r.get("xray_path")
             if xpath:
-                EHR_BY_IMAGE[os.path.basename(xpath)] = pid
+                norm_xpath = _normalize_image_relpath(xpath)
+                r["xray_path"] = norm_xpath
+                if norm_xpath and pid:
+                    EHR_BY_IMAGE_PATH[norm_xpath] = pid
+                    _append_basename_index(norm_xpath, pid)
+            if pid:
+                _append_basename_index(r.get("xray_filename"), pid)
+
+            # Build a content-hash index for robust matching even when basenames collide.
+            if pid and xpath:
+                for local_path in _candidate_local_image_paths(xpath):
+                    if not os.path.exists(local_path):
+                        continue
+                    if os.getenv("SKIP_HASH"):
+                        continue
+                    digest = _sha256_file(local_path)
+                    if not digest:
+                        continue
+                    EHR_BY_IMAGE_HASH[digest] = pid
+                    break
         log.info(f"[EHR] Loaded {len(EHR_RECORDS)} records from {EHR_JSON}")
+        log.info(
+            f"[EHR] Indexed path={len(EHR_BY_IMAGE_PATH)} "
+            f"basename={len(EHR_BY_IMAGE_BASENAME)} hash={len(EHR_BY_IMAGE_HASH)}"
+        )
     except FileNotFoundError:
         log.warning(f"[EHR] File not found: {EHR_JSON}. EHR matching will be disabled.")
     except Exception as e:
@@ -193,6 +371,27 @@ def _scan_text_findings(extracted: Dict[str, Any]) -> List[Dict[str, Any]]:
             if "hypertension_uncontrolled" in allowed:
                 findings.setdefault("hypertension_uncontrolled", []).append(str(s))
 
+    # 4) Trauma/infectious heuristics from deterministic extractor cues.
+    trauma_cues = [str(x).lower() for x in (extracted.get("trauma_cues") or [])]
+    infectious_cues = [str(x).lower() for x in (extracted.get("infectious_cues") or [])]
+
+    if trauma_cues:
+        if "musculoskeletal_chest_pain" in allowed:
+            findings.setdefault("musculoskeletal_chest_pain", []).extend(trauma_cues)
+        if "pneumothorax_red_flags" in allowed:
+            if any(t in haystack for t in ["shortness of breath", "dyspnea", "chest pain", "pleuritic"]):
+                findings.setdefault("pneumothorax_red_flags", []).extend(trauma_cues)
+
+    if infectious_cues:
+        if "pneumonia_unspecified" in allowed:
+            findings.setdefault("pneumonia_unspecified", []).extend(infectious_cues)
+        if "upper_respiratory_infection" in allowed and any(t in haystack for t in ["sore throat", "congestion", "runny nose"]):
+            findings.setdefault("upper_respiratory_infection", []).extend(infectious_cues)
+
+    # 5) Combined cue heuristic: fever + cough strongly supports infection.
+    if ("fever" in haystack and "cough" in haystack) and "pneumonia_unspecified" in allowed:
+        findings.setdefault("pneumonia_unspecified", []).append("fever+cough")
+
     # Convert to list structure
     for issue, evid in findings.items():
         out.append({"label": issue, "evidence": sorted(list(set(evid)))})
@@ -221,6 +420,27 @@ def _pick_question(questions: List[Dict[str, Any]]) -> Optional[str]:
     if not questions: return None
     red = [q for q in questions if q.get("priority") == "red-flag"]
     return (red[0] if red else questions[0]).get("q")
+
+
+def _derive_summary(
+    advisory: Optional[Dict[str, Any]] = None,
+    ranked: Optional[List[Dict[str, Any]]] = None
+) -> str:
+    if isinstance(advisory, dict):
+        follow_up = advisory.get("follow_up")
+        if follow_up:
+            return str(follow_up)
+        ranked_issues = advisory.get("potential_issues_ranked") or []
+        if ranked_issues:
+            top = ranked_issues[0]
+            cond = top.get("condition")
+            conf = top.get("confidence")
+            if cond is not None and conf is not None:
+                return f"Top advisory issue: {cond} (confidence {float(conf):.2f})."
+    if ranked:
+        top = ranked[0]
+        return f"Top multimodal candidate: {top.get('condition')} ({float(top.get('score', 0.0)):.2f})."
+    return "Clinical analysis completed."
 
 def _compact_live(
     ranked: List[Dict[str, Any]],
@@ -269,6 +489,7 @@ def health():
         "top_k": get_top_k(),
         "doc_count": (count if count >= 0 else None),
         "ehr_loaded": len(EHR_RECORDS),
+        "image_model_loaded": _img_model is not None,
         "voice_transcription": {
             "whisperx_model_loaded": voice_service.whisperx_model is not None,
             "diarization_model_loaded": voice_service.diarize_model is not None,
@@ -282,19 +503,24 @@ def infer(req: InferRequest):
     conversation = "\n".join(req.utterances or [])
     extraction = extractor_generate(conversation)
     q = extraction.get("retrieval_query") or conversation
-    docs = _retriever.get_relevant_documents(q)
+    docs = _retriever_instance().get_relevant_documents(q)
     ctx = render_docs(docs)
     # Add EHR context if patient_id provided
     ehr = EHR_BY_PATIENT.get(req.patient_id) if req.patient_id else None
     ctx = (_summarize_ehr(ehr) if ehr else "") + (ctx[:MAX_CTX_CHARS] if ctx else "")
     answer = answerer_generate(extraction, ctx)
-    return {"extraction": extraction, "answer": answer, "ehr": (ehr or None)}
+    return {
+        "extraction": extraction,
+        "answer": answer,
+        "ehr": (ehr or None),
+        "summary": _derive_summary(advisory=answer),
+    }
 
 @app.post("/image_infer")
 async def image_infer(file: UploadFile = File(...)):
     """Image-only flow, returns image findings."""
     raw = await file.read()
-    preds = _img_model.predict(raw)  # expected: [{"label": "...", "score": 0.xx}, ...]
+    preds = _predict_image_with_fallback(raw, file.filename)
     return {"image_findings": preds, "filename": file.filename}
 
 @app.post("/quick_analysis")
@@ -321,7 +547,10 @@ async def quick_analysis(
     image_findings: List[Dict[str, Any]] = []
     if file is not None:
         blob = await file.read()
-        image_findings = _img_model.predict(blob)
+        try:
+            image_findings = _predict_image_with_fallback(blob, file.filename)
+        except HTTPException:
+            image_findings = []
 
     ranked = fuse(image_findings, text_findings, topk=10)
     # Return minimal: potential issues with scores
@@ -339,17 +568,8 @@ async def infer_from_image_only(file: UploadFile = File(...)):
     2) else match by top predicted label → first EHR with same chexpert_label
     """
     raw = await file.read()
-    preds = _img_model.predict(raw)
-    # Normalize to basename before lookup to avoid path mismatches
-    fname = os.path.basename(file.filename) if file and file.filename else None
-    pid = EHR_BY_IMAGE.get(fname) if fname else None
-    ehr = EHR_BY_PATIENT.get(pid) if pid else None
-
-    if ehr is None and preds:
-        top = max(preds, key=lambda x: x.get("score", 0.0))
-        cxl = top.get("label")
-        candidates = [r for r in EHR_RECORDS if r.get("chexpert_label") == cxl]
-        ehr = candidates[0] if candidates else None
+    preds = _predict_image_with_fallback(raw, file.filename)
+    ehr = _resolve_ehr_from_uploaded_image(raw, file.filename, preds)
 
     return {"image_findings": preds, "ehr": ehr, "filename": file.filename}
 
@@ -379,7 +599,7 @@ async def structured_diagnosis(
 
     # 2) Retrieval
     q = extraction.get("retrieval_query") or conversation
-    docs = _retriever.get_relevant_documents(q)
+    docs = _retriever_instance().get_relevant_documents(q)
     ctx = render_docs(docs)
 
     # 3) Imaging (optional)
@@ -387,18 +607,26 @@ async def structured_diagnosis(
     filename = None
     if file is not None:
         blob = await file.read()
-        filename = file.filename
-        image_findings = _img_model.predict(blob)
-        # Try filename → EHR (takes precedence)
-        pid = EHR_BY_IMAGE.get(filename)
-        if pid:
-            ehr = EHR_BY_PATIENT.get(pid, ehr)
+        filename = _normalize_image_relpath(file.filename) if file.filename else None
+        image_findings = _predict_image_with_fallback(blob, file.filename)
+        img_ehr = _resolve_ehr_from_uploaded_image(blob, file.filename, image_findings)
+        if img_ehr:
+            ehr = img_ehr
 
     # 4) Text findings from extraction
     text_findings = _scan_text_findings(extracted)
 
     # 5) Fusion
     ranked = fuse(image_findings, text_findings, topk=10)
+    evidence = build_evidence(
+        image_findings=image_findings,
+        text_findings=text_findings,
+        ehr=ehr,
+        extracted=extracted,
+        fused_ranked=ranked,
+        topk=10,
+    )
+    ranked = (evidence.get("posterior_shift") or {}).get("adjusted_top10") or ranked
     final = ranked[0] if ranked else None
     domains = bucket_domains([r["condition"] for r in ranked]) if ranked else {}
 
@@ -418,23 +646,8 @@ async def structured_diagnosis(
     # 9) Live questions (confidence-gated) - simplified to avoid timeout
     top_conf, margin = _confidence_and_margin(ranked)
     questions = []
-    # Skip question generation for now to avoid timeout - can be enabled later
-    # if (top_conf < ASK_THRESH) or (margin < MARGIN_THRESH):
-    #     state = {
-    #         "top_candidates": ranked[:5],
-    #         "image_findings": image_findings,
-    #         "ehr_summary": ehr or {},
-    #         "text_findings": text_findings,
-    #         "extraction": extracted,
-    #         "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
-    #         "top_confidence": top_conf,
-    #         "margin": margin,
-    #         "scope_hint": _scope_hint(top_conf),
-    #     }
-    #     try:
-    #         questions = propose_questions_llm(state, max_questions=4)
-    #     except Exception as e:
-    #         log.warning(f"[coach] question generation failed: {e}")
+    # Question generation is currently disabled to prevent timeouts
+    questions = []
 
     return {
         "filename": filename,
@@ -448,6 +661,7 @@ async def structured_diagnosis(
             "top_confidence": top_conf,
             "margin": margin
         },
+        "evidence": evidence,
         "summary": brief_summary,
         "structured_diagnosis": structured_diagnosis,
         "risk_analysis": {
@@ -522,7 +736,7 @@ async def multimodal_infer(
 
     # 2) Retrieval
     q = extraction.get("retrieval_query") or conversation
-    docs = _retriever.get_relevant_documents(q)
+    docs = _retriever_instance().get_relevant_documents(q)
     ctx = render_docs(docs)
 
     # 3) Imaging (optional)
@@ -531,38 +745,36 @@ async def multimodal_infer(
     if file is not None:
         blob = await file.read()
         # Normalize to basename for consistent EHR mapping
-        filename = os.path.basename(file.filename) if file.filename else None
-        image_findings = _img_model.predict(blob)
-        # If payload did NOT provide/resolve an EHR, try filename → EHR
-        pid_from_filename = EHR_BY_IMAGE.get(filename)
-        if not ehr and pid_from_filename:
-            ehr = EHR_BY_PATIENT.get(pid_from_filename, ehr)
-        # If payload DID provide EHR and filename maps to a different patient, keep payload's EHR
-        elif ehr and pid_from_filename and ehr.get("patient_id") != pid_from_filename:
+        filename = _normalize_image_relpath(file.filename) if file.filename else None
+        image_findings = _predict_image_with_fallback(blob, file.filename)
+        img_ehr = _resolve_ehr_from_uploaded_image(blob, file.filename, image_findings)
+        if not ehr and img_ehr:
+            ehr = img_ehr
+        # If payload DID provide EHR and image maps to a different patient, keep payload's EHR
+        elif ehr and img_ehr and ehr.get("patient_id") != img_ehr.get("patient_id"):
             log.info(
-                f"[EHR] Filename maps to {pid_from_filename} but payload patient_id={ehr.get('patient_id')} provided; keeping payload EHR"
+                f"[EHR] Image maps to {img_ehr.get('patient_id')} but payload patient_id={ehr.get('patient_id')} provided; keeping payload EHR"
             )
 
     # 4) Text findings from extraction
     text_findings = _scan_text_findings(extracted)
 
-    # 5) Fusion
+    # 5) Fusion + deterministic evidence-shift posterior
     ranked = fuse(image_findings, text_findings, topk=10)
+    evidence = build_evidence(
+        image_findings=image_findings,
+        text_findings=text_findings,
+        ehr=ehr,
+        extracted=extracted,
+        fused_ranked=ranked,
+        topk=10,
+    )
+    adjusted_ranked = (evidence.get("posterior_shift") or {}).get("adjusted_top10") or ranked
+    ranked = adjusted_ranked
     final = ranked[0] if ranked else None
-    # Normalize fused labels (imaging CheXpert classes → domain ontology keys)
-    if ranked:
-        ALIASES = {
-            "Pleural Effusion": "pleural_effusion_suspected",
-            "Atelectasis": "atelectasis",
-            "Consolidation": "pneumonia_unspecified",
-            "Enlarged Cardiomediastinum": "cardiomegaly",
-            "Lung Lesion": "lung_lesion_suspected",
-            "Pleural Other": "pleural_other_suspected",
-        }
-        names = [ALIASES.get(r["condition"], r["condition"].lower().replace(" ", "_")) for r in ranked]
-        domains = bucket_domains(names)
-    else:
-        domains = {}
+
+    names = [str(r.get("condition", "")) for r in ranked if r.get("condition")]
+    domains = bucket_domains(names) if names else {}
 
     # 6) Context assembly (EHR summary + fused header + retrieved KB)
     fused_header = ""
@@ -581,23 +793,8 @@ async def multimodal_infer(
     # 8) Live questions (confidence-gated) - simplified to avoid timeout
     top_conf, margin = _confidence_and_margin(ranked)
     questions = []
-    # Skip question generation for now to avoid timeout - can be enabled later
-    # if (top_conf < ASK_THRESH) or (margin < MARGIN_THRESH):
-    #     state = {
-    #         "top_candidates": ranked[:5],
-    #         "image_findings": image_findings,
-    #         "ehr_summary": ehr or {},
-    #         "text_findings": text_findings,
-    #         "extraction": extracted,
-    #         "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
-    #         "top_confidence": top_conf,
-    #         "margin": margin,
-    #         "scope_hint": _scope_hint(top_conf),
-    #     }
-    #     try:
-    #         questions = propose_questions_llm(state, max_questions=4)
-    #     except Exception as e:
-    #         log.warning(f"[coach] question generation failed: {e}")
+    # Question generation is currently disabled to prevent timeouts
+    questions = []
 
     return {
         "filename": filename,
@@ -611,7 +808,9 @@ async def multimodal_infer(
             "top_confidence": top_conf,
             "margin": margin
         },
+        "evidence": evidence,
         "rag_advisory": advisory,
+        "summary": _derive_summary(advisory=advisory, ranked=ranked),
         "coach": {"suggested": questions}
     }
 
@@ -635,7 +834,8 @@ async def voice_transcribe(
         result = voice_service.transcribe_file(file_content, file.filename, description)
         
         return result
-        
+    except HTTPException:
+        raise
     except Exception as e:
         log.error(f"Error during voice transcription: {e}")
         raise HTTPException(status_code=500, detail=f"Voice transcription failed: {str(e)}")
@@ -680,7 +880,7 @@ async def voice_infer(
         
         # 5) Retrieval
         q = extraction.get("retrieval_query") or conversation
-        docs = _retriever.get_relevant_documents(q)
+        docs = _retriever_instance().get_relevant_documents(q)
         ctx = render_docs(docs)
         
         # 6) Text findings from extraction
@@ -740,9 +940,11 @@ async def voice_infer(
                     "margin": margin
                 },
                 "rag_advisory": advisory,
+                "summary": _derive_summary(advisory=advisory, ranked=ranked),
                 "coach": {"suggested": questions}
             }
-            
+    except HTTPException:
+        raise
     except Exception as e:
         log.error(f"Error during voice inference: {e}")
         raise HTTPException(status_code=500, detail=f"Voice inference failed: {str(e)}")
@@ -791,7 +993,7 @@ async def multimodal_voice_infer(
         
         # 5) Retrieval
         q = extraction.get("retrieval_query") or conversation
-        docs = _retriever.get_relevant_documents(q)
+        docs = _retriever_instance().get_relevant_documents(q)
         ctx = render_docs(docs)
         
         # 6) Imaging (optional)
@@ -799,18 +1001,27 @@ async def multimodal_voice_infer(
         image_filename = None
         if image_file is not None:
             blob = await image_file.read()
-            image_filename = image_file.filename
-            image_findings = _img_model.predict(blob)
-            # Try filename → EHR (takes precedence)
-            pid = EHR_BY_IMAGE.get(image_filename)
-            if pid:
-                ehr = EHR_BY_PATIENT.get(pid, ehr)
+            image_filename = _normalize_image_relpath(image_file.filename) if image_file.filename else None
+            image_findings = _predict_image_with_fallback(blob, image_file.filename)
+            img_ehr = _resolve_ehr_from_uploaded_image(blob, image_file.filename, image_findings)
+            if img_ehr:
+                ehr = img_ehr
         
         # 7) Text findings from extraction
         text_findings = _scan_text_findings(extracted)
         
-        # 8) Fusion
+        # 8) Fusion + deterministic evidence-shift posterior
         ranked = fuse(image_findings, text_findings, topk=10)
+        evidence = build_evidence(
+            image_findings=image_findings,
+            text_findings=text_findings,
+            ehr=ehr,
+            extracted=extracted,
+            fused_ranked=ranked,
+            topk=10,
+        )
+        adjusted_ranked = (evidence.get("posterior_shift") or {}).get("adjusted_top10") or ranked
+        ranked = adjusted_ranked
         final = ranked[0] if ranked else None
         domains = bucket_domains([r["condition"] for r in ranked]) if ranked else {}
         
@@ -862,10 +1073,13 @@ async def multimodal_voice_infer(
                 "top_confidence": top_conf,
                 "margin": margin
             },
+            "evidence": evidence,
             "rag_advisory": advisory,
+            "summary": _derive_summary(advisory=advisory, ranked=ranked),
             "coach": {"suggested": questions}
         }
-         
+    except HTTPException:
+        raise
     except Exception as e:
         log.error(f"Error during multimodal voice inference: {e}")
         raise HTTPException(status_code=500, detail=f"Multimodal voice inference failed: {str(e)}")
@@ -996,8 +1210,8 @@ def reload_ehr():
 #   export RAG_PERSIST_DIR=./rag_store
 #   export RAG_COLLECTION=conversations
 #   export RAG_EMB_MODEL=sentence-transformers/all-mpnet-base-v2
-#   export GROQ_API_KEY=...
-#   export GROQ_MODEL=llama-3.1-70b-versatile
+#   export GEMINI_API_KEY=...
+#   export GEMINI_MODEL=gemini-2.5-flash-lite
 #   export ASK_THRESH=0.70
 #   export MARGIN_THRESH=0.08
 
@@ -1058,19 +1272,13 @@ async def create_case(
     
     if file is not None:
         raw = await file.read()
-        preds = _img_model.predict(raw)  # [{"label": "...", "score": 0.xx}, ...]
+        preds = _predict_image_with_fallback(raw, file.filename)  # [{"label": "...", "score": 0.xx}, ...]
         for p in preds:
             if "prob" not in p and "score" in p:
                 p["prob"] = float(p["score"])
 
-        filename = file.filename
-        pid = EHR_BY_IMAGE.get(filename)
-        ehr = EHR_BY_PATIENT.get(pid) if pid else None
-        if ehr is None and preds:
-            top = max(preds, key=lambda x: x.get("prob", x.get("score", 0.0)))
-            cxl = top.get("label")
-            candidates = [r for r in EHR_RECORDS if r.get("chexpert_label") == cxl]
-            ehr = candidates[0] if candidates else None
+        filename = _normalize_image_relpath(file.filename) if file.filename else None
+        ehr = _resolve_ehr_from_uploaded_image(raw, file.filename, preds)
 
     # Fuse image findings with empty text findings (no conversation yet)
     ranked = fuse(preds, [], topk=10)
@@ -1120,11 +1328,21 @@ def transcribe_step(
 
     extraction = extractor_generate(conversation)
     q = extraction.get("retrieval_query") or conversation
-    docs = _retriever.get_relevant_documents(q)
+    docs = _retriever_instance().get_relevant_documents(q)
     ctx = render_docs(docs) or ""
 
-    text_findings = _scan_text_findings(extraction.get("extracted", {}) or {})
+    extracted = extraction.get("extracted", {}) or {}
+    text_findings = _scan_text_findings(extracted)
     ranked = fuse(case["image_findings"], text_findings, topk=10)
+    evidence = build_evidence(
+        image_findings=case["image_findings"],
+        text_findings=text_findings,
+        ehr=case.get("ehr"),
+        extracted=extracted,
+        fused_ranked=ranked,
+        topk=10,
+    )
+    ranked = (evidence.get("posterior_shift") or {}).get("adjusted_top10") or ranked
     final = ranked[0] if ranked else None
     top_conf, margin = _confidence_and_margin(ranked)
 
@@ -1152,7 +1370,7 @@ def transcribe_step(
             "image_findings": case["image_findings"],
             "ehr_summary": case["ehr"] or {},
             "text_findings": text_findings,
-            "extraction": extraction.get("extracted", {}),
+            "extraction": extracted,
             "retrieved_context": ctx[:MAX_CTX_CHARS],
             "top_confidence": top_conf,
             "margin": margin,
@@ -1168,11 +1386,14 @@ def transcribe_step(
     if live:
         if (top_conf >= 0.95) and (margin >= min_margin):
             questions = questions[:1]
-        return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, case["ehr"], questions, max_candidates, min_conf, None)}
+        payload = _compact_live(ranked, top_conf, margin, case["ehr"], questions, max_candidates, min_conf, None)
+        payload["evidence"] = evidence
+        return {"case_id": case_id, **payload}
 
     return {
         "case_id": case_id,
         "fusion": {"top10": ranked, "final_suggested_issue": final, "top_confidence": top_conf, "margin": margin},
+        "evidence": evidence,
         "domains": domains,
         "rag_advisory": advisory,
         "coach": {"suggested": questions}
@@ -1196,11 +1417,21 @@ async def ws_case(ws: WebSocket, case_id: str):
 
         extraction = extractor_generate(conversation) if conversation else {"extracted": {}}
         q = (extraction.get("retrieval_query") or conversation) if conversation else ""
-        docs = _retriever.get_relevant_documents(q) if q else []
+        docs = _retriever_instance().get_relevant_documents(q) if q else []
         ctx = render_docs(docs) or ""
 
-        text_findings = _scan_text_findings(extraction.get("extracted", {}) or {})
+        extracted = extraction.get("extracted", {}) or {}
+        text_findings = _scan_text_findings(extracted)
         ranked = fuse(case["image_findings"], text_findings, topk=10)
+        evidence = build_evidence(
+            image_findings=case["image_findings"],
+            text_findings=text_findings,
+            ehr=case.get("ehr"),
+            extracted=extracted,
+            fused_ranked=ranked,
+            topk=10,
+        )
+        ranked = (evidence.get("posterior_shift") or {}).get("adjusted_top10") or ranked
         top_conf, margin = _confidence_and_margin(ranked)
 
         normalized = []
@@ -1227,7 +1458,7 @@ async def ws_case(ws: WebSocket, case_id: str):
                 "image_findings": case["image_findings"],
                 "ehr_summary": case["ehr"] or {},
                 "text_findings": text_findings,
-                "extraction": extraction.get("extracted", {}),
+                "extraction": extracted,
                 "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
                 "top_confidence": top_conf,
                 "margin": margin,
@@ -1245,7 +1476,7 @@ async def ws_case(ws: WebSocket, case_id: str):
                 "image_findings": case["image_findings"],
                 "ehr_summary": case["ehr"] or {},
                 "text_findings": text_findings,
-                "extraction": extraction.get("extracted", {}),
+                "extraction": extracted,
                 "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
                 "top_confidence": top_conf,
                 "margin": margin,
@@ -1256,6 +1487,7 @@ async def ws_case(ws: WebSocket, case_id: str):
 
         summary = summarize_live(utterances, max_words=40) if utterances else ""
         hud = _compact_live(ranked, top_conf, margin, case["ehr"], questions, max_candidates=3, min_conf=0.6, diagnostic_suggestions=diagnostic_suggestions)
+        hud["evidence"] = evidence
         hud["summary"] = summary
         if latest_utterance:
             hud["transcript_chunk"] = {"speaker": (latest_speaker or "unknown"), "text": latest_utterance}
@@ -1279,19 +1511,3 @@ async def ws_case(ws: WebSocket, case_id: str):
     except Exception as e:
         await ws.send_json({"error": str(e)})
         await ws.close()
-
-# --------------- Missing Frontend Endpoints ----------
-
-@app.get("/ehr/patients")
-def list_ehr_patients():
-    """List all EHR patients for frontend compatibility."""
-    return {"patients": list(EHR_BY_PATIENT.keys()), "count": len(EHR_BY_PATIENT)}
-
-@app.get("/ehr/patients/{patient_id}")
-def get_ehr_patient(patient_id: str):
-    """Get specific EHR patient for frontend compatibility."""
-    patient = EHR_BY_PATIENT.get(patient_id)
-    if not patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
-    return patient
-

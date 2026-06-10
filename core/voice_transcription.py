@@ -14,10 +14,22 @@ import json
 import uuid
 from datetime import datetime
 from typing import Dict, Any, List, Optional
-import librosa
-import soundfile as sf
-import numpy as np
-import whisperx
+try:
+    import librosa
+except Exception:  # pragma: no cover - optional dependency
+    librosa = None
+try:
+    import soundfile as sf
+except Exception:  # pragma: no cover - optional dependency
+    sf = None
+try:
+    import numpy as np
+except Exception:  # pragma: no cover - optional dependency
+    np = None
+try:
+    import whisperx
+except Exception:  # pragma: no cover - optional dependency
+    whisperx = None
 from pydantic import BaseModel
 
 
@@ -47,13 +59,16 @@ class VoiceTranscriptionService:
         self.diarize_model = None
         self.align_model = None
         self.align_metadata = None
-        self._load_models()
+        self._models_initialized = False
     
     def _load_models(self):
         """Load WhisperX models once at startup"""
+        self._models_initialized = True
         if self.whisperx_model is None:
             print("Loading WhisperX models...")
             try:
+                if whisperx is None:
+                    raise RuntimeError("whisperx package is not installed")
                 # Load WhisperX model with correct API for 3.1.1
                 try:
                     # Method 1: Try the newer API
@@ -93,7 +108,7 @@ class VoiceTranscriptionService:
                             
                             # Use direct pyannote.audio Pipeline (more reliable)
                             from pyannote.audio import Pipeline
-                            self.diarize_model = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token=hf_token)
+                            self.diarize_model = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=hf_token)
                             print("✅ Diarization model loaded with Hugging Face token")
                         except Exception as e1:
                             print(f"Direct pyannote.audio Pipeline failed: {e1}")
@@ -108,7 +123,7 @@ class VoiceTranscriptionService:
                         # Try without auth token (may have limited functionality)
                         try:
                             from pyannote.audio import Pipeline
-                            self.diarize_model = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token=False)
+                            self.diarize_model = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=False)
                             print("✅ Diarization model loaded without token (limited functionality)")
                         except Exception as e3:
                             print(f"Unauthenticated diarization model failed: {e3}")
@@ -121,14 +136,24 @@ class VoiceTranscriptionService:
             except Exception as e:
                 print(f"Error loading WhisperX models: {e}")
                 print("Falling back to basic Whisper...")
-                import whisper
-                self.whisperx_model = whisper.load_model("base")
+                try:
+                    import whisper
+                    self.whisperx_model = whisper.load_model("base")
+                except Exception as whisper_error:
+                    print(f"⚠️  Whisper fallback unavailable: {whisper_error}")
+                    self.whisperx_model = None
                 self.diarize_model = None
                 self.align_model = None
                 self.align_metadata = None
+
+    def _ensure_models_loaded(self):
+        if not self._models_initialized:
+            self._load_models()
     
     def preprocess_audio(self, audio_path: str) -> str:
         """Preprocess audio file for better transcription"""
+        if librosa is None or sf is None:
+            return audio_path
         try:
             # Load audio with librosa
             audio, sr = librosa.load(audio_path, sr=16000)  # WhisperX expects 16kHz
@@ -148,47 +173,60 @@ class VoiceTranscriptionService:
     def transcribe_audio(self, audio_path: str) -> Dict[str, Any]:
         """Transcribe audio using WhisperX with speaker diarization"""
         try:
-            # Load audio
-            audio = whisperx.load_audio(audio_path)
-            
-            # Transcribe
-            result = self.whisperx_model.transcribe(audio)
-            
-            # Align whisper output
-            if self.align_model is not None and self.align_metadata is not None:
-                result = whisperx.align(result["segments"], self.align_model, self.align_metadata, audio, "cpu", return_char_alignments=False)
-            
-            # Diarize (speaker identification) - using correct API for WhisperX 3.1.1
-            if self.diarize_model is not None:
-                try:
-                    print("🎤 Starting speaker diarization...")
-                    # Check if it's a pyannote.audio Pipeline or WhisperX DiarizationPipeline
-                    if hasattr(self.diarize_model, 'apply'):
-                        # It's a pyannote.audio Pipeline
-                        print("Using pyannote.audio Pipeline for diarization")
-                        diarize_segments = self.diarize_model(audio_path)
-                        result = whisperx.assign_word_speakers(diarize_segments, result)
-                    else:
-                        # It's a WhisperX DiarizationPipeline
-                        print("Using WhisperX DiarizationPipeline for diarization")
-                        diarize_segments = self.diarize_model(audio)
-                        result = whisperx.assign_word_speakers(diarize_segments, result)
-                    print(f"✅ Diarization completed: {len(result.get('segments', []))} segments with speaker info")
-                except Exception as diarize_error:
-                    print(f"⚠️  Diarization failed: {diarize_error}")
-                    print(f"   Error type: {type(diarize_error).__name__}")
-                    print(f"   Error details: {str(diarize_error)}")
-                    # Continue without diarization - the fallback logic will handle this
-            
-            return result
+            if whisperx is not None and self.whisperx_model is not None:
+                # Load audio
+                audio = whisperx.load_audio(audio_path)
+
+                # Transcribe
+                result = self.whisperx_model.transcribe(audio)
+
+                # Align whisper output
+                if self.align_model is not None and self.align_metadata is not None:
+                    result = whisperx.align(
+                        result["segments"],
+                        self.align_model,
+                        self.align_metadata,
+                        audio,
+                        "cpu",
+                        return_char_alignments=False
+                    )
+
+                # Diarize (speaker identification) - using correct API for WhisperX 3.1.1
+                if self.diarize_model is not None:
+                    try:
+                        print("🎤 Starting speaker diarization...")
+                        # Check if it's a pyannote.audio Pipeline or WhisperX DiarizationPipeline
+                        if hasattr(self.diarize_model, 'apply'):
+                            # It's a pyannote.audio Pipeline
+                            print("Using pyannote.audio Pipeline for diarization")
+                            diarize_segments = self.diarize_model(audio_path)
+                            result = whisperx.assign_word_speakers(diarize_segments, result)
+                        else:
+                            # It's a WhisperX DiarizationPipeline
+                            print("Using WhisperX DiarizationPipeline for diarization")
+                            diarize_segments = self.diarize_model(audio)
+                            result = whisperx.assign_word_speakers(diarize_segments, result)
+                        print(f"✅ Diarization completed: {len(result.get('segments', []))} segments with speaker info")
+                    except Exception as diarize_error:
+                        print(f"⚠️  Diarization failed: {diarize_error}")
+                        print(f"   Error type: {type(diarize_error).__name__}")
+                        print(f"   Error details: {str(diarize_error)}")
+                        # Continue without diarization - the fallback logic will handle this
+
+                return result
+            raise RuntimeError("WhisperX model unavailable")
             
         except Exception as e:
             print(f"Error in WhisperX transcription: {e}")
             # Fallback to basic transcription
-            import whisper
-            model = whisper.load_model("base")
-            result = model.transcribe(audio_path)
-            return {"segments": [{"text": result["text"], "start": 0, "end": len(result["text"])/10}]}
+            try:
+                import whisper
+                model = whisper.load_model("base")
+                result = model.transcribe(audio_path)
+                return {"segments": [{"text": result["text"], "start": 0, "end": len(result["text"])/10}]}
+            except Exception as whisper_error:
+                print(f"Error in Whisper fallback transcription: {whisper_error}")
+                return {"segments": []}
     
     def format_output(self, result: Dict[str, Any], description: str = None) -> ConversationEntry:
         """Format WhisperX output into the required JSON structure"""
@@ -295,6 +333,7 @@ class VoiceTranscriptionService:
     
     def transcribe_file(self, file_content: bytes, filename: str, description: str = None) -> TranscriptionResponse:
         """Transcribe an uploaded audio file"""
+        self._ensure_models_loaded()
         # Generate session ID
         session_id = str(uuid.uuid4())
         
@@ -335,4 +374,3 @@ class VoiceTranscriptionService:
 
 # Global instance
 voice_service = VoiceTranscriptionService()
-

@@ -35,11 +35,34 @@ def parse_args():
 def load_df(args):
     df = pd.read_csv(args.csv)
     assert "Path" in df.columns
+
+    # Auto-detect and strip CSV path prefix if it doesn't exist on disk
+    # CSV says "CheXpert-v1.0-small/train/patient..." but extracted zip has "train/patient..."
+    sample_path = df["Path"].iloc[0]
+    prefix_candidates = ["CheXpert-v1.0-small/", "CheXpert-v1.0/"]
+    for prefix in prefix_candidates:
+        if sample_path.startswith(prefix):
+            test_path = os.path.join(args.img_root, sample_path)
+            if not os.path.exists(test_path):
+                stripped = os.path.join(args.img_root, sample_path[len(prefix):])
+                if os.path.exists(stripped):
+                    print(f"[CheXpert] Auto-stripping prefix '{prefix}' from paths")
+                    df["Path"] = df["Path"].str.replace(prefix, "", n=1)
+                    break
+
     if args.frontal_only and "Frontal/Lateral" in df.columns:
         df = df[df["Frontal/Lateral"].str.lower() == "frontal"]
     exists = df["Path"].apply(lambda p: os.path.exists(os.path.join(args.img_root, p)))
     print(f"[CheXpert] Filtered missing files: kept {int(exists.sum())} / {len(df)} (dropped {len(df)-int(exists.sum())})")
     df = df[exists].reset_index(drop=True)
+
+    if len(df) < 10:
+        raise RuntimeError(
+            f"Only {len(df)} reachable images found — aborting. "
+            f"Check that --img_root ({args.img_root}) contains the extracted dataset. "
+            f"Sample path: {sample_path}"
+        )
+
     for c in args.labels:
         if c not in df.columns:
             df[c] = np.nan

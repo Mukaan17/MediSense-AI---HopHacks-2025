@@ -78,7 +78,7 @@ if __name__ == "__main__":
             print("✓ All basic tests passed!")
             print()
             print("Next steps:")
-            print("1. Set your GROQ_API_KEY in the .env file")
+            print("1. Set your GEMINI_API_KEY in the .env file")
             print("2. Restart the server: python -m uvicorn api.server:app --host 0.0.0.0 --port 8000")
             print("3. Test full multimodal functionality with: python clients/live_client.py")
         else:

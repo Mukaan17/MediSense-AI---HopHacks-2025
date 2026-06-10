@@ -34,4 +34,30 @@ imaging_to_issue:
   rib_fracture: musculoskeletal_chest_pain
   cardiothoracic_ratio_increased: heart_failure_exacerbation
 
+# Extraction signal groups used by deterministic extractor.
+trauma_cues:
+  - fall
+  - fell
+  - injury
+  - impact
+  - hit
+  - trauma
+  - accident
+  - fracture
+  - broken
+  - bruise
+  - contusion
+  - rib pain
+  - chest wall pain
+
+infectious_cues:
+  - fever
+  - cough
+  - chills
+  - sputum
+  - phlegm
+  - productive cough
+  - congestion
+  - infection
+  - sore throat
 
