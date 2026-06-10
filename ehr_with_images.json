@@ -1,420 +1,4688 @@
 [
   {
-    "patient_id": "P001",
-    "sex": "M",
-    "age": 68,
+    "patient_id": "MIMIC_10000032",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10000032,
+    "source_hadm_id": 25742920,
+    "sex": "F",
+    "age": 52,
     "vital_signs": {
-      "bp": "136/78",
-      "hr": 78,
-      "rr": 18,
-      "temp_f": 98.4,
-      "spo2_pct": 96,
-      "weight_lbs": 185,
-      "height_ft_in": "5'10\""
+      "bp": "98/66",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 93.03,
+      "height_in": 60.0,
+      "height_ft_in": "5'0\""
     },
     "pmh": [
-      "hypertension",
-      "hyperlipidemia"
+      "Tobacco use disorder",
+      "Diarrhea",
+      "Asymptomatic human immunodeficiency virus [HIV] infection status",
+      "Hyperpotassemia",
+      "Chronic hepatitis C without mention of hepatic coma",
+      "Cirrhosis of liver without mention of alcohol"
     ],
     "meds": [
-      "lisinopril",
-      "atorvastatin",
-      "aspirin"
+      "Tiotropium Bromide",
+      "Heparin",
+      "Morphine Sulfate",
+      "Albumin 25% (12.5g / 50mL)",
+      "Calcium Carbonate",
+      "Dextrose 50%",
+      "Lactulose",
+      "0.9% Sodium Chloride"
     ],
     "allergies": [],
     "social": {
-      "tobacco": "former",
-      "alcohol": "moderate"
+      "tobacco": "unknown",
+      "alcohol": "unknown"
     },
-    "chexpert_label": "Cardiomegaly",
-    "imaging_expectation": "Enlarged cardiac silhouette; consider chronic pressure/volume overload history.",
-    "ehr_notes": "Occasional exertional dyspnea, no active chest pain.",
-    "xray_path": "train/patient00108/study1/view2_lateral.jpg",
-    "xray_filename": "view2_lateral.jpg",
-    "encounter_date": "2025-09-01"
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "No acute cardiopulmonary abnormality label from CheXpert metadata.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10000032). Top diagnosis context: Tobacco use disorder.",
+    "xray_path": "train/patient33770/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2180-08-05"
   },
   {
-    "patient_id": "P002",
+    "patient_id": "MIMIC_10001217",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10001217,
+    "source_hadm_id": 27703517,
     "sex": "F",
-    "age": 74,
+    "age": 55,
     "vital_signs": {
-      "bp": "142/84",
-      "hr": 82,
-      "rr": 22,
-      "temp_f": 99.5,
-      "spo2_pct": 92,
-      "weight_lbs": 165,
+      "bp": "132/98",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 148.0,
+      "height_in": 66.0,
       "height_ft_in": "5'6\""
     },
     "pmh": [
-      "heart failure",
-      "ckd stage 3"
+      "Multiple sclerosis",
+      "Cerebral edema",
+      "Intracranial abscess",
+      "Tobacco use disorder",
+      "Streptococcus infection in conditions classified elsewhere and of unspecified site, streptococcus, group B",
+      "Other specified bacterial infections in conditions classified elsewhere and of unspecified site, other anaerobes"
     ],
     "meds": [
-      "furosemide",
-      "metoprolol",
-      "losartan"
+      "Vial",
+      "Bag",
+      "OxycoDONE (Immediate Release)",
+      "*NF* Ertapenem Sodium",
+      "Heparin",
+      "Lactated Ringers",
+      "Magnesium Sulfate",
+      "Meropenem"
     ],
     "allergies": [],
     "social": {
-      "tobacco": "never",
-      "alcohol": "rare"
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Edema",
+    "imaging_expectation": "Interstitial or alveolar edema pattern on chest imaging.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10001217). Top diagnosis context: Multiple sclerosis.",
+    "xray_path": "train/patient59197/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2157-12-18"
+  },
+  {
+    "patient_id": "MIMIC_10001725",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10001725,
+    "source_hadm_id": 25563031,
+    "sex": "F",
+    "age": 46,
+    "vital_signs": {
+      "bp": "114/70",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 142.8,
+      "height_in": 61.5,
+      "height_ft_in": "5'2\""
+    },
+    "pmh": [
+      "Asthma, unspecified type, unspecified",
+      "Myalgia and myositis, unspecified",
+      "Prolapse of vaginal vault after hysterectomy",
+      "Constipation, unspecified",
+      "Irritable bowel syndrome",
+      "Other opiates and related narcotics causing adverse effects in therapeutic use"
+    ],
+    "meds": [
+      "Zolpidem Tartrate",
+      "Bag",
+      "Lorazepam",
+      "Ondansetron",
+      "Albuterol 0.083% Neb Soln",
+      "Polyethylene Glycol",
+      "HydrOXYzine",
+      "Lactated Ringers"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
     },
     "chexpert_label": "Pleural Effusion",
-    "imaging_expectation": "Blunting of costophrenic angles, possible meniscus sign.",
-    "ehr_notes": "Increased orthopnea, 2 kg weight gain this week.",
-    "xray_path": "train/patient02892/study6/view2_lateral.jpg",
-    "xray_filename": "view2_lateral.jpg",
-    "encounter_date": "2025-08-27"
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10001725). Top diagnosis context: Asthma, unspecified type, unspecified.",
+    "xray_path": "train/patient14283/study12/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2110-04-11"
   },
   {
-    "patient_id": "P003",
-    "sex": "M",
-    "age": 26,
+    "patient_id": "MIMIC_10002428",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10002428,
+    "source_hadm_id": 26549334,
+    "sex": "F",
+    "age": 80,
     "vital_signs": {
-      "bp": "122/74",
-      "hr": 96,
-      "rr": 26,
-      "temp_f": 98.6,
-      "spo2_pct": 94,
-      "weight_lbs": 175,
-      "height_ft_in": "6'0\""
+      "bp": "110/70",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 88.0,
+      "height_in": 59.0,
+      "height_ft_in": "4'11\""
     },
-    "pmh": [],
-    "meds": [],
-    "allergies": [
-      "penicillin"
+    "pmh": [
+      "Unspecified injury of left hip, initial encounter",
+      "Dry eye syndrome of bilateral lacrimal glands",
+      "Unspecified injury of head, initial encounter",
+      "Unspecified macular degeneration",
+      "Presence of intraocular lens",
+      "Unspecified place in nursing home as the place of occurrence of the external cause"
     ],
+    "meds": [
+      "Insulin",
+      "Multivitamins",
+      "Neutra-Phos",
+      "Oxycodone-Acetaminophen (5mg-325mg)",
+      "Tiotropium Bromide",
+      "Bag",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Lisinopril"
+    ],
+    "allergies": [],
     "social": {
-      "tobacco": "vapes",
-      "alcohol": "social"
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "No acute cardiopulmonary abnormality label from CheXpert metadata.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10002428). Top diagnosis context: Unspecified injury of left hip, initial encounter.",
+    "xray_path": "train/patient38151/study3/view2_frontal.jpg",
+    "xray_filename": "view2_frontal.jpg",
+    "encounter_date": "2160-07-15"
+  },
+  {
+    "patient_id": "MIMIC_10002495",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10002495,
+    "source_hadm_id": 24982426,
+    "sex": "M",
+    "age": 81,
+    "vital_signs": {
+      "bp": "159/59",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 160.0,
+      "height_in": 66.0,
+      "height_ft_in": "5'6\""
+    },
+    "pmh": [
+      "Gross hematuria",
+      "Acute kidney failure, unspecified",
+      "Long term (current) use of anticoagulants",
+      "Personal history of other venous thrombosis and embolism",
+      "Non-ST elevation (NSTEMI) myocardial infarction",
+      "Enterocolitis due to Clostridium difficile"
+    ],
+    "meds": [
+      "Insulin",
+      "Bag",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Atorvastatin",
+      "Clopidogrel",
+      "Furosemide",
+      "Glucagon",
+      "Heparin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10002495). Top diagnosis context: Gross hematuria.",
+    "xray_path": "train/patient26001/study3/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2141-05-22"
+  },
+  {
+    "patient_id": "MIMIC_10002930",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10002930,
+    "source_hadm_id": 20282368,
+    "sex": "F",
+    "age": 48,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 165.0,
+      "height_in": 62.0,
+      "height_ft_in": "5'2\""
+    },
+    "pmh": [
+      "Cervicalgia",
+      "Thrombocytopenia, unspecified",
+      "Suicidal ideations",
+      "Headache",
+      "Unspecified mood [affective] disorder",
+      "Nicotine dependence, cigarettes, uncomplicated"
+    ],
+    "meds": [
+      "Multivitamins",
+      "Bag",
+      "Diazepam",
+      "FoLIC Acid",
+      "Multivitamins W/minerals",
+      "Nicotine Polacrilex",
+      "OLANZapine",
+      "Amitriptyline"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
     },
     "chexpert_label": "Pneumothorax",
-    "imaging_expectation": "Visceral pleural line with absent lung markings peripherally.",
-    "ehr_notes": "Sudden pleuritic chest pain after exercise; no trauma.",
-    "xray_path": "train/patient01091/study2/view3_lateral.jpg",
-    "xray_filename": "view3_lateral.jpg",
-    "encounter_date": "2025-08-14"
-  },
-  {
-    "patient_id": "P004",
-    "sex": "F",
-    "age": 59,
-    "vital_signs": {
-      "bp": "130/82",
-      "hr": 88,
-      "rr": 20,
-      "temp_f": 99.1,
-      "spo2_pct": 95,
-      "weight_lbs": 140,
-      "height_ft_in": "5'4\""
-    },
-    "pmh": [
-      "recent abdominal surgery"
-    ],
-    "meds": [
-      "acetaminophen"
-    ],
-    "allergies": [],
-    "social": {
-      "tobacco": "never",
-      "alcohol": "none"
-    },
-    "chexpert_label": "Atelectasis",
-    "imaging_expectation": "Linear/wedge-shaped opacities with volume loss; post-op atelectasis.",
-    "ehr_notes": "Shallow breathing, improved with incentive spirometry.",
-    "xray_path": "train/patient00011/study12/view1_frontal.jpg",
+    "imaging_expectation": "Pleural line with absent peripheral lung markings.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10002930). Top diagnosis context: Cervicalgia.",
+    "xray_path": "train/patient33251/study17/view1_frontal.jpg",
     "xray_filename": "view1_frontal.jpg",
-    "encounter_date": "2025-09-02"
+    "encounter_date": "2201-03-23"
   },
   {
-    "patient_id": "P005",
+    "patient_id": "MIMIC_10003046",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10003046,
+    "source_hadm_id": 26048429,
     "sex": "M",
-    "age": 51,
+    "age": 64,
     "vital_signs": {
-      "bp": "126/80",
-      "hr": 102,
-      "rr": 24,
-      "temp_f": 101.3,
-      "spo2_pct": 93
+      "bp": "124/76",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 151.2,
+      "height_in": 66.5,
+      "height_ft_in": "5'6\""
     },
     "pmh": [
-      "type 2 diabetes"
+      "Malignant neoplasm of lower third of esophagus",
+      "Esophageal reflux",
+      "Barrett's esophagus",
+      "Acidosis"
     ],
     "meds": [
-      "metformin"
+      "Insulin",
+      "Bag",
+      "Neutra-Phos",
+      "Vial",
+      "Glucagon",
+      "HYDROmorphone",
+      "Heparin",
+      "Potassium Chloride (Powder)"
     ],
     "allergies": [],
     "social": {
-      "tobacco": "former",
-      "alcohol": "social"
+      "tobacco": "unknown",
+      "alcohol": "unknown"
     },
-    "chexpert_label": "Pneumonia",
-    "imaging_expectation": "Focal/lobar consolidation with air bronchograms.",
-    "ehr_notes": "Fever, productive cough with yellow sputum x 3 days.",
-    "xray_path": "train/patient04744/study1/view1_frontal.jpg",
-    "xray_filename": "view1_frontal.jpg",
-    "encounter_date": "2025-09-05"
+    "chexpert_label": "Enlarged Cardiomediastinum",
+    "imaging_expectation": "Mediastinal/cardiac contour appears enlarged.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10003046). Top diagnosis context: Malignant neoplasm of lower third of esophagus.",
+    "xray_path": "train/patient18496/study2/view3_lateral.jpg",
+    "xray_filename": "view3_lateral.jpg",
+    "encounter_date": "2154-01-02"
   },
   {
-    "patient_id": "P006",
+    "patient_id": "MIMIC_10003400",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10003400,
+    "source_hadm_id": 23559586,
     "sex": "F",
     "age": 72,
     "vital_signs": {
-      "bp": "138/86",
-      "hr": 90,
-      "rr": 22,
-      "temp_f": 98.9,
-      "spo2_pct": 90
+      "bp": "101/62",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 215.0,
+      "height_in": 63.0,
+      "height_ft_in": "5'3\""
     },
     "pmh": [
-      "heart failure",
-      "hypertension"
+      "Obesity, unspecified",
+      "Acute kidney failure, unspecified",
+      "Thrombocytopenia, unspecified",
+      "Severe sepsis with septic shock",
+      "Other urogenital candidiasis",
+      "Encephalopathy, unspecified"
     ],
     "meds": [
-      "furosemide",
-      "spironolactone",
-      "lisinopril"
+      "Multivitamins",
+      "Bag",
+      "Multivitamins W/minerals",
+      "CefePIME",
+      "Diltiazem",
+      "Heparin",
+      "Potassium Chloride",
+      "Lorazepam"
     ],
     "allergies": [],
     "social": {
-      "tobacco": "never",
-      "alcohol": "rare"
+      "tobacco": "unknown",
+      "alcohol": "unknown"
     },
-    "chexpert_label": "Edema",
-    "imaging_expectation": "Perihilar bat-wing opacities, Kerley B lines consistent with pulmonary edema.",
-    "ehr_notes": "Exertional dyspnea, bilateral leg swelling.",
-    "xray_path": "train/patient03027/study4/view1_frontal.jpg",
-    "xray_filename": "view1_frontal.jpg",
-    "encounter_date": "2025-08-30"
+    "chexpert_label": "Atelectasis",
+    "imaging_expectation": "Subsegmental or lobar volume loss pattern visible.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10003400). Top diagnosis context: Obesity, unspecified.",
+    "xray_path": "train/patient33805/study1/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2137-08-04"
   },
   {
-    "patient_id": "P007",
+    "patient_id": "MIMIC_10004235",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10004235,
+    "source_hadm_id": 22187210,
     "sex": "M",
-    "age": 44,
+    "age": 47,
     "vital_signs": {
-      "bp": "124/76",
-      "hr": 84,
-      "rr": 18,
-      "temp_f": 98.2,
-      "spo2_pct": 97
+      "bp": "144/95",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 235.5,
+      "height_in": 72.0,
+      "height_ft_in": "6'0\""
     },
     "pmh": [
-      "asthma"
+      "Autistic disorder, current or active state",
+      "Atrial fibrillation",
+      "Long-term (current) use of anticoagulants",
+      "Personal history of sudden cardiac arrest",
+      "Postprocedural fever",
+      "Unspecified essential hypertension"
     ],
     "meds": [
-      "albuterol inhaler"
-    ],
-    "allergies": [
-      "sulfa"
-    ],
-    "social": {
-      "tobacco": "never",
-      "alcohol": "moderate"
-    },
-    "chexpert_label": "Consolidation",
-    "imaging_expectation": "Dense alveolar opacification in a segment/lobe; air bronchograms.",
-    "ehr_notes": "Cough and pleuritic pain; worsened since last week.",
-    "xray_path": "train/patient05735/study11/view1_frontal.jpg",
-    "xray_filename": "view1_frontal.jpg",
-    "encounter_date": "2025-09-06"
-  },
-  {
-    "patient_id": "P008",
-    "sex": "F",
-    "age": 63,
-    "vital_signs": {
-      "bp": "128/74",
-      "hr": 86,
-      "rr": 20,
-      "temp_f": 98.7,
-      "spo2_pct": 95
-    },
-    "pmh": [
-      "copd"
-    ],
-    "meds": [
-      "tiotropium",
-      "albuterol"
+      "Vial",
+      "Warfarin",
+      "Heparin",
+      "Pantoprazole",
+      "Vancomycin",
+      "Ciprofloxacin HCl",
+      "Docusate Sodium",
+      "Ursodiol"
     ],
     "allergies": [],
     "social": {
-      "tobacco": "current",
-      "alcohol": "rare"
+      "tobacco": "unknown",
+      "alcohol": "unknown"
     },
-    "chexpert_label": "Lung Opacity",
-    "imaging_expectation": "Non-specific airspace opacity; correlate with symptoms.",
-    "ehr_notes": "Increased cough, mild sputum, baseline exertional dyspnea.",
-    "xray_path": "train/patient01671/study9/view1_frontal.jpg",
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10004235). Top diagnosis context: Autistic disorder, current or active state.",
+    "xray_path": "train/patient20835/study7/view1_frontal.jpg",
     "xray_filename": "view1_frontal.jpg",
-    "encounter_date": "2025-08-29"
+    "encounter_date": "2196-06-20"
   },
   {
-    "patient_id": "P009",
+    "patient_id": "MIMIC_10004422",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10004422,
+    "source_hadm_id": 21255400,
+    "sex": "M",
+    "age": 78,
+    "vital_signs": {
+      "bp": "140/60",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 140.0,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Surgical operation with anastomosis, bypass, or graft, with natural or artificial tissues used as implant causing abnormal patient reaction, or later complication, without mention of misadventure at time of operation",
+      "Percutaneous transluminal coronary angioplasty status",
+      "Accidents occurring in residential institution",
+      "Cardiac complications, not elsewhere classified",
+      "Hemorrhage complicating a procedure",
+      "Other and unspecified alcohol dependence, unspecified"
+    ],
+    "meds": [
+      "Neutra-Phos",
+      "Aspirin",
+      "Bag",
+      "Clonazepam",
+      "FoLIC Acid",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Lorazepam",
+      "OLANZapine"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10004422). Top diagnosis context: Surgical operation with anastomosis, bypass, or graft, with natural or artificial tissues used as implant causing abnormal patient reaction, or later complication, without mention of misadventure at time of operation.",
+    "xray_path": "train/patient21003/study12/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2111-01-15"
+  },
+  {
+    "patient_id": "MIMIC_10004457",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10004457,
+    "source_hadm_id": 25559382,
     "sex": "M",
     "age": 65,
     "vital_signs": {
-      "bp": "140/88",
-      "hr": 80,
-      "rr": 18,
-      "temp_f": 98.3,
-      "spo2_pct": 98
+      "bp": "124/56",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 167.8,
+      "height_in": 70.0,
+      "height_ft_in": "5'10\""
     },
     "pmh": [
-      "post-op cardiac surgery"
+      "Unspecified asthma, uncomplicated",
+      "Personal history of Hodgkin lymphoma",
+      "Rash and other nonspecific skin eruption",
+      "Atherosclerotic heart disease of native coronary artery with unstable angina pectoris",
+      "Chronic systolic (congestive) heart failure",
+      "Family history of ischemic heart disease and other diseases of the circulatory system"
     ],
     "meds": [
-      "aspirin",
-      "metoprolol",
-      "atorvastatin"
+      "Aspirin",
+      "Ramelteon",
+      "Clopidogrel",
+      "Isosorbide Mononitrate (Extended Release)",
+      "Diltiazem Extended-Release",
+      "Fish Oil (Omega 3)",
+      "Niacin",
+      "Acetaminophen"
     ],
     "allergies": [],
     "social": {
-      "tobacco": "former",
-      "alcohol": "social"
+      "tobacco": "unknown",
+      "alcohol": "unknown"
     },
-    "chexpert_label": "Enlarged Cardiomediastinum",
-    "imaging_expectation": "Widened mediastinal contours; post-operative changes possible.",
-    "ehr_notes": "Follow-up after CABG; no active symptoms.",
-    "xray_path": "train/patient04598/study2/view1_frontal.jpg",
+    "chexpert_label": "Atelectasis",
+    "imaging_expectation": "Subsegmental or lobar volume loss pattern visible.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10004457). Top diagnosis context: Unspecified asthma, uncomplicated.",
+    "xray_path": "train/patient15123/study11/view1_frontal.jpg",
     "xray_filename": "view1_frontal.jpg",
-    "encounter_date": "2025-08-20"
+    "encounter_date": "2148-09-14"
   },
   {
-    "patient_id": "P010",
-    "sex": "F",
-    "age": 57,
-    "vital_signs": {
-      "bp": "122/70",
-      "hr": 78,
-      "rr": 17,
-      "temp_f": 98.1,
-      "spo2_pct": 98
-    },
-    "pmh": [
-      "breast cancer (in remission)"
-    ],
-    "meds": [
-      "letrozole"
-    ],
-    "allergies": [],
-    "social": {
-      "tobacco": "never",
-      "alcohol": "social"
-    },
-    "chexpert_label": "Lung Lesion",
-    "imaging_expectation": "Discrete nodule/mass; consider prior oncologic history.",
-    "ehr_notes": "Incidental nodule on screening CXR.",
-    "xray_path": "train/patient01987/study2/view2_lateral.jpg",
-    "xray_filename": "view2_lateral.jpg",
-    "encounter_date": "2025-08-18"
-  },
-  {
-    "patient_id": "P011",
+    "patient_id": "MIMIC_10004720",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10004720,
+    "source_hadm_id": 22081550,
     "sex": "M",
-    "age": 39,
-    "vital_signs": {
-      "bp": "118/72",
-      "hr": 74,
-      "rr": 16,
-      "temp_f": 98.0,
-      "spo2_pct": 99
-    },
-    "pmh": [],
-    "meds": [],
-    "allergies": [],
-    "social": {
-      "tobacco": "never",
-      "alcohol": "none"
-    },
-    "chexpert_label": "No Finding",
-    "imaging_expectation": "Normal study anticipated.",
-    "ehr_notes": "Intermittent atypical chest discomfort; low-risk features.",
-    "xray_path": "train/patient00995/study4/view1_frontal.jpg",
-    "xray_filename": "view1_frontal.jpg",
-    "encounter_date": "2025-09-07"
-  },
-  {
-    "patient_id": "P012",
-    "sex": "F",
     "age": 61,
     "vital_signs": {
-      "bp": "134/76",
-      "hr": 82,
-      "rr": 20,
-      "temp_f": 98.6,
-      "spo2_pct": 96
+      "bp": "128/71",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 147.0,
+      "height_in": 70.0,
+      "height_ft_in": "5'10\""
     },
     "pmh": [
-      "prior TB (treated)"
+      "Other medical procedures as the cause of abnormal reaction of the patient, or of later complication, without mention of misadventure at the time of the procedure",
+      "Do not resuscitate",
+      "Encounter for palliative care",
+      "Fall on same level, unspecified, subsequent encounter",
+      "Tobacco use",
+      "Allergic rhinitis, unspecified"
     ],
-    "meds": [],
+    "meds": [
+      "Neutra-Phos",
+      "Bag",
+      "CefePIME",
+      "Citalopram",
+      "Glucagon",
+      "Polyethylene Glycol",
+      "Heparin",
+      "Magnesium Sulfate"
+    ],
     "allergies": [],
     "social": {
-      "tobacco": "former",
-      "alcohol": "rare"
+      "tobacco": "unknown",
+      "alcohol": "unknown"
     },
-    "chexpert_label": "Pleural Other",
-    "imaging_expectation": "Pleural thickening/calcification; chronic changes.",
-    "ehr_notes": "Mild exertional dyspnea; no acute symptoms.",
-    "xray_path": "train/patient04381/study1/view1_frontal.jpg",
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10004720). Top diagnosis context: Other medical procedures as the cause of abnormal reaction of the patient, or of later complication, without mention of misadventure at the time of the procedure.",
+    "xray_path": "train/patient39612/study1/view1_frontal.jpg",
     "xray_filename": "view1_frontal.jpg",
-    "encounter_date": "2025-08-22"
+    "encounter_date": "2186-11-12"
   },
   {
-    "patient_id": "P013",
+    "patient_id": "MIMIC_10004733",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10004733,
+    "source_hadm_id": 27411876,
+    "sex": "M",
+    "age": 51,
+    "vital_signs": {
+      "bp": "152/94",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 236.0,
+      "height_in": 73.0,
+      "height_ft_in": "6'1\""
+    },
+    "pmh": [
+      "Acute kidney failure, unspecified",
+      "Dysphagia, oropharyngeal phase",
+      "Hyperosmolality and/or hypernatremia",
+      "Other specified procedures as the cause of abnormal reaction of patient, or of later complication, without mention of misadventure at time of procedure",
+      "Chronic kidney disease, unspecified",
+      "Other Staphylococcus pneumonia"
+    ],
+    "meds": [
+      "Amlodipine",
+      "Aspirin",
+      "Bag",
+      "CloniDINE",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Lisinopril",
+      "Lorazepam",
+      "Captopril"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10004733). Top diagnosis context: Acute kidney failure, unspecified.",
+    "xray_path": "train/patient52442/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2174-12-04"
+  },
+  {
+    "patient_id": "MIMIC_10005348",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10005348,
+    "source_hadm_id": 25239799,
+    "sex": "M",
+    "age": 76,
+    "vital_signs": {
+      "bp": "121/74",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 152.78,
+      "height_in": 71.0,
+      "height_ft_in": "5'11\""
+    },
+    "pmh": [
+      "Depressive disorder, not elsewhere classified",
+      "Aortic valve disorders",
+      "Unspecified essential hypertension",
+      "Percutaneous transluminal coronary angioplasty status",
+      "Degeneration of cervical intervertebral disc",
+      "Degeneration of lumbar or lumbosacral intervertebral disc"
+    ],
+    "meds": [
+      "Insulin",
+      "Multivitamins",
+      "Aspirin",
+      "Bag",
+      "FoLIC Acid",
+      "Warfarin",
+      "Atorvastatin",
+      "Citalopram"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10005348). Top diagnosis context: Depressive disorder, not elsewhere classified.",
+    "xray_path": "train/patient16717/study1/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2130-10-26"
+  },
+  {
+    "patient_id": "MIMIC_10005817",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10005817,
+    "source_hadm_id": 28661809,
+    "sex": "M",
+    "age": 66,
+    "vital_signs": {
+      "bp": "153/66",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 200.84,
+      "height_in": 68.0,
+      "height_ft_in": "5'8\""
+    },
+    "pmh": [
+      "Other secondary neuroendocrine tumors",
+      "Dependence on supplemental oxygen",
+      "Hypertensive chronic kidney disease with stage 1 through stage 4 chronic kidney disease, or unspecified chronic kidney disease",
+      "Encounter for palliative care",
+      "Unspecified atrial fibrillation",
+      "Malignant pleural effusion"
+    ],
+    "meds": [
+      "Insulin",
+      "Multivitamins",
+      "Bag",
+      "Lidocaine Jelly 2% (Urojet)",
+      "OxyCODONE (Immediate Release)",
+      "Atorvastatin",
+      "CefePIME",
+      "Glucagon"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Support Devices",
+    "imaging_expectation": "Support hardware or lines/tubes visualized.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10005817). Top diagnosis context: Other secondary neuroendocrine tumors.",
+    "xray_path": "train/patient12810/study1/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2135-01-03"
+  },
+  {
+    "patient_id": "MIMIC_10005866",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10005866,
+    "source_hadm_id": 20364112,
+    "sex": "M",
+    "age": 57,
+    "vital_signs": {
+      "bp": "132/79",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 129.41,
+      "height_in": 67.0,
+      "height_ft_in": "5'7\""
+    },
+    "pmh": [
+      "Portal hypertension",
+      "Peritoneal adhesions (postprocedural) (postinfection)",
+      "Encounter for palliative care",
+      "Other specified coagulation defects",
+      "Do not resuscitate",
+      "Hypoxemia"
+    ],
+    "meds": [
+      "Multivitamins",
+      "Bag",
+      "Sucralfate",
+      "OxyCODONE (Immediate Release)",
+      "Sulfameth/Trimethoprim DS",
+      "Sulfameth/Trimethoprim SS",
+      "Furosemide",
+      "Heparin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10005866). Top diagnosis context: Portal hypertension.",
+    "xray_path": "train/patient09703/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2149-10-01"
+  },
+  {
+    "patient_id": "MIMIC_10005909",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10005909,
+    "source_hadm_id": 20199380,
+    "sex": "F",
+    "age": 40,
+    "vital_signs": {
+      "bp": "123/77",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 248.8,
+      "height_in": 70.0,
+      "height_ft_in": "5'10\""
+    },
+    "pmh": [
+      "Accidental puncture and laceration of a circulatory system organ or structure during a circulatory system procedure",
+      "Compression of vein",
+      "Other surgical procedures as the cause of abnormal reaction of the patient, or of later complication, without mention of misadventure at the time of the procedure",
+      "Operating room of hospital as the place of occurrence of the external cause",
+      "Acute embolism and thrombosis of left iliac vein"
+    ],
+    "meds": [
+      "ClonazePAM",
+      "OxyCODONE (Immediate Release)",
+      "Warfarin",
+      "Polyethylene Glycol",
+      "Levothyroxine Sodium",
+      "Docusate Sodium",
+      "Phenazopyridine",
+      "Ranitidine"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10005909). Top diagnosis context: Accidental puncture and laceration of a circulatory system organ or structure during a circulatory system procedure.",
+    "xray_path": "train/patient18323/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2144-10-28"
+  },
+  {
+    "patient_id": "MIMIC_10006053",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10006053,
+    "source_hadm_id": 22942076,
+    "sex": "M",
+    "age": 52,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Esophageal varices in diseases classified elsewhere, with bleeding",
+      "Acute kidney failure with lesion of tubular necrosis",
+      "Alcoholic cirrhosis of liver",
+      "Acute alcoholic intoxication in alcoholism, continuous",
+      "Acute alcoholic hepatitis",
+      "Subendocardial infarction, initial episode of care"
+    ],
+    "meds": [
+      "Multivitamins",
+      "Bag",
+      "FoLIC Acid",
+      "Magnesium Sulfate",
+      "Dextrose 50%",
+      "Midazolam",
+      "Sodium Bicarbonate",
+      "0.9% Sodium Chloride"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Atelectasis",
+    "imaging_expectation": "Subsegmental or lobar volume loss pattern visible.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10006053). Top diagnosis context: Esophageal varices in diseases classified elsewhere, with bleeding.",
+    "xray_path": "train/patient58503/study3/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2111-11-13"
+  },
+  {
+    "patient_id": "MIMIC_10006580",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10006580,
+    "source_hadm_id": 24159665,
+    "sex": "F",
+    "age": 63,
+    "vital_signs": {
+      "bp": "148/77",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 172.0,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Gout, unspecified",
+      "Arthropathy, unspecified, site unspecified",
+      "Long-term (current) use of insulin",
+      "Bariatric surgery status",
+      "Unspecified essential hypertension",
+      "Other and unspecified hyperlipidemia"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "Sucralfate",
+      "Glucagon",
+      "Heparin",
+      "Magnesium Sulfate",
+      "Omeprazole"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10006580). Top diagnosis context: Gout, unspecified.",
+    "xray_path": "train/patient32666/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2137-08-10"
+  },
+  {
+    "patient_id": "MIMIC_10007058",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10007058,
+    "source_hadm_id": 22954658,
+    "sex": "M",
+    "age": 48,
+    "vital_signs": {
+      "bp": "124/76",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 171.0,
+      "height_in": 70.0,
+      "height_ft_in": "5'10\""
+    },
+    "pmh": [
+      "Encounter for immunization",
+      "Non-ST elevation (NSTEMI) myocardial infarction",
+      "Gastro-esophageal reflux disease without esophagitis",
+      "Long term (current) use of aspirin",
+      "Long term (current) use of antithrombotics/antiplatelets",
+      "Dissection of abdominal aorta"
+    ],
+    "meds": [
+      "Vial",
+      "Aspirin",
+      "Bag",
+      "Atorvastatin",
+      "Magnesium Sulfate",
+      "Nitroglycerin SL",
+      "Pantoprazole",
+      "TiCAGRELOR"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Consolidation",
+    "imaging_expectation": "Focal airspace opacity consistent with consolidation.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10007058). Top diagnosis context: Encounter for immunization.",
+    "xray_path": "train/patient13300/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2167-11-07"
+  },
+  {
+    "patient_id": "MIMIC_10007795",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10007795,
+    "source_hadm_id": 22051341,
+    "sex": "F",
+    "age": 53,
+    "vital_signs": {
+      "bp": "132/91",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 164.0,
+      "height_in": 65.5,
+      "height_ft_in": "5'6\""
+    },
+    "pmh": [
+      "Other acute pain",
+      "Secondary diabetes mellitus without mention of complication, not stated as uncontrolled, or unspecified",
+      "Colostomy status",
+      "Personal history of malignant neoplasm of breast",
+      "Pure hypercholesterolemia",
+      "Personal history of antineoplastic chemotherapy"
+    ],
+    "meds": [
+      "Multivitamins",
+      "Vial",
+      "Bag",
+      "Lorazepam",
+      "Cyclobenzaprine",
+      "Heparin",
+      "Lactated Ringers",
+      "Magnesium Sulfate"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pneumothorax",
+    "imaging_expectation": "Pleural line with absent peripheral lung markings.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10007795). Top diagnosis context: Other acute pain.",
+    "xray_path": "train/patient20397/study5/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2136-09-22"
+  },
+  {
+    "patient_id": "MIMIC_10007818",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10007818,
+    "source_hadm_id": 22987108,
+    "sex": "M",
+    "age": 69,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 196.65,
+      "height_in": 73.0,
+      "height_ft_in": "6'1\""
+    },
+    "pmh": [
+      "Adult failure to thrive",
+      "Methicillin susceptible Staphylococcus aureus infection as the cause of diseases classified elsewhere",
+      "Sepsis due to Escherichia coli [E. coli]",
+      "Hemoperitoneum",
+      "Acute and subacute hepatic failure with coma",
+      "Other medical procedures as the cause of abnormal reaction of the patient, or of later complication, without mention of misadventure at the time of the procedure"
+    ],
+    "meds": [
+      "Insulin",
+      "Bag",
+      "Multivitamins",
+      "Tuberculin Protein",
+      "Vial",
+      "Aspirin",
+      "FoLIC Acid",
+      "Lidocaine Jelly 2% (Urojet)"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10007818). Top diagnosis context: Adult failure to thrive.",
+    "xray_path": "train/patient22125/study3/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2146-06-10"
+  },
+  {
+    "patient_id": "MIMIC_10007928",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10007928,
+    "source_hadm_id": 20338077,
+    "sex": "F",
+    "age": 59,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Chronic or unspecified duodenal ulcer with hemorrhage, without mention of obstruction",
+      "Esophagitis, unspecified",
+      "Electrolyte and fluid disorders not elsewhere classified",
+      "Severe sepsis",
+      "Hypoxemia",
+      "Nonspecific elevation of levels of transaminase or lactic acid dehydrogenase [LDH]"
+    ],
+    "meds": [
+      "Multivitamins",
+      "Neutra-Phos",
+      "Diazepam",
+      "Albuterol 0.083% Neb Soln",
+      "CeftriaXONE",
+      "Furosemide",
+      "Heparin",
+      "Lactated Ringers"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10007928). Top diagnosis context: Chronic or unspecified duodenal ulcer with hemorrhage, without mention of obstruction.",
+    "xray_path": "train/patient33155/study35/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2129-04-05"
+  },
+  {
+    "patient_id": "MIMIC_10008287",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10008287,
+    "source_hadm_id": 22168393,
+    "sex": "F",
+    "age": 43,
+    "vital_signs": {
+      "bp": "90/70",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 166.0,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Epilepsy, unspecified, not intractable, without status epilepticus",
+      "Personal history of malignant neoplasm of thyroid",
+      "Hemangioma of intracranial structures"
+    ],
+    "meds": [
+      "Bag",
+      "CeFAZolin",
+      "Heparin",
+      "Magnesium Sulfate",
+      "Bisacodyl",
+      "Docusate Sodium",
+      "Iso-Osmotic Sodium Chloride",
+      "LevETIRAcetam"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Support Devices",
+    "imaging_expectation": "Support hardware or lines/tubes visualized.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10008287). Top diagnosis context: Epilepsy, unspecified, not intractable, without status epilepticus.",
+    "xray_path": "train/patient01121/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2145-09-28"
+  },
+  {
+    "patient_id": "MIMIC_10008454",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10008454,
+    "source_hadm_id": 20291550,
+    "sex": "F",
+    "age": 26,
+    "vital_signs": {
+      "bp": "118/78",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": 67.0,
+      "height_ft_in": "5'7\""
+    },
+    "pmh": [
+      "Closed fracture of four ribs",
+      "Long-term (current) use of anticoagulants",
+      "Urinary tract infection, site not specified",
+      "Acute edema of lung, unspecified",
+      "Obesity, unspecified",
+      "Open fracture of shaft of femur"
+    ],
+    "meds": [
+      "Insulin",
+      "Bag",
+      "Warfarin",
+      "Aspirin",
+      "Glucagon",
+      "Heparin",
+      "HydrALAzine",
+      "LR"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Atelectasis",
+    "imaging_expectation": "Subsegmental or lobar volume loss pattern visible.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10008454). Top diagnosis context: Closed fracture of four ribs.",
+    "xray_path": "train/patient03091/study4/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2110-11-30"
+  },
+  {
+    "patient_id": "MIMIC_10009035",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10009035,
+    "source_hadm_id": 28324362,
+    "sex": "M",
+    "age": 28,
+    "vital_signs": {
+      "bp": "120/90",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Mitral valve disorders",
+      "Other postprocedural status",
+      "Iatrogenic pneumothorax",
+      "Flatulence, eructation, and gas pain"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "CefazoLIN",
+      "Furosemide",
+      "Glucagon",
+      "Polyethylene Glycol",
+      "Insulin Human Regular"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Lesion",
+    "imaging_expectation": "Focal pulmonary lesion signal present.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10009035). Top diagnosis context: Mitral valve disorders.",
+    "xray_path": "train/patient07618/study1/view2_frontal.jpg",
+    "xray_filename": "view2_frontal.jpg",
+    "encounter_date": "2161-04-27"
+  },
+  {
+    "patient_id": "MIMIC_10009049",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10009049,
+    "source_hadm_id": 22995465,
+    "sex": "M",
+    "age": 56,
+    "vital_signs": {
+      "bp": "124/72",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 145.0,
+      "height_in": 67.0,
+      "height_ft_in": "5'7\""
+    },
+    "pmh": [
+      "Bacterial pneumonia, unspecified",
+      "Severe sepsis",
+      "Hypopotassemia",
+      "Other specified septicemias",
+      "Diarrhea",
+      "Paralytic ileus"
+    ],
+    "meds": [
+      "Lidocaine Jelly 2% (Urojet)",
+      "Heparin",
+      "Tamsulosin",
+      "Vancomycin",
+      "CeftriaXONE",
+      "Levofloxacin",
+      "0.9% Sodium Chloride",
+      "Ondansetron"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Edema",
+    "imaging_expectation": "Interstitial or alveolar edema pattern on chest imaging.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10009049). Top diagnosis context: Bacterial pneumonia, unspecified.",
+    "xray_path": "train/patient19202/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2174-05-26"
+  },
+  {
+    "patient_id": "MIMIC_10009628",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10009628,
+    "source_hadm_id": 25926192,
+    "sex": "M",
+    "age": 58,
+    "vital_signs": {
+      "bp": "108/70",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Background diabetic retinopathy",
+      "Other and unspecified hyperlipidemia",
+      "Atrial fibrillation",
+      "Long-term (current) use of insulin",
+      "Diabetes with ophthalmic manifestations, type II or unspecified type, not stated as uncontrolled",
+      "Coronary atherosclerosis of native coronary artery"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "Lorazepam",
+      "Warfarin",
+      "Atorvastatin",
+      "GlipiZIDE",
+      "Glucagon"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Consolidation",
+    "imaging_expectation": "Focal airspace opacity consistent with consolidation.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10009628). Top diagnosis context: Background diabetic retinopathy.",
+    "xray_path": "train/patient26572/study6/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2153-09-17"
+  },
+  {
+    "patient_id": "MIMIC_10010471",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10010471,
+    "source_hadm_id": 29842315,
+    "sex": "F",
+    "age": 89,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 161.16,
+      "height_in": 66.0,
+      "height_ft_in": "5'6\""
+    },
+    "pmh": [
+      "Personal history of nicotine dependence",
+      "Non-ST elevation (NSTEMI) myocardial infarction",
+      "Dependence on supplemental oxygen",
+      "Chronic obstructive pulmonary disease, unspecified",
+      "Bacteremia",
+      "Unspecified place in hospital as the place of occurrence of the external cause"
+    ],
+    "meds": [
+      "Bag",
+      "Aspirin",
+      "HYDROmorphone (Dilaudid)",
+      "Midodrine",
+      "Nephrocaps",
+      "Albuterol 0.083% Neb Soln",
+      "Heparin",
+      "Ipratropium-Albuterol Neb"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10010471). Top diagnosis context: Personal history of nicotine dependence.",
+    "xray_path": "train/patient32919/study3/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2155-12-02"
+  },
+  {
+    "patient_id": "MIMIC_10010867",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10010867,
+    "source_hadm_id": 22196214,
+    "sex": "F",
+    "age": 28,
+    "vital_signs": {
+      "bp": "132/75",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 210.0,
+      "height_in": 67.0,
+      "height_ft_in": "5'7\""
+    },
+    "pmh": [
+      "Nontoxic single thyroid nodule",
+      "Other paved roadways as the place of occurrence of the external cause",
+      "Driver of other special all-terrain or other off-road motor vehicle injured in traffic accident, sequela",
+      "Pain in right shoulder",
+      "Migraine, unspecified, not intractable, without status migrainosus",
+      "Pleural effusion, not elsewhere classified"
+    ],
+    "meds": [
+      "Zolpidem Tartrate",
+      "Diazepam",
+      "Tizanidine",
+      "Baclofen",
+      "Polyethylene Glycol",
+      "Heparin",
+      "Morphine SR (MS Contin)",
+      "Pregabalin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10010867). Top diagnosis context: Nontoxic single thyroid nodule.",
+    "xray_path": "train/patient31414/study1/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2148-03-07"
+  },
+  {
+    "patient_id": "MIMIC_10011398",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10011398,
+    "source_hadm_id": 27505812,
+    "sex": "M",
+    "age": 67,
+    "vital_signs": {
+      "bp": "132/84",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 136.0,
+      "height_in": 61.5,
+      "height_ft_in": "5'2\""
+    },
+    "pmh": [
+      "Irritable bowel syndrome",
+      "Hypertrophy (benign) of prostate without urinary obstruction and other lower urinary tract symptom (LUTS)",
+      "Personal history of urinary calculi",
+      "Allergic rhinitis, cause unspecified",
+      "Other and unspecified hyperlipidemia",
+      "Personal history of colonic polyps"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "Furosemide",
+      "Glucagon",
+      "Insulin Human Regular",
+      "Potassium Chloride",
+      "Lactated Ringers"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10011398). Top diagnosis context: Irritable bowel syndrome.",
+    "xray_path": "train/patient46454/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2146-12-15"
+  },
+  {
+    "patient_id": "MIMIC_10012552",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10012552,
+    "source_hadm_id": 27089790,
+    "sex": "M",
+    "age": 78,
+    "vital_signs": {
+      "bp": "184/93",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Coronary atherosclerosis of native coronary artery",
+      "Esophageal reflux",
+      "Unspecified essential hypertension",
+      "Other and unspecified hyperlipidemia",
+      "Subendocardial infarction, initial episode of care",
+      "Examination of participant in clinical trial"
+    ],
+    "meds": [
+      "Insulin",
+      "Neutra-Phos",
+      "Aspirin",
+      "Lisinopril",
+      "Atorvastatin",
+      "CefazoLIN",
+      "Glucagon",
+      "Heparin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10012552). Top diagnosis context: Coronary atherosclerosis of native coronary artery.",
+    "xray_path": "train/patient43159/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2140-03-22"
+  },
+  {
+    "patient_id": "MIMIC_10012853",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10012853,
+    "source_hadm_id": 20457729,
+    "sex": "F",
+    "age": 91,
+    "vital_signs": {
+      "bp": "143/60",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 162.0,
+      "height_in": 64.0,
+      "height_ft_in": "5'4\""
+    },
+    "pmh": [
+      "Chronic obstructive pulmonary disease, unspecified",
+      "Peripheral vascular disease, unspecified",
+      "Type 2 diabetes mellitus without complications",
+      "Neuromuscular dysfunction of bladder, unspecified",
+      "Personal history of pulmonary embolism",
+      "Malignant neoplasm of thyroid gland"
+    ],
+    "meds": [
+      "Multivitamins",
+      "amLODIPine",
+      "Aspirin",
+      "Atorvastatin",
+      "Calcitriol",
+      "Metoprolol Succinate XL",
+      "Calcium Carbonate",
+      "Docusate Sodium"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "No acute cardiopulmonary abnormality label from CheXpert metadata.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10012853). Top diagnosis context: Chronic obstructive pulmonary disease, unspecified.",
+    "xray_path": "train/patient13074/study1/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2177-11-03"
+  },
+  {
+    "patient_id": "MIMIC_10013049",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10013049,
+    "source_hadm_id": 22675517,
+    "sex": "M",
+    "age": 52,
+    "vital_signs": {
+      "bp": "105/66",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Family history of ischemic heart disease",
+      "Unspecified gastritis and gastroduodenitis, without mention of hemorrhage",
+      "Benign neoplasm of heart",
+      "Personal history of colonic polyps",
+      "Unspecified hemorrhoids without mention of complication"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "Furosemide",
+      "Glucagon",
+      "Insulin Human Regular",
+      "Lactated Ringers",
+      "Magnesium Sulfate"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10013049). Top diagnosis context: Family history of ischemic heart disease.",
+    "xray_path": "train/patient42533/study3/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2114-06-20"
+  },
+  {
+    "patient_id": "MIMIC_10014078",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10014078,
+    "source_hadm_id": 25809882,
+    "sex": "F",
+    "age": 60,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Unspecified infectious and parasitic diseases",
+      "Grand mal status",
+      "Unspecified essential hypertension",
+      "Encephalopathy, unspecified",
+      "Other and unspecified hyperlipidemia",
+      "Benign neoplasm of cerebral meninges"
+    ],
+    "meds": [
+      "Insulin",
+      "Ampicillin Sodium",
+      "Bag",
+      "Glucagon",
+      "Heparin",
+      "Magnesium Sulfate",
+      "Vancomycin",
+      "Chlorhexidine Gluconate 0.12% Oral Rinse"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Lesion",
+    "imaging_expectation": "Focal pulmonary lesion signal present.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10014078). Top diagnosis context: Unspecified infectious and parasitic diseases.",
+    "xray_path": "train/patient14350/study4/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2166-08-21"
+  },
+  {
+    "patient_id": "MIMIC_10014354",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10014354,
+    "source_hadm_id": 24357615,
+    "sex": "M",
+    "age": 60,
+    "vital_signs": {
+      "bp": "138/84",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 283.4,
+      "height_in": 72.0,
+      "height_ft_in": "6'0\""
+    },
+    "pmh": [
+      "Paroxysmal atrial fibrillation",
+      "Gout, unspecified",
+      "Long term (current) use of insulin",
+      "Thrombocytopenia, unspecified",
+      "Hypothyroidism, unspecified",
+      "Localized edema"
+    ],
+    "meds": [
+      "Vial",
+      "Aspirin",
+      "Sucralfate",
+      "OxyCODONE (Immediate Release)",
+      "Atorvastatin",
+      "CefePIME",
+      "Fenofibrate",
+      "Glucagon"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10014354). Top diagnosis context: Paroxysmal atrial fibrillation.",
+    "xray_path": "train/patient28806/study12/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2150-05-09"
+  },
+  {
+    "patient_id": "MIMIC_10014729",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10014729,
+    "source_hadm_id": 23300884,
+    "sex": "F",
+    "age": 21,
+    "vital_signs": {
+      "bp": "142/85",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 160.0,
+      "height_in": 66.0,
+      "height_ft_in": "5'6\""
+    },
+    "pmh": [
+      "Disruption of external operation (surgical) wound",
+      "Acute post-thoracotomy pain",
+      "Surgical operation with anastomosis, bypass, or graft, with natural or artificial tissues used as implant causing abnormal patient reaction, or later complication, without mention of misadventure at time of operation",
+      "Personal history of Methicillin resistant Staphylococcus aureus",
+      "Other postoperative infection",
+      "Methicillin resistant Staphylococcus aureus in conditions classified elsewhere and of unspecified site"
+    ],
+    "meds": [
+      "Insulin",
+      "Bag",
+      "Lorazepam",
+      "OxycoDONE (Immediate Release)",
+      "Sarna Lotion",
+      "DiphenhydrAMINE",
+      "Furosemide",
+      "Glucagon"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10014729). Top diagnosis context: Disruption of external operation (surgical) wound.",
+    "xray_path": "train/patient26169/study23/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2125-03-19"
+  },
+  {
+    "patient_id": "MIMIC_10015272",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10015272,
+    "source_hadm_id": 27993466,
+    "sex": "F",
+    "age": 78,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 117.0,
+      "height_in": 65.0,
+      "height_ft_in": "5'5\""
+    },
+    "pmh": [
+      "Acute embolism and thrombosis of left femoral vein",
+      "History of falling",
+      "Acute embolism and thrombosis of left popliteal vein",
+      "Other secondary pulmonary hypertension",
+      "Presence of aortocoronary bypass graft",
+      "Gas pain"
+    ],
+    "meds": [
+      "Aspirin",
+      "Bag",
+      "Warfarin",
+      "Magnesium Sulfate",
+      "Metoprolol Tartrate",
+      "Senna",
+      "Digoxin",
+      "Docusate Sodium"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10015272). Top diagnosis context: Acute embolism and thrombosis of left femoral vein.",
+    "xray_path": "train/patient41195/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2137-06-12"
+  },
+  {
+    "patient_id": "MIMIC_10015860",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10015860,
+    "source_hadm_id": 28196804,
+    "sex": "M",
+    "age": 53,
+    "vital_signs": {
+      "bp": "168/89",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 171.4,
+      "height_in": 71.0,
+      "height_ft_in": "5'11\""
+    },
+    "pmh": [
+      "Gastro-esophageal reflux disease without esophagitis",
+      "Thrombosis due to vascular prosthetic devices, implants and grafts, initial encounter",
+      "Surgical instruments, materials and cardiovascular devices (including sutures) associated with adverse incidents",
+      "Peripheral vascular angioplasty status with implants and grafts",
+      "Cellulitis of left upper limb",
+      "Acquired absence of right foot"
+    ],
+    "meds": [
+      "Bag",
+      "Aspirin",
+      "Lisinopril",
+      "LORazepam",
+      "Nephrocaps",
+      "Ramelteon",
+      "Sarna Lotion",
+      "Atorvastatin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Atelectasis",
+    "imaging_expectation": "Subsegmental or lobar volume loss pattern visible.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10015860). Top diagnosis context: Gastro-esophageal reflux disease without esophagitis.",
+    "xray_path": "train/patient45995/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2193-11-23"
+  },
+  {
+    "patient_id": "MIMIC_10015931",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10015931,
+    "source_hadm_id": 22130791,
+    "sex": "M",
+    "age": 87,
+    "vital_signs": {
+      "bp": "122/60",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 120.0,
+      "height_in": 65.0,
+      "height_ft_in": "5'5\""
+    },
+    "pmh": [
+      "Unspecified atrial fibrillation",
+      "Presence of xenogenic heart valve",
+      "Long term (current) use of anticoagulants",
+      "Chronic kidney disease, stage 4 (severe)",
+      "Acute kidney failure with tubular necrosis",
+      "Hyperkalemia"
+    ],
+    "meds": [
+      "Insulin",
+      "Tiotropium Bromide",
+      "Vial",
+      "Bag",
+      "Lidocaine Jelly 2% (Urojet)",
+      "CefePIME",
+      "Glucagon",
+      "Ipratropium Bromide Neb"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Lesion",
+    "imaging_expectation": "Focal pulmonary lesion signal present.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10015931). Top diagnosis context: Unspecified atrial fibrillation.",
+    "xray_path": "train/patient07468/study2/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2177-03-24"
+  },
+  {
+    "patient_id": "MIMIC_10016150",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10016150,
+    "source_hadm_id": 29374560,
+    "sex": "M",
+    "age": 69,
+    "vital_signs": {
+      "bp": "125/62",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 197.0,
+      "height_in": 72.0,
+      "height_ft_in": "6'0\""
+    },
+    "pmh": [
+      "Accidents occurring in residential institution",
+      "Other primary cardiomyopathies",
+      "Chronic kidney disease, unspecified",
+      "Unspecified hereditary and idiopathic peripheral neuropathy",
+      "Cardiac catheterization as the cause of abnormal reaction of patient, or of later complication, without mention of misadventure at time of procedure",
+      "Aphasia"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Finasteride",
+      "OxycoDONE (Immediate Release)",
+      "Glucagon",
+      "Heparin",
+      "Potassium Chloride",
+      "Nitroglycerin SL"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Support Devices",
+    "imaging_expectation": "Support hardware or lines/tubes visualized.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10016150). Top diagnosis context: Accidents occurring in residential institution.",
+    "xray_path": "train/patient11353/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2142-05-10"
+  },
+  {
+    "patient_id": "MIMIC_10016742",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10016742,
+    "source_hadm_id": 27568122,
+    "sex": "F",
+    "age": 58,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Encounter for attention to other artificial openings of digestive tract",
+      "Amyotrophic lateral sclerosis",
+      "Other diseases of bronchus, not elsewhere classified",
+      "Epilepsy, unspecified, not intractable, without status epilepticus",
+      "Tracheostomy status",
+      "Long term (current) use of insulin"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "LORazepam",
+      "Atorvastatin",
+      "Glucagon",
+      "Polyethylene Glycol",
+      "Heparin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10016742). Top diagnosis context: Encounter for attention to other artificial openings of digestive tract.",
+    "xray_path": "train/patient42640/study3/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2178-07-22"
+  },
+  {
+    "patient_id": "MIMIC_10016810",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10016810,
+    "source_hadm_id": 20973395,
+    "sex": "F",
+    "age": 66,
+    "vital_signs": {
+      "bp": "142/67",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Hypotension, unspecified",
+      "Long-term (current) use of aspirin",
+      "Tobacco use disorder",
+      "Acute appendicitis with generalized peritonitis",
+      "Diabetes mellitus without mention of complication, type II or unspecified type, not stated as uncontrolled",
+      "Pure hypercholesterolemia"
+    ],
+    "meds": [
+      "Insulin",
+      "Multivitamins",
+      "Vial",
+      "Aspirin",
+      "Bag",
+      "Chlorpheniramine Maleate",
+      "OxycoDONE (Immediate Release)",
+      "Sarna Lotion"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10016810). Top diagnosis context: Hypotension, unspecified.",
+    "xray_path": "train/patient01090/study6/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2185-06-16"
+  },
+  {
+    "patient_id": "MIMIC_10017492",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10017492,
+    "source_hadm_id": 27417763,
+    "sex": "M",
+    "age": 84,
+    "vital_signs": {
+      "bp": "120/78",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 111.0,
+      "height_in": 67.0,
+      "height_ft_in": "5'7\""
+    },
+    "pmh": [
+      "Acute kidney failure, unspecified",
+      "Urinary tract infection, site not specified",
+      "Unspecified essential hypertension",
+      "Hypoxemia",
+      "Urinary incontinence, unspecified",
+      "Hyperosmolality and/or hypernatremia"
+    ],
+    "meds": [
+      "Enoxaparin Sodium",
+      "Lidocaine Jelly 2% (Urojet)",
+      "CefazoLIN",
+      "Heparin",
+      "Lactated Ringers",
+      "Tamsulosin",
+      "Bisacodyl",
+      "Calcium Carbonate"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10017492). Top diagnosis context: Acute kidney failure, unspecified.",
+    "xray_path": "train/patient20823/study5/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2116-06-26"
+  },
+  {
+    "patient_id": "MIMIC_10018081",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10018081,
+    "source_hadm_id": 25973915,
+    "sex": "M",
+    "age": 79,
+    "vital_signs": {
+      "bp": "106/52",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 169.31,
+      "height_in": 68.0,
+      "height_ft_in": "5'8\""
+    },
+    "pmh": [
+      "Hyperosmolality and/or hypernatremia",
+      "Dysarthria",
+      "Mitral valve disorders",
+      "Anemia, unspecified",
+      "Acute on chronic diastolic heart failure",
+      "Paroxysmal ventricular tachycardia"
+    ],
+    "meds": [
+      "Insulin",
+      "Vial",
+      "Bag",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Lisinopril",
+      "Albuterol 0.083% Neb Soln",
+      "Furosemide",
+      "Glucagon"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10018081). Top diagnosis context: Hyperosmolality and/or hypernatremia.",
+    "xray_path": "train/patient63515/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2134-09-06"
+  },
+  {
+    "patient_id": "MIMIC_10018328",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10018328,
+    "source_hadm_id": 23786647,
+    "sex": "F",
+    "age": 83,
+    "vital_signs": {
+      "bp": "120/74",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 132.0,
+      "height_in": 64.0,
+      "height_ft_in": "5'4\""
+    },
+    "pmh": [
+      "Postprocedural heart failure following other surgery",
+      "Acute posthemorrhagic anemia",
+      "Essential (primary) hypertension",
+      "Accidental puncture and laceration of a circulatory system organ or structure during other procedure",
+      "Hemothorax",
+      "Acute diastolic (congestive) heart failure"
+    ],
+    "meds": [
+      "Insulin",
+      "amLODIPine",
+      "Bag",
+      "Dexamethasone",
+      "Aspirin",
+      "Atenolol",
+      "Glucagon",
+      "HydrALAZINE"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10018328). Top diagnosis context: Postprocedural heart failure following other surgery.",
+    "xray_path": "train/patient18081/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2154-04-24"
+  },
+  {
+    "patient_id": "MIMIC_10018423",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10018423,
+    "source_hadm_id": 29366372,
+    "sex": "M",
+    "age": 37,
+    "vital_signs": {
+      "bp": "106/71",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 241.4,
+      "height_in": 67.0,
+      "height_ft_in": "5'7\""
+    },
+    "pmh": [
+      "Acute posthemorrhagic anemia",
+      "Family history of ischemic heart disease and other diseases of the circulatory system",
+      "Pure hypercholesterolemia",
+      "Atherosclerotic heart disease of native coronary artery with unstable angina pectoris",
+      "Body mass index (BMI) 38.0-38.9, adult",
+      "Gastro-esophageal reflux disease without esophagitis"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "OxycoDONE (Immediate Release)",
+      "Albuterol 0.083% Neb Soln",
+      "Atorvastatin",
+      "CefazoLIN",
+      "Furosemide"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10018423). Top diagnosis context: Acute posthemorrhagic anemia.",
+    "xray_path": "train/patient30270/study1/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2167-05-03"
+  },
+  {
+    "patient_id": "MIMIC_10018501",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10018501,
+    "source_hadm_id": 28479513,
+    "sex": "M",
+    "age": 83,
+    "vital_signs": {
+      "bp": "160/78",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 197.0,
+      "height_in": 67.0,
+      "height_ft_in": "5'7\""
+    },
+    "pmh": [
+      "Alcohol withdrawal",
+      "Subdural hemorrhage following injury without mention of open intracranial wound, with no loss of consciousness",
+      "Esophageal reflux",
+      "Other motor vehicle traffic accident involving collision on the highway injuring driver of motor vehicle other than motorcycle",
+      "Gout, unspecified",
+      "Unspecified essential hypertension"
+    ],
+    "meds": [
+      "Diazepam",
+      "Sarna Lotion",
+      "Atenolol",
+      "Haloperidol",
+      "Heparin",
+      "Metoprolol Tartrate",
+      "Omeprazole",
+      "PHENObarbital Alcohol Withdrawal Dose Taper (Days 2-7)"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10018501). Top diagnosis context: Alcohol withdrawal.",
+    "xray_path": "train/patient49520/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2141-07-30"
+  },
+  {
+    "patient_id": "MIMIC_10018845",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10018845,
+    "source_hadm_id": 21101111,
+    "sex": "M",
+    "age": 91,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Chronic kidney disease, Stage V",
+      "Subdural hemorrhage following injury without mention of open intracranial wound, unspecified state of consciousness",
+      "Dysarthria",
+      "Knee joint replacement",
+      "Aphasia",
+      "Coronary atherosclerosis of native coronary artery"
+    ],
+    "meds": [
+      "CefazoLIN",
+      "Heparin",
+      "Simvastatin",
+      "Bisacodyl",
+      "CeftriaXONE",
+      "Docusate Sodium",
+      "LeVETiracetam",
+      "Ondansetron"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10018845). Top diagnosis context: Chronic kidney disease, Stage V.",
+    "xray_path": "train/patient38051/study4/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2184-10-08"
+  },
+  {
+    "patient_id": "MIMIC_10019003",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10019003,
+    "source_hadm_id": 26226543,
+    "sex": "F",
+    "age": 65,
+    "vital_signs": {
+      "bp": "113/44",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 141.5,
+      "height_in": 63.0,
+      "height_ft_in": "5'3\""
+    },
+    "pmh": [
+      "Acute kidney failure, unspecified",
+      "Pure hypercholesterolemia, unspecified",
+      "Unspecified abdominal pain",
+      "Nonalcoholic steatohepatitis (NASH)",
+      "Type 2 diabetes mellitus without complications",
+      "Major depressive disorder, single episode, unspecified"
+    ],
+    "meds": [
+      "ruxolitinib",
+      "Multivitamins",
+      "Neutra-Phos",
+      "Tiotropium Bromide",
+      "Vial",
+      "Bag",
+      "OxyCODONE (Immediate Release)",
+      "CefTRIAXone"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "No acute cardiopulmonary abnormality label from CheXpert metadata.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10019003). Top diagnosis context: Acute kidney failure, unspecified.",
+    "xray_path": "train/patient12634/study3/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2155-10-17"
+  },
+  {
+    "patient_id": "MIMIC_10019172",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10019172,
+    "source_hadm_id": 24997044,
+    "sex": "F",
+    "age": 63,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Atrial fibrillation",
+      "Paroxysmal ventricular tachycardia",
+      "Tobacco use disorder",
+      "Aortic valve disorders",
+      "Unspecified essential hypertension",
+      "Osteoarthrosis, unspecified whether generalized or localized, site unspecified"
+    ],
+    "meds": [
+      "Insulin",
+      "Amlodipine",
+      "Aspirin",
+      "Bag",
+      "Lorazepam",
+      "Warfarin",
+      "Albuterol 0.083% Neb Soln",
+      "Captopril"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pneumothorax",
+    "imaging_expectation": "Pleural line with absent peripheral lung markings.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10019172). Top diagnosis context: Atrial fibrillation.",
+    "xray_path": "train/patient36732/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2118-11-15"
+  },
+  {
+    "patient_id": "MIMIC_10019385",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10019385,
+    "source_hadm_id": 20611796,
+    "sex": "M",
+    "age": 44,
+    "vital_signs": {
+      "bp": "116/58",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 97.3,
+      "height_in": 68.0,
+      "height_ft_in": "5'8\""
+    },
+    "pmh": [
+      "Presence of aortocoronary bypass graft",
+      "Presence of coronary angioplasty implant and graft",
+      "Atherosclerotic heart disease of native coronary artery with unspecified angina pectoris",
+      "Hyperlipidemia, unspecified",
+      "Family history of ischemic heart disease and other diseases of the circulatory system",
+      "Nicotine dependence, cigarettes, uncomplicated"
+    ],
+    "meds": [
+      "Aspirin",
+      "HYDROmorphone (Dilaudid)",
+      "Clopidogrel",
+      "Fexofenadine",
+      "Heparin",
+      "Lidocaine 5% Patch",
+      "Metoprolol Tartrate",
+      "Nitroglycerin SL"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10019385). Top diagnosis context: Presence of aortocoronary bypass graft.",
+    "xray_path": "train/patient55287/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2180-03-04"
+  },
+  {
+    "patient_id": "MIMIC_10019568",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10019568,
+    "source_hadm_id": 28710730,
+    "sex": "F",
+    "age": 59,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Closed fracture of seven ribs",
+      "Home accidents",
+      "Accidental fall on or from other stairs or steps",
+      "Unspecified essential hypertension",
+      "Alcohol abuse, unspecified",
+      "Traumatic pneumothorax without mention of open wound into thorax"
+    ],
+    "meds": [
+      "FoLIC Acid",
+      "Ondansetron",
+      "HYDROmorphone",
+      "Heparin",
+      "Lidocaine 5% Patch",
+      "Multivitamins",
+      "Naloxone",
+      "0.9% Sodium Chloride"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10019568). Top diagnosis context: Closed fracture of seven ribs.",
+    "xray_path": "train/patient05161/study9/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2120-01-30"
+  },
+  {
+    "patient_id": "MIMIC_10019777",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10019777,
+    "source_hadm_id": 27738145,
+    "sex": "M",
+    "age": 51,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Other complications due to other vascular device, implant, and graft",
+      "Malignant neoplasm of body of pancreas",
+      "Other specified disorders of peritoneum",
+      "Jaundice, unspecified, not of newborn",
+      "Varices of other sites",
+      "Early satiety"
+    ],
+    "meds": [
+      "Vial",
+      "Bag",
+      "Lorazepam",
+      "CefePIME",
+      "Polyethylene Glycol",
+      "Heparin",
+      "Ipratropium-Albuterol Neb",
+      "Magnesium Sulfate"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10019777). Top diagnosis context: Other complications due to other vascular device, implant, and graft.",
+    "xray_path": "train/patient06041/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2187-02-10"
+  },
+  {
+    "patient_id": "MIMIC_10019917",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10019917,
+    "source_hadm_id": 22585261,
+    "sex": "M",
+    "age": 44,
+    "vital_signs": {
+      "bp": "130/73",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 172.0,
+      "height_in": 69.0,
+      "height_ft_in": "5'9\""
+    },
+    "pmh": [
+      "Acute posthemorrhagic anemia",
+      "Chronic or unspecified duodenal ulcer with hemorrhage, without mention of obstruction",
+      "Duodenitis, without mention of hemorrhage",
+      "Ankylosing spondylitis"
+    ],
+    "meds": [
+      "Vial",
+      "FoLIC Acid",
+      "Pantoprazole",
+      "MoviPrep",
+      "Epoetin Alfa",
+      "Ferric Gluconate",
+      "5% Dextrose",
+      "Phytonadione"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Edema",
+    "imaging_expectation": "Interstitial or alveolar edema pattern on chest imaging.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10019917). Top diagnosis context: Acute posthemorrhagic anemia.",
+    "xray_path": "train/patient10011/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2182-01-07"
+  },
+  {
+    "patient_id": "MIMIC_10020187",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10020187,
+    "source_hadm_id": 26842957,
+    "sex": "F",
+    "age": 63,
+    "vital_signs": {
+      "bp": "142/90",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Presence of right artificial knee joint",
+      "Body mass index (BMI) 40.0-44.9, adult",
+      "Cerebral aneurysm, nonruptured",
+      "Unilateral primary osteoarthritis, left knee",
+      "Hyperlipidemia, unspecified",
+      "Barrett's esophagus without dysplasia"
+    ],
+    "meds": [
+      "Aspirin",
+      "Clopidogrel",
+      "Hydrochlorothiazide",
+      "Heparin",
+      "Bisacodyl",
+      "Docusate Sodium",
+      "Iso-Osmotic Sodium Chloride",
+      "Ondansetron"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Atelectasis",
+    "imaging_expectation": "Subsegmental or lobar volume loss pattern visible.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10020187). Top diagnosis context: Presence of right artificial knee joint.",
+    "xray_path": "train/patient57035/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2170-02-24"
+  },
+  {
+    "patient_id": "MIMIC_10020306",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10020306,
+    "source_hadm_id": 23052851,
+    "sex": "F",
+    "age": 74,
+    "vital_signs": {
+      "bp": "120/70",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 163.6,
+      "height_in": 64.0,
+      "height_ft_in": "5'4\""
+    },
+    "pmh": [
+      "Acute kidney failure with tubular necrosis",
+      "Pilonidal cyst without abscess",
+      "Obstructive sleep apnea (adult) (pediatric)",
+      "Body mass index (BMI) 24.0-24.9, adult",
+      "Unspecified severe protein-calorie malnutrition",
+      "Physical restraint status"
+    ],
+    "meds": [
+      "Calcium Gluconate sliding scale (Critical Care-Ionized calcium)",
+      "Neutra-Phos",
+      "Vial",
+      "Apixaban",
+      "Bag",
+      "FoLIC Acid",
+      "Insulin",
+      "Multivitamins W/minerals"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10020306). Top diagnosis context: Acute kidney failure with tubular necrosis.",
+    "xray_path": "train/patient35739/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2135-01-15"
+  },
+  {
+    "patient_id": "MIMIC_10020640",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10020640,
+    "source_hadm_id": 27984218,
+    "sex": "F",
+    "age": 91,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Metabolic encephalopathy",
+      "Alzheimer's disease",
+      "Dementia in conditions classified elsewhere with behavioral disturbance",
+      "Osteoarthrosis, unspecified whether generalized or localized, site unspecified",
+      "Hypoxemia",
+      "Abnormal coagulation profile"
+    ],
+    "meds": [
+      "Insulin",
+      "Neutra-Phos",
+      "Aspirin",
+      "Bag",
+      "Phytonadione",
+      "Albuterol 0.083% Neb Soln",
+      "Citalopram",
+      "Glucagon"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10020640). Top diagnosis context: Metabolic encephalopathy.",
+    "xray_path": "train/patient12240/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2153-02-13"
+  },
+  {
+    "patient_id": "MIMIC_10020740",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10020740,
+    "source_hadm_id": 23143086,
+    "sex": "M",
+    "age": 56,
+    "vital_signs": {
+      "bp": "116/67",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 166.89,
+      "height_in": 67.0,
+      "height_ft_in": "5'7\""
+    },
+    "pmh": [
+      "Schizoaffective disorder, chronic with acute exacerbation",
+      "Diabetes mellitus without mention of complication, type II or unspecified type, not stated as uncontrolled",
+      "Long-term (current) use of insulin"
+    ],
+    "meds": [
+      "Insulin",
+      "Neutra-Phos",
+      "Vial",
+      "Zolpidem Tartrate",
+      "Bag",
+      "CloniDINE",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Lorazepam"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10020740). Top diagnosis context: Schizoaffective disorder, chronic with acute exacerbation.",
+    "xray_path": "train/patient15564/study8/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2151-01-15"
+  },
+  {
+    "patient_id": "MIMIC_10020786",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10020786,
+    "source_hadm_id": 23488445,
+    "sex": "F",
+    "age": 86,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Unspecified atrial fibrillation",
+      "Chronic obstructive pulmonary disease, unspecified",
+      "Severe sepsis with septic shock",
+      "Essential (primary) hypertension",
+      "Hypothyroidism, unspecified",
+      "Pneumonia, unspecified organism"
+    ],
+    "meds": [
+      "Apixaban",
+      "Bag",
+      "Atorvastatin",
+      "Heparin",
+      "Ipratropium-Albuterol Neb",
+      "Levothyroxine Sodium",
+      "Magnesium Sulfate",
+      "Mirtazapine"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10020786). Top diagnosis context: Unspecified atrial fibrillation.",
+    "xray_path": "train/patient04326/study4/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2189-06-09"
+  },
+  {
+    "patient_id": "MIMIC_10020944",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10020944,
+    "source_hadm_id": 29974575,
+    "sex": "M",
+    "age": 72,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Alcoholic polyneuropathy",
+      "Urethral stricture, unspecified",
+      "Other convulsions",
+      "Unspecified gastritis and gastroduodenitis, without mention of hemorrhage",
+      "Other septicemia due to gram-negative organisms",
+      "Diarrhea"
+    ],
+    "meds": [
+      "Insulin",
+      "Multivitamins",
+      "Tiotropium Bromide",
+      "Vial",
+      "Bag",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Vitamin B Complex",
+      "Furosemide"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "No acute cardiopulmonary abnormality label from CheXpert metadata.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10020944). Top diagnosis context: Alcoholic polyneuropathy.",
+    "xray_path": "train/patient03394/study3/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2131-02-27"
+  },
+  {
+    "patient_id": "MIMIC_10021118",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10021118,
+    "source_hadm_id": 24490144,
+    "sex": "M",
+    "age": 62,
+    "vital_signs": {
+      "bp": "135/76",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 252.65,
+      "height_in": 71.0,
+      "height_ft_in": "5'11\""
+    },
+    "pmh": [
+      "Essential (primary) hypertension",
+      "Personal history of nicotine dependence",
+      "Unspecified asthma, uncomplicated",
+      "Acute posthemorrhagic anemia",
+      "Non-ST elevation (NSTEMI) myocardial infarction",
+      "Atherosclerotic heart disease of native coronary artery without angina pectoris"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "Lorazepam",
+      "OxycoDONE (Immediate Release)",
+      "Albuterol 0.083% Neb Soln",
+      "Atorvastatin",
+      "CefazoLIN"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10021118). Top diagnosis context: Essential (primary) hypertension.",
+    "xray_path": "train/patient28379/study7/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2161-11-15"
+  },
+  {
+    "patient_id": "MIMIC_10021312",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10021312,
+    "source_hadm_id": 28829452,
+    "sex": "F",
+    "age": 55,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 185.63,
+      "height_in": 65.0,
+      "height_ft_in": "5'5\""
+    },
+    "pmh": [
+      "Other chronic pain",
+      "Tachycardia, unspecified",
+      "Heartburn",
+      "Other diseases of bronchus, not elsewhere classified",
+      "Other dysphagia",
+      "Major depressive disorder, single episode, unspecified"
+    ],
+    "meds": [
+      "Vial",
+      "ALPRAZolam",
+      "Bag",
+      "Albuterol 0.083% Neb Soln",
+      "Polyethylene Glycol",
+      "Heparin",
+      "Ipratropium-Albuterol Neb",
+      "Ipratropium Bromide Neb"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10021312). Top diagnosis context: Other chronic pain.",
+    "xray_path": "train/patient13202/study8/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2113-09-12"
+  },
+  {
+    "patient_id": "MIMIC_10021487",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10021487,
+    "source_hadm_id": 21928381,
+    "sex": "M",
+    "age": 43,
+    "vital_signs": {
+      "bp": "136/91",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 241.0,
+      "height_in": 72.0,
+      "height_ft_in": "6'0\""
+    },
+    "pmh": [
+      "Fistula of intestine, excluding rectum and anus",
+      "Staphylococcus infection in conditions classified elsewhere and of unspecified site, other staphylococcus",
+      "Streptococcus infection in conditions classified elsewhere and of unspecified site, other streptococcus",
+      "Acquired absence of intestine (large) (small)",
+      "Surgical operation with anastomosis, bypass, or graft, with natural or artificial tissues used as implant causing abnormal patient reaction, or later complication, without mention of misadventure at time of operation",
+      "Cellulitis and abscess of trunk"
+    ],
+    "meds": [
+      "Levofloxacin",
+      "MetRONIDAZOLE (FLagyl)",
+      "Piperacillin-Tazobactam",
+      "Sodium Chloride 0.9%  Flush",
+      "OxycoDONE (Immediate Release)",
+      "Iso-Osmotic Dextrose",
+      "Vancomycin",
+      "5% Dextrose"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10021487). Top diagnosis context: Fistula of intestine, excluding rectum and anus.",
+    "xray_path": "train/patient46402/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2117-12-03"
+  },
+  {
+    "patient_id": "MIMIC_10021666",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10021666,
+    "source_hadm_id": 22756440,
+    "sex": "M",
+    "age": 87,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Do not resuscitate status",
+      "Congestive heart failure, unspecified",
+      "Hypertensive chronic kidney disease, unspecified, with chronic kidney disease stage I through stage IV, or unspecified",
+      "Atrial fibrillation",
+      "Asthma, unspecified type, unspecified",
+      "Other specified forms of hearing loss"
+    ],
+    "meds": [
+      "Insulin",
+      "Multivitamins",
+      "Neutra-Phos",
+      "Donepezil",
+      "FoLIC Acid",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Lorazepam",
+      "Albuterol 0.083% Neb Soln"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10021666). Top diagnosis context: Do not resuscitate status.",
+    "xray_path": "train/patient10329/study6/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2172-03-12"
+  },
+  {
+    "patient_id": "MIMIC_10021938",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10021938,
+    "source_hadm_id": 27154822,
+    "sex": "M",
+    "age": 65,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Abdominal pain, unspecified site",
+      "Other and unspecified hyperlipidemia",
+      "Chronic systolic heart failure",
+      "Renal sclerosis, unspecified",
+      "Noncompliance with renal dialysis",
+      "Other and unspecified alcohol dependence, in remission"
+    ],
+    "meds": [
+      "Vial",
+      "Nephrocaps",
+      "Ondansetron",
+      "NIFEdipine CR",
+      "Cinacalcet",
+      "NIFEdipine",
+      "Famotidine",
+      "PNEUMOcoccal 23-valent polysaccharide vaccine"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10021938). Top diagnosis context: Abdominal pain, unspecified site.",
+    "xray_path": "train/patient57200/study1/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2181-10-25"
+  },
+  {
+    "patient_id": "MIMIC_10022017",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10022017,
+    "source_hadm_id": 22342963,
+    "sex": "M",
+    "age": 59,
+    "vital_signs": {
+      "bp": "117/77",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Unspecified atrial fibrillation",
+      "Hypotension, unspecified",
+      "Surgical operation with anastomosis, bypass or graft as the cause of abnormal reaction of the patient, or of later complication, without mention of misadventure at the time of the procedure",
+      "Ulcerative colitis, unspecified, without complications",
+      "Type 2 diabetes mellitus without complications",
+      "Hyperlipidemia, unspecified"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "Albuterol 0.083% Neb Soln",
+      "Atorvastatin",
+      "CeFAZolin",
+      "Furosemide",
+      "Glucagon"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Atelectasis",
+    "imaging_expectation": "Subsegmental or lobar volume loss pattern visible.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10022017). Top diagnosis context: Unspecified atrial fibrillation.",
+    "xray_path": "train/patient46268/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2189-09-10"
+  },
+  {
+    "patient_id": "MIMIC_10022041",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10022041,
+    "source_hadm_id": 28909879,
+    "sex": "M",
+    "age": 64,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Backache, unspecified",
+      "Alcohol withdrawal",
+      "Unspecified fall",
+      "Other and unspecified hyperlipidemia",
+      "Other psoriasis",
+      "Other and unspecified alcohol dependence, unspecified"
+    ],
+    "meds": [
+      "Insulin",
+      "Bag",
+      "Glucagon",
+      "Heparin",
+      "Magnesium Sulfate",
+      "OxyCODONE SR (OxyconTIN)",
+      "Pantoprazole",
+      "Calcium Carbonate"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10022041). Top diagnosis context: Backache, unspecified.",
+    "xray_path": "train/patient30627/study47/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2187-05-18"
+  },
+  {
+    "patient_id": "MIMIC_10022281",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10022281,
+    "source_hadm_id": 29642388,
+    "sex": "M",
+    "age": 84,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Diabetes mellitus without mention of complication, type II or unspecified type, not stated as uncontrolled",
+      "Osteoarthrosis, localized, not specified whether primary or secondary, pelvic region and thigh",
+      "Dissection of aorta, abdominal",
+      "Personal history of tobacco use",
+      "Pure hypercholesterolemia",
+      "Long-term (current) use of insulin"
+    ],
+    "meds": [
+      "Insulin",
+      "Oxycodone-Acetaminophen",
+      "Oxycodone-Acetaminophen (5mg-325mg)",
+      "Amlodipine",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Atorvastatin",
+      "Clopidogrel",
+      "Glucagon"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10022281). Top diagnosis context: Diabetes mellitus without mention of complication, type II or unspecified type, not stated as uncontrolled.",
+    "xray_path": "train/patient41781/study1/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2125-06-17"
+  },
+  {
+    "patient_id": "MIMIC_10022880",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10022880,
+    "source_hadm_id": 27708593,
+    "sex": "M",
+    "age": 66,
+    "vital_signs": {
+      "bp": "142/84",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 210.0,
+      "height_in": 71.0,
+      "height_ft_in": "5'11\""
+    },
+    "pmh": [
+      "Long-term (current) use of anticoagulants",
+      "Hip joint replacement",
+      "Other constipation",
+      "Personal history of transient ischemic attack (TIA), and cerebral infarction without residual deficits",
+      "Atrial fibrillation",
+      "Retention of urine, unspecified"
+    ],
+    "meds": [
+      "Multivitamins",
+      "Aspirin",
+      "Vitamin B Complex",
+      "Warfarin",
+      "CefazoLIN",
+      "Diltiazem",
+      "Heparin",
+      "Loratadine"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10022880). Top diagnosis context: Long-term (current) use of anticoagulants.",
+    "xray_path": "train/patient26984/study6/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2177-03-12"
+  },
+  {
+    "patient_id": "MIMIC_10023117",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10023117,
+    "source_hadm_id": 21607814,
+    "sex": "M",
+    "age": 53,
+    "vital_signs": {
+      "bp": "91/67",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 166.0,
+      "height_in": 67.5,
+      "height_ft_in": "5'8\""
+    },
+    "pmh": [
+      "Other disorders of bilirubin metabolism",
+      "Barrett's esophagus without dysplasia",
+      "Nonrheumatic tricuspid (valve) insufficiency",
+      "Paranoid schizophrenia",
+      "Acute kidney failure, unspecified",
+      "Insomnia, unspecified"
+    ],
+    "meds": [
+      "Zolpidem Tartrate",
+      "Aspirin",
+      "Bag",
+      "Isosorbide Dinitrate",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Midodrine",
+      "Warfarin",
+      "Atorvastatin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10023117). Top diagnosis context: Other disorders of bilirubin metabolism.",
+    "xray_path": "train/patient16302/study7/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2175-07-06"
+  },
+  {
+    "patient_id": "MIMIC_10023239",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10023239,
+    "source_hadm_id": 28984460,
+    "sex": "F",
+    "age": 29,
+    "vital_signs": {
+      "bp": "131/72",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 181.7,
+      "height_in": 64.0,
+      "height_ft_in": "5'4\""
+    },
+    "pmh": [
+      "Epilepsy, unspecified, not intractable, without status epilepticus",
+      "Hypothyroidism, unspecified",
+      "Pure hypercholesterolemia, unspecified",
+      "Hypo-osmolality and hyponatremia",
+      "Type 2 diabetes mellitus with hyperglycemia",
+      "Acute kidney failure, unspecified"
+    ],
+    "meds": [
+      "Insulin Pump (Self Administering Medication)",
+      "Insulin",
+      "Bag",
+      "LORazepam",
+      "Citalopram",
+      "Glucagon",
+      "Heparin",
+      "Insulin Human Regular"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Support Devices",
+    "imaging_expectation": "Support hardware or lines/tubes visualized.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10023239). Top diagnosis context: Epilepsy, unspecified, not intractable, without status epilepticus.",
+    "xray_path": "train/patient33895/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2140-10-22"
+  },
+  {
+    "patient_id": "MIMIC_10023771",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10023771,
+    "source_hadm_id": 20044587,
+    "sex": "M",
+    "age": 70,
+    "vital_signs": {
+      "bp": "116/76",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Hemorrhage complicating a procedure",
+      "Personal history of antineoplastic chemotherapy",
+      "Unspecified essential hypertension",
+      "Coronary atherosclerosis of native coronary artery",
+      "Other and unspecified hyperlipidemia",
+      "Surgical operation with anastomosis, bypass, or graft, with natural or artificial tissues used as implant causing abnormal patient reaction, or later complication, without mention of misadventure at time of operation"
+    ],
+    "meds": [
+      "Insulin",
+      "Amlodipine",
+      "Aspirin",
+      "Bag",
+      "Finasteride",
+      "Atorvastatin",
+      "Clopidogrel",
+      "Furosemide"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10023771). Top diagnosis context: Hemorrhage complicating a procedure.",
+    "xray_path": "train/patient33982/study3/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2113-08-25"
+  },
+  {
+    "patient_id": "MIMIC_10024043",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10024043,
+    "source_hadm_id": 24717014,
+    "sex": "M",
+    "age": 67,
+    "vital_signs": {
+      "bp": "162/80",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 180.0,
+      "height_in": 69.5,
+      "height_ft_in": "5'10\""
+    },
+    "pmh": [
+      "Personal history of alcoholism",
+      "Hypertensive chronic kidney disease, unspecified, with chronic kidney disease stage I through stage IV, or unspecified",
+      "Personal history of other malignant neoplasm of skin",
+      "Spinal stenosis, lumbar region, without neurogenic claudication",
+      "Personal history of poliomyelitis",
+      "Diabetes mellitus without mention of complication, type II or unspecified type, not stated as uncontrolled"
+    ],
+    "meds": [
+      "Insulin",
+      "Multivitamins",
+      "Zolpidem Tartrate",
+      "NIFEdipine CR",
+      "DiphenhydrAMINE",
+      "Glucagon",
+      "Heparin",
+      "LR"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Consolidation",
+    "imaging_expectation": "Focal airspace opacity consistent with consolidation.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10024043). Top diagnosis context: Personal history of alcoholism.",
+    "xray_path": "train/patient07075/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2117-04-11"
+  },
+  {
+    "patient_id": "MIMIC_10025463",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10025463,
+    "source_hadm_id": 24470193,
+    "sex": "M",
+    "age": 66,
+    "vital_signs": {
+      "bp": "160/102",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 178.0,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Unspecified hemorrhoids with other complication",
+      "Intracerebral hemorrhage",
+      "Obstructive hydrocephalus",
+      "Atrial fibrillation",
+      "Unspecified essential hypertension",
+      "Physical restraints status"
+    ],
+    "meds": [
+      "23.4% Sodium Chloride",
+      "Lisinopril",
+      "Sotalol",
+      "Bisacodyl",
+      "Docusate Sodium",
+      "Iso-Osmotic Sodium Chloride",
+      "Ondansetron",
+      "PNEUMOcoccal 23-valent polysaccharide vaccine"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10025463). Top diagnosis context: Unspecified hemorrhoids with other complication.",
+    "xray_path": "train/patient00800/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2137-10-08"
+  },
+  {
+    "patient_id": "MIMIC_10025612",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10025612,
+    "source_hadm_id": 23403708,
+    "sex": "M",
+    "age": 82,
+    "vital_signs": {
+      "bp": "131/82",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 162.7,
+      "height_in": 64.0,
+      "height_ft_in": "5'4\""
+    },
+    "pmh": [
+      "Personal history of tobacco use",
+      "Personal history of antineoplastic chemotherapy",
+      "Malignant neoplasm of main bronchus",
+      "Family history of malignant neoplasm of prostate",
+      "Family history of malignant neoplasm of breast",
+      "Hemorrhage complicating a procedure"
+    ],
+    "meds": [
+      "Neutra-Phos",
+      "Bag",
+      "OxycoDONE (Immediate Release)",
+      "Albumin 25% (12.5g / 50mL)",
+      "Albuterol 0.083% Neb Soln",
+      "CefazoLIN",
+      "Diltiazem",
+      "Dronabinol"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10025612). Top diagnosis context: Personal history of tobacco use.",
+    "xray_path": "train/patient32945/study4/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2125-09-25"
+  },
+  {
+    "patient_id": "MIMIC_10026255",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10026255,
+    "source_hadm_id": 22059910,
+    "sex": "M",
+    "age": 66,
+    "vital_signs": {
+      "bp": "120/75",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 170.0,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Delirium due to conditions classified elsewhere",
+      "Late effect of certain complications of trauma",
+      "Chronic viral hepatitis B without mention of hepatic coma without mention of hepatitis delta",
+      "Localization-related (focal) (partial) epilepsy and epileptic syndromes with simple partial seizures, without mention of intractable epilepsy",
+      "Tobacco use disorder",
+      "Leukocytosis, unspecified"
+    ],
+    "meds": [
+      "Tiotropium Bromide",
+      "Aspirin",
+      "Bag",
+      "Albuterol 0.083% Neb Soln",
+      "Atorvastatin",
+      "Diltiazem",
+      "Haloperidol",
+      "Heparin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10026255). Top diagnosis context: Delirium due to conditions classified elsewhere.",
+    "xray_path": "train/patient32604/study2/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2201-07-07"
+  },
+  {
+    "patient_id": "MIMIC_10026354",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10026354,
+    "source_hadm_id": 24547356,
     "sex": "M",
     "age": 34,
     "vital_signs": {
-      "bp": "120/78",
-      "hr": 88,
-      "rr": 18,
-      "temp_f": 98.2,
-      "spo2_pct": 99
-    },
-    "pmh": [],
-    "meds": [],
-    "allergies": [],
-    "social": {
-      "tobacco": "never",
-      "alcohol": "social"
-    },
-    "chexpert_label": "Fracture",
-    "imaging_expectation": "Acute or healing rib fracture; assess for complication.",
-    "ehr_notes": "Lateral rib pain after minor trauma; localized tenderness.",
-    "xray_path": "train/patient04799/study2/view1_frontal.jpg",
-    "xray_filename": "view1_frontal.jpg",
-    "encounter_date": "2025-09-03"
-  },
-  {
-    "patient_id": "P014",
-    "sex": "F",
-    "age": 77,
-    "vital_signs": {
-      "bp": "138/80",
-      "hr": 76,
-      "rr": 18,
-      "temp_f": 98.1,
-      "spo2_pct": 97
+      "bp": "98/64",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
     },
     "pmh": [
-      "atrial fibrillation",
-      "pacemaker"
+      "Thrombocytopenia, unspecified",
+      "Dislocation of jaw, initial encounter",
+      "Laceration of intercostal blood vessels, left side, initial encounter",
+      "Anemia, unspecified",
+      "Alcohol abuse, uncomplicated",
+      "Fracture of subcondylar process of mandible, initial encounter for closed fracture"
     ],
     "meds": [
-      "apixaban",
-      "metoprolol"
+      "Bag",
+      "Heparin",
+      "Magnesium Sulfate",
+      "Milk of Magnesia",
+      "0.9% Sodium Chloride",
+      "Senna",
+      "TraZODone",
+      "Ampicillin-Sulbactam"
     ],
     "allergies": [],
     "social": {
-      "tobacco": "never",
-      "alcohol": "none"
+      "tobacco": "unknown",
+      "alcohol": "unknown"
     },
-    "chexpert_label": "Support Devices",
-    "imaging_expectation": "Lines/leads/tubes positioning; device evaluation.",
-    "ehr_notes": "Routine device follow-up; no acute symptoms.",
-    "xray_path": "train/patient00826/study18/view1_frontal.jpg",
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10026354). Top diagnosis context: Thrombocytopenia, unspecified.",
+    "xray_path": "train/patient37302/study11/view1_frontal.jpg",
     "xray_filename": "view1_frontal.jpg",
-    "encounter_date": "2025-08-25"
+    "encounter_date": "2119-10-26"
+  },
+  {
+    "patient_id": "MIMIC_10026406",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10026406,
+    "source_hadm_id": 25166559,
+    "sex": "M",
+    "age": 45,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 171.3,
+      "height_in": 71.0,
+      "height_ft_in": "5'11\""
+    },
+    "pmh": [
+      "Anxiety disorder, unspecified",
+      "Alcohol dependence with withdrawal, unspecified",
+      "Nicotine dependence, cigarettes, uncomplicated",
+      "Unspecified mood [affective] disorder",
+      "Alcohol dependence with intoxication, unspecified",
+      "Personal history of self-harm"
+    ],
+    "meds": [
+      "Multivitamins",
+      "FoLIC Acid",
+      "OxycoDONE (Immediate Release)",
+      "Heparin",
+      "Omeprazole",
+      "Diazepam",
+      "Thiamine",
+      "Influenza Vaccine Quadrivalent"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10026406). Top diagnosis context: Anxiety disorder, unspecified.",
+    "xray_path": "train/patient63734/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2133-03-01"
+  },
+  {
+    "patient_id": "MIMIC_10027445",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10027445,
+    "source_hadm_id": 27488741,
+    "sex": "F",
+    "age": 48,
+    "vital_signs": {
+      "bp": "120/78",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 255.1,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Cellulitis and abscess of trunk",
+      "Peripheral vascular disease, unspecified",
+      "Obesity, unspecified",
+      "Other and unspecified superficial injury of hip, thigh, leg, and ankle, without mention of infection",
+      "Acute on chronic diastolic heart failure",
+      "Other specified alveolar and parietoalveolar pneumonopathies"
+    ],
+    "meds": [
+      "Insulin",
+      "Tiotropium Bromide",
+      "Diazepam",
+      "Albuterol 0.083% Neb Soln",
+      "Furosemide",
+      "Glucagon",
+      "Heparin",
+      "HydrOXYzine"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10027445). Top diagnosis context: Cellulitis and abscess of trunk.",
+    "xray_path": "train/patient16660/study11/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2145-12-08"
+  },
+  {
+    "patient_id": "MIMIC_10027602",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10027602,
+    "source_hadm_id": 21477991,
+    "sex": "F",
+    "age": 71,
+    "vital_signs": {
+      "bp": "128/80",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 122.9,
+      "height_in": 62.5,
+      "height_ft_in": "5'2\""
+    },
+    "pmh": [
+      "Other diseases of lung, not elsewhere classified",
+      "Unspecified essential hypertension",
+      "Gastrostomy status",
+      "Delirium due to conditions classified elsewhere",
+      "Attention deficit disorder with hyperactivity",
+      "Dysphagia, unspecified"
+    ],
+    "meds": [
+      "Insulin",
+      "Bag",
+      "Diazepam",
+      "Glucagon",
+      "Heparin",
+      "Magnesium Sulfate",
+      "Propranolol",
+      "Bisacodyl"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "No acute cardiopulmonary abnormality label from CheXpert metadata.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10027602). Top diagnosis context: Other diseases of lung, not elsewhere classified.",
+    "xray_path": "train/patient05165/study18/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2201-12-11"
+  },
+  {
+    "patient_id": "MIMIC_10029291",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10029291,
+    "source_hadm_id": 22205327,
+    "sex": "F",
+    "age": 50,
+    "vital_signs": {
+      "bp": "151/86",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 113.0,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Hypokalemia",
+      "Patient room in hospital as the place of occurrence of the external cause",
+      "Adverse effect of diagnostic agents, initial encounter",
+      "Other psychotic disorder not due to a substance or known physiological condition",
+      "Hyperlipidemia, unspecified",
+      "Chronic kidney disease, unspecified"
+    ],
+    "meds": [
+      "Insulin",
+      "Bag",
+      "Click Change <--- to Choose a Base Solution",
+      "CloniDINE",
+      "ClonazePAM",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Perphenazine",
+      "Prazosin"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10029291). Top diagnosis context: Hypokalemia.",
+    "xray_path": "train/patient23351/study38/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2123-02-20"
+  },
+  {
+    "patient_id": "MIMIC_10029484",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10029484,
+    "source_hadm_id": 20764029,
+    "sex": "M",
+    "age": 64,
+    "vital_signs": {
+      "bp": "114/59",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 192.0,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Coronary atherosclerosis of unspecified type of vessel, native or graft",
+      "Unspecified essential hypertension",
+      "Dehydration",
+      "Other and unspecified hyperlipidemia",
+      "Syncope and collapse",
+      "Backache, unspecified"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "Cyclobenzaprine",
+      "Glucagon",
+      "Heparin",
+      "Insulin Human Regular",
+      "Potassium Chloride"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10029484). Top diagnosis context: Coronary atherosclerosis of unspecified type of vessel, native or graft.",
+    "xray_path": "train/patient45923/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2160-11-08"
+  },
+  {
+    "patient_id": "MIMIC_10031404",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10031404,
+    "source_hadm_id": 21606243,
+    "sex": "F",
+    "age": 82,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Dehydration",
+      "Atelectasis",
+      "Acute kidney failure, unspecified",
+      "Discoid lupus erythematosus",
+      "Essential (primary) hypertension",
+      "Palpitations"
+    ],
+    "meds": [
+      "amLODIPine",
+      "Bag",
+      "LORazepam",
+      "Atorvastatin",
+      "Magnesium Sulfate",
+      "Metoprolol Succinate XL",
+      "0.9% Sodium Chloride",
+      "PNEUMOcoccal 23-valent polysaccharide vaccine"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10031404). Top diagnosis context: Dehydration.",
+    "xray_path": "train/patient49268/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2113-08-04"
+  },
+  {
+    "patient_id": "MIMIC_10031757",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10031757,
+    "source_hadm_id": 28477280,
+    "sex": "F",
+    "age": 67,
+    "vital_signs": {
+      "bp": "138/94",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 239.0,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Impaired fasting glucose",
+      "Other and unspecified hyperlipidemia",
+      "Long-term (current) use of aspirin",
+      "Urinary tract infection, site not specified",
+      "Coronary atherosclerosis of native coronary artery",
+      "Personal history of tobacco use"
+    ],
+    "meds": [
+      "Multivitamins",
+      "Vial",
+      "Enoxaparin Sodium",
+      "Lorazepam",
+      "Phytonadione",
+      "Polyethylene Glycol",
+      "Heparin",
+      "Milk of Magnesia"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10031757). Top diagnosis context: Impaired fasting glucose.",
+    "xray_path": "train/patient07386/study3/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2137-10-12"
+  },
+  {
+    "patient_id": "MIMIC_10032725",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10032725,
+    "source_hadm_id": 20611640,
+    "sex": "F",
+    "age": 38,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Cerebral edema",
+      "Personal history of malignant neoplasm of other parts of uterus",
+      "Secondary malignant neoplasm of lung",
+      "Secondary malignant neoplasm of adrenal gland",
+      "Pure hypercholesterolemia",
+      "Unspecified essential hypertension"
+    ],
+    "meds": [
+      "Insulin",
+      "Glucagon",
+      "Lidocaine 5% Patch",
+      "Bisacodyl",
+      "Dexamethasone",
+      "Docusate Sodium",
+      "Labetalol",
+      "Protamine Sulfate"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10032725). Top diagnosis context: Cerebral edema.",
+    "xray_path": "train/patient53703/study1/view3_lateral.jpg",
+    "xray_filename": "view3_lateral.jpg",
+    "encounter_date": "2143-03-22"
+  },
+  {
+    "patient_id": "MIMIC_10035185",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10035185,
+    "source_hadm_id": 22580999,
+    "sex": "M",
+    "age": 70,
+    "vital_signs": {
+      "bp": "145/96",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 225.0,
+      "height_in": 70.0,
+      "height_ft_in": "5'10\""
+    },
+    "pmh": [
+      "Other and unspecified angina pectoris",
+      "Examination of participant in clinical trial",
+      "Coronary atherosclerosis of native coronary artery",
+      "Unspecified hearing loss",
+      "Body Mass Index 32.0-32.9, adult",
+      "Diabetes mellitus without mention of complication, type II or unspecified type, uncontrolled"
+    ],
+    "meds": [
+      "Insulin",
+      "Aspirin",
+      "Bag",
+      "CefazoLIN",
+      "Furosemide",
+      "Glucagon",
+      "Hydrochlorothiazide",
+      "Insulin Human Regular"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "No acute cardiopulmonary abnormality label from CheXpert metadata.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10035185). Top diagnosis context: Other and unspecified angina pectoris.",
+    "xray_path": "train/patient08051/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2120-05-12"
+  },
+  {
+    "patient_id": "MIMIC_10035631",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10035631,
+    "source_hadm_id": 29276678,
+    "sex": "M",
+    "age": 63,
+    "vital_signs": {
+      "bp": "122/73",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 189.0,
+      "height_in": 71.0,
+      "height_ft_in": "5'11\""
+    },
+    "pmh": [
+      "Atelectasis",
+      "Do not resuscitate",
+      "Graft-versus-host disease, unspecified",
+      "Unspecified atrial fibrillation",
+      "Sepsis, unspecified organism",
+      "Hyperkalemia"
+    ],
+    "meds": [
+      "Bag",
+      "Multivitamins",
+      "Syringe",
+      "Vial",
+      "FoLIC Acid",
+      "LORazepam",
+      "Multivitamins W/minerals",
+      "Nephrocaps"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Edema",
+    "imaging_expectation": "Interstitial or alveolar edema pattern on chest imaging.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10035631). Top diagnosis context: Atelectasis.",
+    "xray_path": "train/patient60037/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2116-02-27"
+  },
+  {
+    "patient_id": "MIMIC_10036156",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10036156,
+    "source_hadm_id": 28019404,
+    "sex": "F",
+    "age": 88,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Other and unspecified hyperlipidemia",
+      "Other specified hypotension",
+      "Leukocytosis, unspecified",
+      "Diabetes mellitus without mention of complication, type II or unspecified type, not stated as uncontrolled",
+      "Other postprocedural status",
+      "Atrioventricular block, complete"
+    ],
+    "meds": [
+      "Insulin",
+      "Bag",
+      "Glucagon",
+      "Heparin",
+      "Magnesium Sulfate",
+      "Pantoprazole",
+      "0.9% Sodium Chloride",
+      "PNEUMOcoccal 23-valent polysaccharide vaccine"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "No acute cardiopulmonary abnormality label from CheXpert metadata.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10036156). Top diagnosis context: Other and unspecified hyperlipidemia.",
+    "xray_path": "train/patient12205/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2157-07-01"
+  },
+  {
+    "patient_id": "MIMIC_10037861",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10037861,
+    "source_hadm_id": 24540843,
+    "sex": "M",
+    "age": 77,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 181.88,
+      "height_in": 62.0,
+      "height_ft_in": "5'2\""
+    },
+    "pmh": [
+      "Dependence on respirator [ventilator] status",
+      "Hyperlipidemia, unspecified",
+      "Type 2 diabetes mellitus with diabetic chronic kidney disease",
+      "Chronic kidney disease, stage 3 (moderate)",
+      "Sepsis, unspecified organism",
+      "Compression of brain"
+    ],
+    "meds": [
+      "OxyCODONE--Acetaminophen (5mg-325mg)",
+      "Bag",
+      "Atorvastatin",
+      "CeFAZolin",
+      "Glucagon",
+      "Heparin",
+      "Insulin Human Regular",
+      "Magnesium Sulfate"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10037861). Top diagnosis context: Dependence on respirator [ventilator] status.",
+    "xray_path": "train/patient38783/study3/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2117-03-14"
+  },
+  {
+    "patient_id": "MIMIC_10037928",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10037928,
+    "source_hadm_id": 22228639,
+    "sex": "F",
+    "age": 78,
+    "vital_signs": {
+      "bp": "146/72",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 134.0,
+      "height_in": 62.0,
+      "height_ft_in": "5'2\""
+    },
+    "pmh": [
+      "Fracture of one rib, left side, initial encounter for closed fracture",
+      "Gastro-esophageal reflux disease without esophagitis",
+      "Type 2 diabetes mellitus without complications",
+      "Anxiety disorder, unspecified",
+      "Personal history of malignant neoplasm of tongue",
+      "Hyperlipidemia, unspecified"
+    ],
+    "meds": [
+      "Insulin",
+      "Neutra-Phos",
+      "Vial",
+      "Bag",
+      "Multivitamins W/minerals",
+      "Albuterol 0.083% Neb Soln",
+      "Atorvastatin",
+      "Sulfameth/Trimethoprim DS"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10037928). Top diagnosis context: Fracture of one rib, left side, initial encounter for closed fracture.",
+    "xray_path": "train/patient32229/study8/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2183-08-04"
+  },
+  {
+    "patient_id": "MIMIC_10037975",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10037975,
+    "source_hadm_id": 27617929,
+    "sex": "M",
+    "age": 60,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Encounter for palliative care",
+      "Infection with microorganisms resistant to penicillins",
+      "Chronic kidney disease, unspecified",
+      "Unspecified hereditary and idiopathic peripheral neuropathy",
+      "Edema",
+      "Septic shock"
+    ],
+    "meds": [
+      "Vial",
+      "CefePIME",
+      "Polyethylene Glycol",
+      "Hydrocortisone Na Succ.",
+      "Heparin",
+      "Meropenem",
+      "Famotidine",
+      "Bisacodyl"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10037975). Top diagnosis context: Encounter for palliative care.",
+    "xray_path": "train/patient44951/study5/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2185-01-17"
+  },
+  {
+    "patient_id": "MIMIC_10038081",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10038081,
+    "source_hadm_id": 20755971,
+    "sex": "F",
+    "age": 63,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 139.99,
+      "height_in": 62.0,
+      "height_ft_in": "5'2\""
+    },
+    "pmh": [
+      "Transfusion related acute lung injury (TRALI)",
+      "Pulmonary congestion and hypostasis",
+      "Portal hypertension",
+      "Hypertensive chronic kidney disease, unspecified, with chronic kidney disease stage I through stage IV, or unspecified",
+      "Personal history of malignant neoplasm of tongue",
+      "Acute respiratory failure"
+    ],
+    "meds": [
+      "Insulin",
+      "Vial",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Metolazone",
+      "Glucagon",
+      "Ipratropium-Albuterol Neb",
+      "Ipratropium Bromide Neb",
+      "Meropenem"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "No acute cardiopulmonary abnormality label from CheXpert metadata.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10038081). Top diagnosis context: Transfusion related acute lung injury (TRALI).",
+    "xray_path": "train/patient11092/study1/view2_lateral.jpg",
+    "xray_filename": "view2_lateral.jpg",
+    "encounter_date": "2115-09-27"
+  },
+  {
+    "patient_id": "MIMIC_10038933",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10038933,
+    "source_hadm_id": 25129047,
+    "sex": "M",
+    "age": 34,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Encephalopathy, unspecified",
+      "Hyposmolality and/or hyponatremia",
+      "Diabetes mellitus without mention of complication, type II or unspecified type, not stated as uncontrolled",
+      "Retention of urine, unspecified",
+      "Other and unspecified cerebral laceration and contusion, without mention of open intracranial wound, with loss of consciousness of unspecified duration",
+      "Other and unspecified alcohol dependence, unspecified"
+    ],
+    "meds": [
+      "Insulin",
+      "Bag",
+      "Multivitamins",
+      "Amlodipine",
+      "CloniDINE",
+      "Diazepam",
+      "FoLIC Acid",
+      "GlyBURIDE"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Edema",
+    "imaging_expectation": "Interstitial or alveolar edema pattern on chest imaging.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10038933). Top diagnosis context: Encephalopathy, unspecified.",
+    "xray_path": "train/patient12870/study13/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2148-09-10"
+  },
+  {
+    "patient_id": "MIMIC_10038992",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10038992,
+    "source_hadm_id": 24745425,
+    "sex": "M",
+    "age": 70,
+    "vital_signs": {
+      "bp": "105/73",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 222.66,
+      "height_in": 70.0,
+      "height_ft_in": "5'10\""
+    },
+    "pmh": [
+      "Thrombocytopenia, unspecified",
+      "Hypertensive heart and chronic kidney disease with heart failure and stage 1 through stage 4 chronic kidney disease, or unspecified chronic kidney disease",
+      "Gout, unspecified",
+      "Chronic kidney disease, stage 3 (moderate)",
+      "Supraventricular tachycardia",
+      "Chronic obstructive pulmonary disease, unspecified"
+    ],
+    "meds": [
+      "Aspirin",
+      "Bag",
+      "Lidocaine Jelly 2% (Urojet)",
+      "Sarna Lotion",
+      "CeFAZolin",
+      "Losartan Potassium",
+      "Glucagon",
+      "Polyethylene Glycol"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Pleural Effusion",
+    "imaging_expectation": "Pleural fluid layering or blunting of costophrenic angles seen.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10038992). Top diagnosis context: Thrombocytopenia, unspecified.",
+    "xray_path": "train/patient39261/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2187-07-29"
+  },
+  {
+    "patient_id": "MIMIC_10038999",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10038999,
+    "source_hadm_id": 29026789,
+    "sex": "M",
+    "age": 45,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 220.0,
+      "height_in": 68.0,
+      "height_ft_in": "5'8\""
+    },
+    "pmh": [
+      "Unspecified mental disorder due to known physiological condition",
+      "Unspecified place in other specified residential institution as the place of occurrence of the external cause",
+      "Displaced comminuted fracture of shaft of right tibia, initial encounter for closed fracture",
+      "Fall on same level, unspecified, initial encounter",
+      "Epilepsy, unspecified, not intractable, without status epilepticus",
+      "Legal blindness, as defined in USA"
+    ],
+    "meds": [
+      "Multivitamins",
+      "OxyCODONE (Immediate Release)",
+      "TraZODone",
+      "Divalproex (DELayed Release)",
+      "Docusate Sodium",
+      "Ketorolac",
+      "Enoxaparin Sodium",
+      "Ondansetron"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10038999). Top diagnosis context: Unspecified mental disorder due to known physiological condition.",
+    "xray_path": "train/patient41665/study6/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2132-05-17"
+  },
+  {
+    "patient_id": "MIMIC_10039708",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10039708,
+    "source_hadm_id": 29488258,
+    "sex": "F",
+    "age": 46,
+    "vital_signs": {
+      "bp": "110/76",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 145.0,
+      "height_in": 62.0,
+      "height_ft_in": "5'2\""
+    },
+    "pmh": [
+      "Secondary esophageal varices without bleeding",
+      "Hypothyroidism, unspecified",
+      "Patient's intentional underdosing of medication regimen for other reason",
+      "Nicotine dependence, cigarettes, uncomplicated",
+      "Dependence on renal dialysis",
+      "Alcoholic cirrhosis of liver without ascites"
+    ],
+    "meds": [
+      "Multivitamins",
+      "Sucralfate",
+      "FoLIC Acid",
+      "LORazepam",
+      "Heparin",
+      "Ipratropium-Albuterol Neb",
+      "Nicotine Patch",
+      "Pantoprazole"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "No Finding",
+    "imaging_expectation": "No acute cardiopulmonary abnormality label from CheXpert metadata.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10039708). Top diagnosis context: Secondary esophageal varices without bleeding.",
+    "xray_path": "train/patient24121/study7/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2144-01-19"
+  },
+  {
+    "patient_id": "MIMIC_10039831",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10039831,
+    "source_hadm_id": 26924951,
+    "sex": "F",
+    "age": 57,
+    "vital_signs": {
+      "bp": null,
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": null,
+      "height_in": null,
+      "height_ft_in": null
+    },
+    "pmh": [
+      "Embolism and thrombosis of other specified artery",
+      "Accidental puncture or laceration during a procedure, not elsewhere classified",
+      "Accidental cut, puncture, perforation or hemorrhage during surgical operation",
+      "Personal history of malignant neoplasm of other gastrointestinal tract",
+      "Secondary and unspecified malignant neoplasm of intra-abdominal lymph nodes",
+      "Personal history of malignant neoplasm of other parts of uterus"
+    ],
+    "meds": [
+      "Insulin",
+      "Neutra-Phos",
+      "Vial",
+      "Aspirin",
+      "HYDROmorphone (Dilaudid)",
+      "OxycoDONE (Immediate Release)",
+      "Warfarin",
+      "Glucagon"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Lung Opacity",
+    "imaging_expectation": "Nonspecific pulmonary opacity identified.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10039831). Top diagnosis context: Embolism and thrombosis of other specified artery.",
+    "xray_path": "train/patient42261/study2/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2115-12-28"
+  },
+  {
+    "patient_id": "MIMIC_10039997",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10039997,
+    "source_hadm_id": 22484749,
+    "sex": "F",
+    "age": 67,
+    "vital_signs": {
+      "bp": "141/82",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 200.1,
+      "height_in": 65.0,
+      "height_ft_in": "5'5\""
+    },
+    "pmh": [
+      "Cerebral infarction due to embolism of unspecified cerebral artery",
+      "Hypertensive chronic kidney disease with stage 1 through stage 4 chronic kidney disease, or unspecified chronic kidney disease",
+      "Chronic kidney disease, unspecified",
+      "Ataxia following other cerebrovascular disease",
+      "Unsteadiness on feet",
+      "Hemiplegia and hemiparesis following cerebral infarction affecting left non-dominant side"
+    ],
+    "meds": [
+      "Aspirin",
+      "Clopidogrel",
+      "Heparin",
+      "Lisinopril",
+      "Metoprolol Tartrate",
+      "Rosuvastatin Calcium",
+      "LamoTRIgine",
+      "Influenza Vaccine Quadrivalent"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10039997). Top diagnosis context: Cerebral infarction due to embolism of unspecified cerebral artery.",
+    "xray_path": "train/patient25248/study1/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2137-03-15"
+  },
+  {
+    "patient_id": "MIMIC_10040025",
+    "source": "MIMIC-IV Demo v2.2 (PhysioNet)",
+    "source_subject_id": 10040025,
+    "source_hadm_id": 27996267,
+    "sex": "F",
+    "age": 64,
+    "vital_signs": {
+      "bp": "112/60",
+      "hr": null,
+      "rr": null,
+      "temp_f": null,
+      "spo2_pct": null,
+      "weight_lbs": 187.61,
+      "height_in": 66.0,
+      "height_ft_in": "5'6\""
+    },
+    "pmh": [
+      "Type 2 diabetes mellitus with diabetic chronic kidney disease",
+      "Encounter for palliative care",
+      "Hypertensive heart and chronic kidney disease with heart failure and stage 1 through stage 4 chronic kidney disease, or unspecified chronic kidney disease",
+      "Other streptococcus as the cause of diseases classified elsewhere",
+      "Type 2 diabetes mellitus with diabetic peripheral angiopathy with gangrene",
+      "Pressure ulcer of other site, unspecified stage"
+    ],
+    "meds": [
+      "Tiotropium Bromide",
+      "Aspirin",
+      "Bag",
+      "LORazepam",
+      "Multivitamins W/minerals",
+      "OxyCODONE (Immediate Release)",
+      "Albuterol 0.083% Neb Soln",
+      "BuPROPion"
+    ],
+    "allergies": [],
+    "social": {
+      "tobacco": "unknown",
+      "alcohol": "unknown"
+    },
+    "chexpert_label": "Cardiomegaly",
+    "imaging_expectation": "Cardiomediastinal silhouette enlargement noted on chest radiograph.",
+    "ehr_notes": "Original-source demo EHR record (subject_id=10040025). Top diagnosis context: Type 2 diabetes mellitus with diabetic chronic kidney disease.",
+    "xray_path": "train/patient36309/study8/view1_frontal.jpg",
+    "xray_filename": "view1_frontal.jpg",
+    "encounter_date": "2148-01-23"
   }
 ]

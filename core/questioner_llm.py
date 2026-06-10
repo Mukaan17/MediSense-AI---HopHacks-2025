@@ -1,43 +1,38 @@
-# core/questioner_llm.py
-import json, os
+import json
+import os
 from typing import Dict, Any, List
-from langchain_groq import ChatGroq
-from langchain.schema import HumanMessage, SystemMessage
 
-# Reuse your env: GROQ_API_KEY, default model
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-70b-versatile")
+from .llm_client import get_llm
+
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 
-def _llm():
-    return ChatGroq(model=GROQ_MODEL, temperature=TEMPERATURE)
-
 SYSTEM = (
-  "You are a clinical question generator for a chest-focused advisory system. "
-  "You DO NOT diagnose or prescribe. You generate brief, high-yield clarifying "
-  "questions that increase information for the current leading differential, "
-  "prioritizing red flags first. You must return STRICT JSON only."
+    "You are a clinical question generator for a chest-focused advisory system. "
+    "You DO NOT diagnose or prescribe. You generate brief, high-yield clarifying "
+    "questions that increase information for the current leading differential, "
+    "prioritizing red flags first. You must return STRICT JSON only."
 )
 
-# Strict JSON schema the UI/server expects
 SCHEMA = {
-  "type": "object",
-  "properties": {
-    "questions": {
-      "type":"array",
-      "items":{
-        "type":"object",
-        "properties":{
-          "q":{"type":"string"},
-          "priority":{"type":"string","enum":["red-flag","triage","disposition","detail"]},
-          "targets":{"type":"array","items":{"type":"string"}},
-          "info_gain":{"type":"number","minimum":0,"maximum":1},
-          "why":{"type":"string"}
-        },
-        "required":["q","priority","targets","info_gain","why"]
-      }
-    }
-  },
-  "required":["questions"]
+    "type": "object",
+    "properties": {
+        "questions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "q": {"type": "string"},
+                    "priority": {"type": "string", "enum": ["red-flag", "triage", "disposition", "detail"]},
+                    "targets": {"type": "array", "items": {"type": "string"}},
+                    "info_gain": {"type": "number", "minimum": 0, "maximum": 1},
+                    "why": {"type": "string"},
+                },
+                "required": ["q", "priority", "targets", "info_gain", "why"],
+            },
+        }
+    },
+    "required": ["questions"],
 }
 
 PROMPT = """You will be given the current case STATE as JSON.
@@ -60,54 +55,50 @@ STATE
 {state}
 """
 
+
 def propose_questions_llm(state: Dict[str, Any], max_questions: int = 4) -> List[Dict[str, Any]]:
     state = dict(state or {})
     state["max_questions"] = max_questions
-    lm = _llm()
+    lm = get_llm(model=GEMINI_MODEL, temperature=TEMPERATURE)
     msg = PROMPT.format(schema=json.dumps(SCHEMA, indent=2), state=json.dumps(state, ensure_ascii=False))
-    out = lm([SystemMessage(content=SYSTEM), HumanMessage(content=msg)]).content.strip()
+    out = lm.invoke(f"{SYSTEM}\n\n{msg}").content.strip()
 
-    # robust JSON recovery
     try:
         data = json.loads(out)
     except Exception:
-        # Try to extract JSON from markdown code blocks first
         try:
-            # Remove markdown code block markers
             cleaned_resp = out.strip()
             if cleaned_resp.startswith("```json"):
-                cleaned_resp = cleaned_resp[7:]  # Remove ```json
+                cleaned_resp = cleaned_resp[7:]
             if cleaned_resp.startswith("```"):
-                cleaned_resp = cleaned_resp[3:]   # Remove ```
+                cleaned_resp = cleaned_resp[3:]
             if cleaned_resp.endswith("```"):
-                cleaned_resp = cleaned_resp[:-3]  # Remove trailing ```
-            
-            # Try to find JSON object boundaries
+                cleaned_resp = cleaned_resp[:-3]
+
             start_idx = cleaned_resp.find("{")
             end_idx = cleaned_resp.rfind("}")
-            
             if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                json_str = cleaned_resp[start_idx:end_idx+1]
+                json_str = cleaned_resp[start_idx : end_idx + 1]
                 data = json.loads(json_str)
             else:
                 raise json.JSONDecodeError("No JSON found in cleaned response", cleaned_resp, 0)
         except Exception:
-            # brace-recovery fallback
             start, end = out.find("{"), out.rfind("}")
-            data = json.loads(out[start:end+1]) if start >= 0 and end > start else {"questions":[]}
+            data = json.loads(out[start : end + 1]) if start >= 0 and end > start else {"questions": []}
 
     qs = data.get("questions", [])[:max_questions]
-    # light guardrails
     clean = []
     for q in qs:
-        txt = (q.get("q","") or "").strip()
-        if not txt: continue
-        if any(w in txt.lower() for w in ["take", "start", "mg", "dose", "prescribe", "diagnose"]):  # safety
+        txt = (q.get("q", "") or "").strip()
+        if not txt:
             continue
-        pr = q.get("priority","detail")
-        if pr not in {"red-flag","triage","disposition","detail"}: pr = "detail"
-        tg = q.get("targets",[]) or []
+        if any(w in txt.lower() for w in ["take", "start", "mg", "dose", "prescribe", "diagnose"]):
+            continue
+        pr = q.get("priority", "detail")
+        if pr not in {"red-flag", "triage", "disposition", "detail"}:
+            pr = "detail"
+        tg = q.get("targets", []) or []
         ig = float(q.get("info_gain", 0.5))
-        why = (q.get("why","") or "")[:140]
-        clean.append({"q": txt, "priority": pr, "targets": tg[:3], "info_gain": max(0,min(1,ig)), "why": why})
+        why = (q.get("why", "") or "")[:140]
+        clean.append({"q": txt, "priority": pr, "targets": tg[:3], "info_gain": max(0, min(1, ig)), "why": why})
     return clean[:max_questions]

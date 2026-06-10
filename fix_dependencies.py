@@ -55,7 +55,7 @@ def main():
     
     # Step 3: Install other required packages
     other_packages = [
-        "langchain-groq==0.3.8",
+        "requests>=2.32.0",
         "sentence-transformers==2.2.2"
     ]
     

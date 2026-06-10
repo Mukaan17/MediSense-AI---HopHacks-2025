@@ -12,12 +12,20 @@ CFG_DIR = BASE_DIR / "config"
 load_dotenv()
 
 def load_labels() -> Dict[str, Any]:
-    with open(CFG_DIR / "labels.json", "r") as f:
-        return json.load(f)
+    try:
+        with open(CFG_DIR / "labels.json", "r") as f:
+            return json.load(f)
+    except Exception:
+        return {"issues_allowed": []}
 
 def load_domains() -> Dict[str, Any]:
-    with open(CFG_DIR / "domains.yaml", "r") as f:
-        return yaml.safe_load(f)
+    """Load domain configuration; return empty dict if missing/malformed."""
+    try:
+        with open(CFG_DIR / "domains.yaml", "r") as f:
+            data = yaml.safe_load(f)
+            return data or {}
+    except Exception:
+        return {}
 
 def load_mappings() -> Dict[str, Any]:
     with open(CFG_DIR / "mappings.yaml", "r") as f:
@@ -55,7 +63,9 @@ def load_prompt(name: str) -> str:
 
 
 def load_symptom_map() -> Dict[str, Any]:
-    with open(CFG_DIR / "symptom_map.json", "r") as f:
-        return json.load(f)
-
+    try:
+        with open(CFG_DIR / "symptom_map.json", "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 

@@ -217,9 +217,15 @@ const ClinicalInterface: React.FC = () => {
 
   // Process API response into clinical report format
   const processAPIResponse = (data: any): ClinicalReport => {
+    const advisory = data?.rag_advisory;
+    const advisorySummary =
+      typeof advisory === 'string'
+        ? advisory
+        : (advisory?.follow_up || '');
+
     // Process the actual backend response
     const report: ClinicalReport = {
-      patientSummary: data.rag_advisory || data.structured_diagnosis?.summary || "Clinical analysis completed",
+      patientSummary: data.summary || advisorySummary || "Clinical analysis completed",
       differentialDiagnosis: [],
       redFlagAlerts: [],
       recommendations: [],
@@ -248,7 +254,9 @@ const ClinicalInterface: React.FC = () => {
       const structured = data.structured_diagnosis;
       
       // Update patient summary
-      if (structured.summary) {
+      if (data.summary) {
+        report.patientSummary = data.summary;
+      } else if (structured.summary) {
         report.patientSummary = structured.summary;
       }
       
@@ -613,7 +621,7 @@ const ClinicalInterface: React.FC = () => {
                                   <div key={idx} className="flex justify-between items-center text-sm">
                                     <span className="text-gray-800">{condition.condition}</span>
                                     <span className="text-gray-500 text-xs">
-                                      {(condition.confidence * 100).toFixed(1)}%
+                                      {(((condition.confidence ?? 0) * 100).toFixed(1))}%
                                     </span>
                                   </div>
                                 ))}
