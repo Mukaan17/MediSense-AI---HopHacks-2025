@@ -2,7 +2,7 @@
 # @Author: Mukhil Sundararaj
 # @Date:   2025-09-13 16:14:38
 # @Last Modified by:   Mukhil Sundararaj
-# @Last Modified time: 2025-09-13 17:10:19
+# @Last Modified time: 2025-09-14 10:20:19
 """
 Voice transcription module for integrating WhisperX into the main backend.
 This module provides audio transcription capabilities with speaker diarization.

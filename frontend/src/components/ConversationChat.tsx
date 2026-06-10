@@ -58,6 +58,6 @@ const ConversationChat: React.FC<ConversationChatProps> = ({ caseId, hud, classN
       </div>
     </div>
   );
-};
+});
 
 export default ConversationChat;
