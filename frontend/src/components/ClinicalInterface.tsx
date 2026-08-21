@@ -92,12 +92,14 @@ const ClinicalInterface: React.FC = () => {
     }
   });
 
-  // Voice recording handling
+  // Voice recording handling. During a live case the WS echoes each utterance
+  // back as transcript_chunk (which feeds the chat), so only add to the chat
+  // here when no live case is active.
   const handleVoiceTranscription = (transcript: string) => {
     setConversation(prev => [...prev, transcript]);
-    // Also add to chat for real-time display
-    conversationChatRef.current?.addTranscriptMessage(transcript, 'patient');
-    toast.success('Voice note transcribed');
+    if (!activeCaseId) {
+      conversationChatRef.current?.addTranscriptMessage(transcript, 'patient');
+    }
   };
 
   // Voice inference handling
@@ -637,13 +639,9 @@ const ClinicalInterface: React.FC = () => {
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <VoiceRecorder 
+                      <VoiceRecorder
                         onTranscription={handleVoiceTranscription}
                         onVoiceInference={handleVoiceInference}
-                        onInterimTranscript={(txt) => {
-                          // Send interim results to chat for real-time display
-                          conversationChatRef.current?.addTranscriptMessage(txt, 'patient');
-                        }}
                         onStartLive={() => {
                           // Return a sender that queues until WS is ready
                           const sender = (txt: string) => {
