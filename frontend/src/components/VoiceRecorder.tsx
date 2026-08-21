@@ -9,11 +9,10 @@ interface VoiceRecorderProps {
   onVoiceInference?: (audioFile: File) => void;
   onStartLive?: () => ((text: string) => void) | void; // returns send function
   onStopLive?: () => void;
-  onInterimTranscript?: (transcript: string) => void; // for real-time chat updates
   className?: string;
 }
 
-const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceInference, onStartLive, onStopLive, onInterimTranscript, className = '' }) => {
+const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceInference, onStartLive, onStopLive, className = '' }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -69,24 +68,18 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
         setRecordingTime(prev => prev + 1);
       }, 1000);
 
-      // Start browser STT immediately and push final chunks live
+      // Start browser STT immediately and push final utterances live.
+      // The transcriber emits final results only; the live WS echoes each
+      // utterance back as transcript_chunk, which drives the chat display.
       try {
         if (onStartLive) {
           const sender = onStartLive();
           if (typeof sender === 'function') liveSendRef.current = sender;
         }
-        stopSTTRef.current = startBrowserTranscriber(
-          (txt: string) => {
-            // Interim results for live chat updates
-            onInterimTranscript?.(txt);
-            liveSendRef.current?.(txt);
-          },
-          (txt: string) => {
-            // Final results for clinical notes
-            onTranscription(txt);
-            liveSendRef.current?.(txt);
-          }
-        );
+        stopSTTRef.current = startBrowserTranscriber((txt: string) => {
+          onTranscription(txt);
+          liveSendRef.current?.(txt);
+        });
       } catch (e) {
         // Fallback: will only do post-stop transcription
         console.warn('Live STT not available:', e);
