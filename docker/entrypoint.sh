@@ -6,7 +6,9 @@ set -e
 # so the build must finish before uvicorn starts.
 if [ ! -f "${RAG_PERSIST_DIR:-./rag_store}/index.faiss" ]; then
     echo "[entrypoint] rag_store missing - building knowledge base"
-    python3 -m rag_runtime.build_faiss_kb --reset || \
+    # No --reset: /app/rag_store is typically a bind mount and rmtree on a
+    # mount point fails with EBUSY; the builder writes into the existing dir.
+    python3 -m rag_runtime.build_faiss_kb || \
         echo "[entrypoint] KB build failed; serving with empty retrieval context"
 fi
 

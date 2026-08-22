@@ -8,13 +8,24 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 
 # Clinical guardrail: questions containing prescriptive language never reach
-# the clinician UI, whichever model generated them.
-PRESCRIPTIVE_TERMS = ("take", "start", "mg", "dose", "prescribe", "diagnose")
+# the clinician UI, whichever model generated them. Patterns target actual
+# prescriptive instructions (dosing, prescribing, telling the patient to
+# take/start medication) - bare substrings like 'take'/'start' would filter
+# legitimate questions such as "When did the symptoms start?".
+import re as _re
+
+PRESCRIPTIVE_PATTERNS = tuple(_re.compile(p) for p in (
+    r"\b\d+\s?(mg|mcg|ml|milligrams?|micrograms?|units?)\b",
+    r"\bprescri(be|bed|bing|ption)\b",
+    r"\bdos(e|es|ing|age)\b",
+    r"\b(take|start|begin)\b[^.?!]*\b(medication|medicine|pill|tablet|antibiotic|aspirin|drug)s?\b",
+    r"\bdiagnos(e|ed|ing)\s+you\b",
+))
 
 
 def is_prescriptive(text: str) -> bool:
     lowered = (text or "").lower()
-    return any(term in lowered for term in PRESCRIPTIVE_TERMS)
+    return any(p.search(lowered) for p in PRESCRIPTIVE_PATTERNS)
 
 SYSTEM = (
     "You are a clinical question generator for a chest-focused advisory system. "
@@ -130,7 +141,8 @@ async def stream_live_suggestions(state: Dict[str, Any], model: str = None) -> A
     prompt = (
         "Given this partial clinical state, generate 1-3 short follow-up "
         "questions a clinician should ask, each on its own line as a bullet "
-        "point. Questions only - no headers, no JSON, no advice.\n\n"
+        "point. Prefix any urgent safety-screening question with the tag "
+        "[red-flag]. Questions only - no headers, no JSON, no advice.\n\n"
         f"STATE: {json.dumps(state, ensure_ascii=False, default=str)[:1500]}"
     )
     async for token in stream_claude_tokens(prompt, model=model, system=STREAM_SYSTEM):
@@ -145,15 +157,21 @@ def parse_bullet_questions(text: str, max_questions: int = 3) -> List[Dict[str, 
         line = raw.strip().lstrip("•-*").strip()
         if not line or len(line) < 4:
             continue
-        if is_prescriptive(line):
+        priority = "detail"
+        if line.lower().startswith("[red-flag]"):
+            priority = "red-flag"
+            line = line[len("[red-flag]"):].strip()
+        if not line or is_prescriptive(line):
             continue
         questions.append({
             "q": line,
-            "priority": "detail",
+            "priority": priority,
             "targets": [],
             "info_gain": 0.5,
             "why": "",
         })
         if len(questions) >= max_questions:
             break
+    # Red flags first, mirroring the JSON path's ordering contract.
+    questions.sort(key=lambda q: 0 if q["priority"] == "red-flag" else 1)
     return questions

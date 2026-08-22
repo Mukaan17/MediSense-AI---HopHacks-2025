@@ -107,17 +107,28 @@ async def _security_middleware(request, call_next):
     request_id = new_request_id()
     start = time.perf_counter()
     path = request.url.path
-    client = request.client.host if request.client else "unknown"
+    # Behind the nginx proxy / ALB every connection shares the proxy's IP;
+    # the first X-Forwarded-For hop (set by our nginx) identifies the client.
+    forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    client = forwarded or (request.client.host if request.client else "unknown")
 
     content_length = request.headers.get("content-length")
     if content_length and content_length.isdigit() and int(content_length) > MAX_UPLOAD_MB * 1024 * 1024:
         return JSONResponse({"detail": f"Request too large (> {MAX_UPLOAD_MB} MB)"}, status_code=413)
+    # A chunked POST with no Content-Length would bypass the size cap;
+    # every legitimate client here sends a length.
+    if request.method == "POST" and not content_length \
+            and "chunked" in (request.headers.get("transfer-encoding") or "").lower():
+        return JSONResponse({"detail": "Content-Length required"}, status_code=411)
 
     if RATE_LIMIT_PER_MINUTE > 0 and path != "/health":
         now = time.monotonic()
         with _rate_lock:
-            bucket = _rate_buckets.setdefault(client, [])
             cutoff = now - 60.0
+            if len(_rate_buckets) > 10000:
+                for key in [k for k, b in _rate_buckets.items() if not b or b[-1] < cutoff]:
+                    _rate_buckets.pop(key, None)
+            bucket = _rate_buckets.setdefault(client, [])
             while bucket and bucket[0] < cutoff:
                 bucket.pop(0)
             if len(bucket) >= RATE_LIMIT_PER_MINUTE:
@@ -139,11 +150,17 @@ async def _security_middleware(request, call_next):
 
     # Audit: identifiers and outcomes only - never clinical content.
     duration_ms = (time.perf_counter() - start) * 1000
+    patient_id = request.query_params.get("patient_id")
+    if not patient_id and path.startswith("/ehr/patients/"):
+        patient_id = path.rsplit("/", 1)[-1]
     audit_event("request", request_id=request_id, user=user.get("username", ""),
                 method=request.method, path=path, status=response.status_code,
-                patient_id=request.query_params.get("patient_id"),
+                patient_id=patient_id,
                 duration_ms=duration_ms)
-    route = path if not path.startswith("/ehr/patients/") else "/ehr/patients/{id}"
+    # Label metrics with the resolved route template, not the raw path -
+    # bounded cardinality, no attacker-controlled label values.
+    route_obj = request.scope.get("route")
+    route = getattr(route_obj, "path", None) or "unmatched"
     metrics.inc("requests", path=route, status=str(response.status_code))
     metrics.observe("request_latency", duration_ms, path=route)
     response.headers["X-Request-ID"] = request_id
@@ -346,6 +363,16 @@ def _call_llm(fn, *args, **kwargs):
         if "API_KEY" in str(e).upper():
             raise HTTPException(status_code=503, detail=f"LLM not configured: {e}")
         raise
+
+
+def _ehr_for_patient(patient_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    """EHR lookup honoring the clinical-mode synthetic-data ban: inference
+    endpoints must not attach the bundled demo records either."""
+    if not patient_id:
+        return None
+    if is_clinical() and ehr_is_synthetic(EHR_JSON):
+        return None
+    return EHR_BY_PATIENT.get(patient_id)
 
 
 def _gated_questions(ranked: List[Dict[str, Any]], top_conf: float, margin: float,
@@ -680,7 +707,7 @@ def infer(req: InferRequest):
     docs = _retriever_instance().get_relevant_documents(q)
     ctx = render_docs(docs)
     # Add EHR context if patient_id provided
-    ehr = EHR_BY_PATIENT.get(req.patient_id) if req.patient_id else None
+    ehr = _ehr_for_patient(req.patient_id)
     ctx = (_summarize_ehr(ehr) if ehr else "") + (ctx[:MAX_CTX_CHARS] if ctx else "")
     answer = _call_llm(answerer_generate, extraction, ctx)
     return {
@@ -765,7 +792,7 @@ async def structured_diagnosis(
     patient_id = data.get("patient_id")
 
     # EHR by patient_id (hint), may be overridden by image filename match if present
-    ehr = EHR_BY_PATIENT.get(patient_id) if patient_id else None
+    ehr = _ehr_for_patient(patient_id)
 
     # 1) Extraction
     extraction = extractor_generate(conversation)
@@ -862,7 +889,7 @@ async def test_structured_diagnosis(
     patient_id = data.get("patient_id")
 
     # EHR by patient_id (hint)
-    ehr = EHR_BY_PATIENT.get(patient_id) if patient_id else None
+    ehr = _ehr_for_patient(patient_id)
 
     # Simple extraction
     extraction = extractor_generate(conversation)
@@ -901,7 +928,7 @@ async def multimodal_infer(
     patient_id = data.get("patient_id")
 
     # EHR by patient_id (hint), may be overridden by image filename match if present
-    ehr = EHR_BY_PATIENT.get(patient_id) if patient_id else None
+    ehr = _ehr_for_patient(patient_id)
 
     # 1) Extraction
     extraction = extractor_generate(conversation)
@@ -1044,7 +1071,7 @@ async def voice_infer(
         patient_id = patient_id
         
         # EHR by patient_id (hint)
-        ehr = EHR_BY_PATIENT.get(patient_id) if patient_id else None
+        ehr = _ehr_for_patient(patient_id)
         
         # 4) Extraction
         extraction = extractor_generate(conversation)
@@ -1169,7 +1196,7 @@ async def multimodal_voice_infer(
         conversation = "\n".join(utterances)
         
         # EHR by patient_id (hint), may be overridden by image filename match if present
-        ehr = EHR_BY_PATIENT.get(patient_id) if patient_id else None
+        ehr = _ehr_for_patient(patient_id)
         
         # 4) Extraction
         extraction = extractor_generate(conversation)
@@ -1787,6 +1814,9 @@ async def ws_transcribe(ws: WebSocket):
         await ws.send_json({"error": "server-side transcription unavailable"})
         await ws.close()
         return
+    # Readiness handshake: the client falls back to browser STT unless this
+    # arrives, so an unavailable model degrades loudly instead of silently.
+    await ws.send_json({"ready": True})
 
     buffer = UtteranceBuffer()
     loop = asyncio.get_running_loop()
@@ -1868,29 +1898,40 @@ async def ws_case(ws: WebSocket, case_id: str):
 
     await _send_update()
 
+    def _ingest(m: Dict[str, Any]):
+        """Append one utterance to the case and persist immediately, so a
+        disconnect mid-burst never loses received speech."""
+        utt = m.get("utterance")
+        speaker = m.get("speaker")
+        if isinstance(utt, str) and utt.strip():
+            prefixed = f"{speaker}: {utt.strip()}" if speaker in ("patient", "doctor") else utt.strip()
+            case.setdefault("utterances", []).append(prefixed)
+            _case_store.put(case_id, case)
+            return utt.strip(), speaker
+        return None
+
     try:
         while True:
             msg = await ws.receive_json()
-            batch = [msg]
+            ingested = [x for x in [_ingest(msg)] if x]
             # Collapse bursts: drain messages that arrived while the previous
             # recompute ran, so a fast talker triggers one recompute per burst
             # instead of one full pipeline per utterance.
             while True:
                 try:
-                    batch.append(await asyncio.wait_for(ws.receive_json(), timeout=0.05))
+                    more = await asyncio.wait_for(ws.receive_json(), timeout=0.05)
                 except asyncio.TimeoutError:
                     break
+                got = _ingest(more)
+                if got:
+                    ingested.append(got)
 
-            latest_utt, latest_speaker = None, None
-            for m in batch:
-                utt = m.get("utterance")
-                speaker = m.get("speaker")
-                if isinstance(utt, str) and utt.strip():
-                    prefixed = f"{speaker}: {utt.strip()}" if speaker in ("patient", "doctor") else utt.strip()
-                    case.setdefault("utterances", []).append(prefixed)
-                    latest_utt, latest_speaker = utt.strip(), speaker
-            if latest_utt is not None:
-                _case_store.put(case_id, case)
+            if ingested:
+                # Echo every drained utterance to the transcript; only the
+                # last one rides along with the recomputed HUD.
+                for utt, speaker in ingested[:-1]:
+                    await ws.send_json({"transcript_chunk": {"speaker": (speaker or "unknown"), "text": utt}})
+                latest_utt, latest_speaker = ingested[-1]
                 await _send_update(latest_utterance=latest_utt, latest_speaker=latest_speaker)
     except WebSocketDisconnect:
         return

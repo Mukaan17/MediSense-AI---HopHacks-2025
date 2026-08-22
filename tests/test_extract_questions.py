@@ -24,7 +24,20 @@ def test_extractor_negation():
 def test_prescriptive_filter():
     assert is_prescriptive("Take 50 mg of aspirin")
     assert is_prescriptive("Should we prescribe antibiotics?")
+    assert is_prescriptive("Start taking the antibiotics today")
     assert not is_prescriptive("Any recent travel or sick contacts?")
+    # Regression: bare substrings ('start', 'take') must not filter
+    # legitimate clarifying questions.
+    assert not is_prescriptive("When did the symptoms start?")
+    assert not is_prescriptive("Have you taken your temperature?")
+
+
+def test_red_flag_tag_parsing():
+    text = "- When did the cough start?\n- [red-flag] Any chest pain radiating to your arm?"
+    qs = parse_bullet_questions(text)
+    assert qs[0]["priority"] == "red-flag"
+    assert qs[0]["q"].startswith("Any chest pain")
+    assert qs[1]["priority"] == "detail"
 
 
 def test_parse_bullet_questions_filters_and_caps():

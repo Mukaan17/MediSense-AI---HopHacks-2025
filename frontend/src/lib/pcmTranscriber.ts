@@ -68,14 +68,28 @@ export async function startWhisperTranscriber(
     ws.onerror = () => { clearTimeout(timer); reject(new Error('transcribe WS failed')); };
   });
 
-  let serverReady = true;
+  // Readiness handshake: the server sends {ready:true} when its STT model is
+  // loaded, or {error} when unavailable. Throwing here lets the caller fall
+  // back to browser speech recognition instead of recording into a void.
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('transcribe WS not ready')), 4000);
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.ready) { clearTimeout(timer); resolve(); }
+        else if (msg.error) { clearTimeout(timer); reject(new Error(msg.error)); }
+      } catch { /* ignore */ }
+    };
+    ws.onclose = () => { clearTimeout(timer); reject(new Error('transcribe WS closed')); };
+  }).catch((err) => {
+    try { ws.close(); } catch { /* no-op */ }
+    throw err;
+  });
+
+  ws.onclose = null;
   ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data);
-      if (msg.error) {
-        serverReady = false;
-        return;
-      }
       if (msg.transcript && msg.final) onFinalText(msg.transcript);
     } catch {
       // ignore malformed frames
@@ -90,7 +104,7 @@ export async function startWhisperTranscriber(
   const pending: number[] = [];
 
   const pushSamples = (chunk: Float32Array) => {
-    if (ws.readyState !== WebSocket.OPEN || !serverReady) return;
+    if (ws.readyState !== WebSocket.OPEN) return;
     downsampler.process(chunk, pending);
     while (pending.length >= FRAME_SAMPLES) {
       const frame = new Int16Array(pending.splice(0, FRAME_SAMPLES));

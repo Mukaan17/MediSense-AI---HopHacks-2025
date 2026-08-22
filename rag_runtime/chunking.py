@@ -88,10 +88,11 @@ def chunk_dialogue(turns: List[str], max_words: int = DEFAULT_MAX_WORDS,
         count += n
     if current:
         chunks.append("\n".join(current))
-    if len(chunks) > 1:
-        kept = [c for c in chunks if len(c.split()) >= MIN_CHUNK_WORDS]
-        if kept:
-            return kept
+    # Dialogue packing has no overlap, so a short tail chunk would be lost
+    # corpus text if dropped - merge it into the previous chunk instead.
+    if len(chunks) > 1 and len(chunks[-1].split()) < MIN_CHUNK_WORDS:
+        tail = chunks.pop()
+        chunks[-1] = chunks[-1] + "\n" + tail
     return chunks
 
 
