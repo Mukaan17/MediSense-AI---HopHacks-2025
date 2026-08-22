@@ -394,3 +394,6 @@ VOICE_INTEGRATION_README.md
 .claude/
 CLAUDE_MEMORY.md
 **/CLAUDE_MEMORY.md
+# Auth users and audit logs never enter the repo
+config/users.json
+logs/audit.log

@@ -1,4 +1,5 @@
 import { API_CONFIG } from '../config/api';
+import { getAuthToken } from '../services/api';
 
 export interface RankedCondition {
   condition: string;
@@ -67,7 +68,9 @@ export async function connectCaseWS(
   currentCaseId = caseId;
 
   await new Promise<void>((resolve, reject) => {
-    const wsUrl = `${toWsBase(API_CONFIG.BASE_URL)}/ws/case/${caseId}`;
+    const token = getAuthToken();
+    const wsUrl = `${toWsBase(API_CONFIG.BASE_URL)}/ws/case/${caseId}` +
+      (token ? `?token=${encodeURIComponent(token)}` : '');
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => resolve();

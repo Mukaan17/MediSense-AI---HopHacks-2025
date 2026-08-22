@@ -10,7 +10,7 @@ import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 
 import { Patient, ClinicalReport, KnowledgeBaseMode } from '../types';
-import { clinicalAPI, futureAPI, apiUtils } from '../services/api';
+import { clinicalAPI, futureAPI, apiUtils, getAuthToken, login } from '../services/api';
 import PatientForm from './PatientForm';
 import XAIExplanation from './XAIExplanation';
 import DifferentialDiagnosis from './DifferentialDiagnosis';
@@ -40,6 +40,8 @@ const ClinicalInterface: React.FC = () => {
   const [ehrPatients, setEhrPatients] = useState<any[]>([]);
   const [selectedEhrPatient, setSelectedEhrPatient] = useState<string>('');
   const [appMode, setAppMode] = useState<'demo' | 'clinical'>('demo');
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [activeCaseId, setActiveCaseId] = useState<string>('');
   const [liveHUD, setLiveHUD] = useState<HUD | null>(null);
   const [streamingText, setStreamingText] = useState<string>('');
@@ -61,7 +63,11 @@ const ClinicalInterface: React.FC = () => {
         if (healthResponse.success) {
           console.log('Backend connected:', healthResponse.data);
           if (healthResponse.data?.app_mode) {
-            setAppMode(healthResponse.data.app_mode === 'clinical' ? 'clinical' : 'demo');
+            const mode = healthResponse.data.app_mode === 'clinical' ? 'clinical' : 'demo';
+            setAppMode(mode);
+            if (mode === 'clinical' && !getAuthToken()) {
+              setShowLogin(true);
+            }
           }
         } else {
           console.warn('Backend health check failed:', healthResponse.error);
@@ -98,6 +104,30 @@ const ClinicalInterface: React.FC = () => {
       toast.error('Please upload a valid image file');
     }
   });
+
+  // Clinical mode requires a bearer token; the API layer fires this event on
+  // any 401 so an expired token re-opens the login.
+  useEffect(() => {
+    const onUnauthorized = () => setShowLogin(true);
+    window.addEventListener('medisense:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('medisense:unauthorized', onUnauthorized);
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = await login(loginForm.username, loginForm.password);
+    if (result.success) {
+      setShowLogin(false);
+      setLoginForm({ username: '', password: '' });
+      toast.success('Signed in');
+      const ehrResponse = await futureAPI.listEHRPatients();
+      if (ehrResponse.success && ehrResponse.data?.patients) {
+        setEhrPatients(ehrResponse.data.patients);
+      }
+    } else {
+      toast.error(result.error || 'Sign-in failed');
+    }
+  };
 
   // Deep final report over the whole conversation once a live case ends.
   const handleFinalizeCase = async () => {
@@ -488,6 +518,37 @@ const ClinicalInterface: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* Clinical-mode sign-in */}
+      {showLogin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <form
+            onSubmit={handleLogin}
+            className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4"
+          >
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Sign in</h2>
+              <p className="text-sm text-gray-600">Clinical mode requires authentication.</p>
+            </div>
+            <input
+              className="input-field w-full"
+              placeholder="Username"
+              autoComplete="username"
+              value={loginForm.username}
+              onChange={(e) => setLoginForm((f) => ({ ...f, username: e.target.value }))}
+            />
+            <input
+              className="input-field w-full"
+              type="password"
+              placeholder="Password"
+              autoComplete="current-password"
+              value={loginForm.password}
+              onChange={(e) => setLoginForm((f) => ({ ...f, password: e.target.value }))}
+            />
+            <button type="submit" className="btn-primary w-full">Sign in</button>
+          </form>
+        </div>
+      )}
 
       {/* Live Coach HUD - Always show, minimized when no case */}
       <LiveCoach caseId={activeCaseId || 'no-case'} />
