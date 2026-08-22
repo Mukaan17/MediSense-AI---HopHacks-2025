@@ -14,8 +14,17 @@ const MIME = {
   '.woff': 'font/woff', '.woff2': 'font/woff2',
 };
 
+// E2E serves a dynamic runtime config pointing at the local backend, so
+// the production build under test never needs a baked-in API URL.
+const API_URL = process.env.E2E_API_URL || 'http://localhost:8000';
+
 http.createServer((req, res) => {
   const urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
+  if (urlPath === '/config.js') {
+    res.writeHead(200, { 'Content-Type': 'text/javascript' });
+    res.end(`window.__MEDISENSE_CONFIG__ = { API_URL: ${JSON.stringify(API_URL)} };\n`);
+    return;
+  }
   let filePath = path.normalize(path.join(ROOT, urlPath));
   if (!filePath.startsWith(ROOT)) {
     res.writeHead(403).end();
