@@ -50,6 +50,8 @@ openai-whisper==20231117
 python-jose[cryptography]>=3.5.0
 bcrypt>=4.0
 jinja2>=3.1
+prometheus-client>=0.20
+sentry-sdk[fastapi]>=2.0
 
 # ---------- Compatibility pins ----------
 protobuf>=3.20.2,<5.0.0

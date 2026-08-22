@@ -2,10 +2,10 @@
 # the backend's /metrics endpoint (clinical mode: give the scraper a service
 # token, /metrics is auth-gated like every non-public path).
 #
-# The exporter (core/metrics.py) emits counters (medisense_*_total) and
-# latency aggregates (medisense_*_count / _sum_ms / _max_ms), so p95 is not
-# directly available; the mean-latency and max-latency rules below are the
-# honest equivalents until a histogram exporter replaces it.
+# The exporter (core/metrics.py, prometheus_client) emits counters
+# (medisense_*_total) and latency histograms (medisense_*_ms_bucket/
+# _count/_sum), so the latency rules below use real histogram_quantile
+# percentiles.
 
 groups:
   - name: medisense-availability
@@ -40,23 +40,33 @@ groups:
     rules:
       - alert: SlowRequests
         expr: |
-          sum(rate(medisense_request_latency_sum_ms[5m]))
-            / clamp_min(sum(rate(medisense_request_latency_count[5m])), 0.001) > 3000
+          histogram_quantile(0.95,
+            sum by (le) (rate(medisense_request_latency_ms_bucket[5m]))) > 3000
         for: 10m
         labels: {severity: warning}
         annotations:
-          summary: "Mean request latency above 3 s (see docs/PERF_BASELINE.md)"
+          summary: "p95 request latency above 3 s (see docs/PERF_BASELINE.md)"
           runbook: docs/RUNBOOK.md#slow-pipeline
 
       - alert: SlowPipelineStage
         expr: |
-          sum by (stage) (rate(medisense_stage_latency_sum_ms[10m]))
-            / clamp_min(sum by (stage) (rate(medisense_stage_latency_count[10m])), 0.001) > 2000
+          histogram_quantile(0.95,
+            sum by (le, stage) (rate(medisense_stage_latency_ms_bucket[10m]))) > 2000
         for: 10m
         labels: {severity: warning}
         annotations:
-          summary: "Pipeline stage {{ $labels.stage }} mean latency above 2 s"
+          summary: "Pipeline stage {{ $labels.stage }} p95 latency above 2 s"
           runbook: docs/RUNBOOK.md#slow-pipeline
+
+      - alert: SlowLLMCalls
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, provider) (rate(medisense_llm_latency_ms_bucket[10m]))) > 20000
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.provider }} p95 call latency above 20 s"
+          runbook: docs/RUNBOOK.md#llm-failures
 
   - name: medisense-llm
     rules:
