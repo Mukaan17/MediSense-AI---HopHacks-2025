@@ -24,6 +24,10 @@ jobs:
           pip install fastapi uvicorn pydantic python-dotenv pyyaml requests \
             numpy pytest httpx python-multipart websockets bcrypt \
             "python-jose[cryptography]"
+      - name: Lint
+        run: |
+          pip install ruff
+          ruff check . --exclude frontend
       - name: Run tests
         run: python -m pytest tests/ -q
 

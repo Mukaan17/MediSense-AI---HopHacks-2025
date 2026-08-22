@@ -12,13 +12,12 @@ import os
 import pickle
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 from .chunking import (
     DEFAULT_MAX_WORDS,
     DEFAULT_OVERLAP_WORDS,
     docs_from_json,
-    flatten as _flatten,
 )
 
 

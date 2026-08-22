@@ -163,7 +163,7 @@ def _ensure_store_initialized() -> bool:
                 return self._vs.as_retriever(search_kwargs={"k": self._top_k}).get_relevant_documents(query)
 
         _retriever = _ChromaRetriever(vs, top_k)
-        print(f"[Retriever] ChromaDB loaded")
+        print("[Retriever] ChromaDB loaded")
         return True
     except Exception as e:
         print(f"[Retriever] ChromaDB init failed: {e}")

@@ -3,9 +3,8 @@ EHR Integration Module
 Provides clinical workflow integration features for EHR/EMR systems
 """
 
-import json
 from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 
 def generate_ehr_workflow_actions(
     diagnosis_result: Dict[str, Any],
@@ -39,7 +38,7 @@ def generate_ehr_workflow_actions(
                 "priority": "high",
                 "icd10_code": _get_icd10_code(condition),
                 "confidence": confidence,
-                "reasoning": f"High confidence diagnosis based on clinical evidence"
+                "reasoning": "High confidence diagnosis based on clinical evidence"
             })
             
             # Add medication alerts if applicable
