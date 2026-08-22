@@ -192,6 +192,16 @@ def _load_ehr() -> None:
     EHR_RECORDS.clear(); EHR_BY_PATIENT.clear()
     EHR_BY_IMAGE_PATH.clear(); EHR_BY_IMAGE_BASENAME.clear(); EHR_BY_IMAGE_HASH.clear()
     try:
+        from core.app_mode import ehr_source
+        if ehr_source() == "fhir":
+            from core.fhir import load_fhir_records
+            EHR_RECORDS.extend(load_fhir_records())
+            for r in EHR_RECORDS:
+                pid = r.get("patient_id")
+                if pid:
+                    EHR_BY_PATIENT[pid] = r
+            log.info(f"[EHR] Loaded {len(EHR_RECORDS)} records from FHIR roster")
+            return
         with open(EHR_JSON, "r") as f:
             EHR_RECORDS.extend(json.load(f))
         for r in EHR_RECORDS:
