@@ -1,6 +1,24 @@
 # Implementation Plan — Roadmap Execution
 
-**Status: DRAFT — awaiting owner approval. No implementation has started.**
+**Status: APPROVED (2026-08-22) — decisions recorded below; execution in
+progress in package order.**
+
+Approved decisions:
+
+- **D1 → (b)**: Track 1 + Track 2 mock-verified scaffolding.
+- **D2 → (a)**: CRA→Vite migration included (I3b).
+- **D3 → (a)** (delegated): Postgres via SQLAlchemy — an auditable
+  append-only timeline needs a relational store; SQLite-verified here,
+  Postgres in compose/prod.
+- **D4 → (a)** (delegated): in-process STT worker pool now; the queued
+  worker container is designed and flag-gated for a measured rollout —
+  best resilience without taking unverifiable latency risk on the live
+  path.
+- **D5 → (a)** (delegated): print-stylesheet export — it reuses the app's
+  own design system, so it is the most consistent by construction.
+- **D6 → include**: mutation testing added as a report-only (non-blocking)
+  job with the score recorded in `docs/PERF_BASELINE.md`, so it informs
+  without being able to flake CI red.
 
 This plan turns `docs/IMPROVEMENT_ROADMAP.md` into ordered, verifiable work
 packages. It follows the conventions that worked for the previous rounds

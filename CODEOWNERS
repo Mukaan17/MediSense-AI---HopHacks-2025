@@ -1,0 +1,7 @@
+# Default owner for everything in the repository.
+* @Mukaan17
+
+# Security-sensitive surfaces: changes here deserve explicit owner review.
+/core/auth.py @Mukaan17
+/api/middleware.py @Mukaan17
+/.github/ @Mukaan17
