@@ -1,13 +1,20 @@
 # Build Stage
-FROM node:18-alpine as build
+FROM node:20-alpine AS build
 WORKDIR /app
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci
 COPY frontend/ .
+# Empty REACT_APP_API_URL = same-origin requests, served through this
+# image's nginx proxy (see nginx.conf). Override for split-origin setups.
+ARG REACT_APP_API_URL=""
+ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 RUN GENERATE_SOURCEMAP=false npm run build
 
-# Production Stage
+# Production Stage: static files + reverse proxy to the backend
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html
+COPY frontend/nginx.conf /etc/nginx/templates/default.conf.template
+# envsubst (built into the nginx image entrypoint) fills ${BACKEND_HOST}
+ENV BACKEND_HOST=backend
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

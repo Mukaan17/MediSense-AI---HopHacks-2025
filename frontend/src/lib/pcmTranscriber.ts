@@ -48,7 +48,9 @@ class Downsampler {
 }
 
 function toWsBase(url: string): string {
-  return url.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:').replace(/\/$/, '');
+  // Empty base = same-origin (nginx-proxied deployment): derive from the page.
+  const base = url || window.location.origin;
+  return base.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:').replace(/\/$/, '');
 }
 
 export async function startWhisperTranscriber(

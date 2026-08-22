@@ -11,7 +11,7 @@ Use these prompts to guide an AI assistant or human DevOps engineer through the 
 > 1. VPC with 2 public and 2 private subnets.
 > 2. NAT Gateway for private subnet outbound access.
 > 3. An ECS Cluster supporting both Fargate and EC2 `g4dn.xlarge` instances (use an Auto Scaling Group/Capacity Provider for the GPU instances).
-> 4. An Application Load Balancer (ALB) listening on port 80/443, forwarding traffic to target groups.
+> 4. An Application Load Balancer (ALB) listening on 443 (TLS) with a single target group: the frontend (nginx) service. The nginx image proxies every non-static path - REST and WebSockets - to the backend's internal service DNS, so the backend needs no public target group and no CORS exposure. Set the ALB idle timeout to at least 300s for the live WebSockets.
 > 5. An EFS file system with a mount target in the private subnets."
 
 ### Phase 2: Docker & ECR
@@ -19,8 +19,8 @@ Use these prompts to guide an AI assistant or human DevOps engineer through the 
 
 ### Phase 3: ECS Task Definitions
 > "Write two AWS ECS Task Definitions:
-> 1. **Backend Service**: EC2 compatibility. Requires 1 GPU, 4 vCPUs, 16GB RAM. Mounts EFS volume to `/app/rag_store` and `/app/cache`. Environment variables from AWS Secrets Manager for `GEMINI_API_KEY`.
-> 2. **Frontend Service**: Fargate compatibility. 0.5 vCPU, 1GB RAM. Exposes port 80."
+> 1. **Backend Service**: EC2 compatibility for GPU imaging (g4dn.xlarge; the CPU image `Dockerfile.cpu` on Fargate is the budget alternative - everything degrades gracefully without a GPU). Mounts EFS at `/app/rag_store` and `/app/cache`. Secrets Manager entries: `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `AUTH_SECRET_KEY`, and the auth users file. Environment: `APP_MODE=clinical`, `REDIS_URL` (ElastiCache), `FRONTEND_ORIGINS` (empty - same-origin via the nginx proxy). Register with Cloud Map / service discovery so nginx's `BACKEND_HOST` resolves.
+> 2. **Frontend Service**: Fargate. 0.5 vCPU, 1GB RAM. Exposes port 80 to the ALB target group; env `BACKEND_HOST` points at the backend service discovery name. This nginx serves the static app AND reverse-proxies the API + WebSockets (see frontend/nginx.conf)."
 
 ## 2. Detailed Deployment Plan
 
@@ -83,8 +83,8 @@ graph TD
     end
 
     User((User)) --> ALB
-    ALB -->|/api/*| BE
-    ALB -->|/*| FE
+    ALB -->|all traffic| FE
+    FE -->|proxy REST + WS| BE
     
     FE -->|Internal HTTP| BE
     

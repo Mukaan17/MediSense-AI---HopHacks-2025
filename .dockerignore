@@ -4,6 +4,7 @@ __pycache__/
 .github/
 .gitignore
 venv_new/
+.venv/
 .env
 
 # Large dataset archives
@@ -11,16 +12,16 @@ venv_new/
 *.tar.gz
 *.zip
 
-# Training files the user requested not to be dockerized
+# Corpus files that never shipped (English Train.json is required: the
+# entrypoint builds the RAG knowledge base from it)
 English Dev.json
 English Test.json
-English Train.json
 Synthetic English Train Data.json
 
-# Local data and logs
+# Local data and logs (the 31 KB imaging head checkpoint ships with the
+# image; the BiomedCLIP backbone still downloads from HF at first load)
 data/
 logs/
-checkpoints/
 
 # Frontend build artifacts
 frontend/node_modules/

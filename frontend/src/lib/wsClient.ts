@@ -42,7 +42,9 @@ let ws: WebSocket | null = null;
 let currentCaseId: string | null = null;
 
 function toWsBase(url: string): string {
-  return url.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:').replace(/\/$/, '');
+  // Empty base = same-origin (nginx-proxied deployment): derive from the page.
+  const base = url || window.location.origin;
+  return base.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:').replace(/\/$/, '');
 }
 
 export function normalizeHUD(payload: any): HUD {
