@@ -46,6 +46,7 @@ const ClinicalInterface: React.FC = () => {
   // Live-case lifecycle (case creation, WS, HUD, final report)
   const {
     activeCaseId, liveHUD, streamingText, finalReport, isFinalizing,
+    confidenceHistory, sendQuestionFeedback,
     isLive, startLive, stopLive, finalizeCase, resetLiveCase,
   } = useLiveCase();
 
@@ -277,19 +278,21 @@ const ClinicalInterface: React.FC = () => {
           silently. Both providers absent -> prominent banner; primary absent
           with fallback present -> quieter notice. */}
       {llmStatus && !llmStatus.anthropic && !llmStatus.gemini && (
-        <div role="status" className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 text-center">
+        <div role="status" className="print:hidden bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 text-center">
           AI assistance degraded — no language model is configured. Analysis runs on
           retrieval and deterministic rules only.
         </div>
       )}
       {llmStatus && !llmStatus.anthropic && llmStatus.gemini && (
-        <div role="status" className="bg-gray-100 border-b border-gray-200 text-gray-700 text-xs px-4 py-1 text-center">
+        <div role="status" className="print:hidden bg-gray-100 border-b border-gray-200 text-gray-700 text-xs px-4 py-1 text-center">
           Running on the fallback language model only.
         </div>
       )}
 
       {/* Live Coach HUD - Always show, minimized when no case */}
-      <LiveCoach caseId={activeCaseId || 'no-case'} />
+      <div className="print:hidden">
+        <LiveCoach caseId={activeCaseId || 'no-case'} />
+      </div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -380,6 +383,7 @@ const ClinicalInterface: React.FC = () => {
                           encounterDate: selectedPatient.encounter_date
                         });
                       }}
+                      aria-label="Select from EHR patients"
                       className="input-field"
                     >
                       <option value="">Select a patient from EHR...</option>
@@ -408,6 +412,7 @@ const ClinicalInterface: React.FC = () => {
                   <div className="space-y-4">
                     <textarea
                       ref={conversationInputRef}
+                      aria-label="Clinical notes"
                       className="input-field h-32 resize-none"
                       placeholder="Enter patient symptoms, history, or clinical findings..."
                       value={conversation.join('\n')}
@@ -429,6 +434,8 @@ const ClinicalInterface: React.FC = () => {
                       finalReport={finalReport}
                       isFinalizing={isFinalizing}
                       onFinalize={finalizeCase}
+                      confidenceHistory={confidenceHistory}
+                      onQuestionFeedback={sendQuestionFeedback}
                     />
 
                     <div className="text-xs text-gray-600 mb-2">
@@ -505,7 +512,7 @@ const ClinicalInterface: React.FC = () => {
                             : 'border-gray-300 hover:border-medical-primary hover:bg-gray-50'
                         }`}
                       >
-                        <input {...getInputProps()} />
+                        <input {...getInputProps({ 'aria-label': 'Upload medical image' })} />
                         <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                         <div className="space-y-1">
                           <p className="text-sm font-medium text-gray-700">
@@ -697,6 +704,14 @@ const ClinicalInterface: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
+              <div className="print:hidden flex justify-end space-x-2 mb-4">
+                <button onClick={() => setCurrentView('results')} className="btn-secondary">
+                  Back to Results
+                </button>
+                <button onClick={() => window.print()} className="btn-primary">
+                  Export PDF
+                </button>
+              </div>
               {clinicalReport && typeof clinicalReport === 'object' ? (
                 <ClinicalReportView report={clinicalReport} />
               ) : (

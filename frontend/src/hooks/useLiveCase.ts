@@ -11,6 +11,10 @@ export interface LiveCase {
   streamingText: string;
   finalReport: string;
   isFinalizing: boolean;
+  /** Top-confidence trajectory across HUD updates (sparkline data). */
+  confidenceHistory: number[];
+  /** Record the clinician's verdict on a suggested question. */
+  sendQuestionFeedback: (question: string, action: 'accepted' | 'dismissed') => Promise<void>;
   /** Reads the live-connection flag at call time (a ref, never a stale closure). */
   isLive: () => boolean;
   /** Create the case (image-backed or voice-only), connect the WS, and return
@@ -33,6 +37,7 @@ export function useLiveCase(): LiveCase {
   const [streamingText, setStreamingText] = useState<string>('');
   const [finalReport, setFinalReport] = useState<string>('');
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const [confidenceHistory, setConfidenceHistory] = useState<number[]>([]);
   const wsRef = useRef<boolean>(false);
   const pendingUtterancesRef = useRef<string[]>([]);
 
@@ -73,6 +78,9 @@ export function useLiveCase(): LiveCase {
             // and merge into the existing HUD.
             setStreamingText('');
             setLiveHUD((prev) => ({ ...(prev || {}), ...hud }));
+            if (typeof hud.conf === 'number') {
+              setConfidenceHistory((prev) => [...prev.slice(-59), hud.conf as number]);
+            }
           },
           (token) => setStreamingText((prev) => prev + token)
         );
@@ -139,11 +147,29 @@ export function useLiveCase(): LiveCase {
     }
   };
 
+  const sendQuestionFeedback = async (question: string, action: 'accepted' | 'dismissed') => {
+    if (!activeCaseId) return;
+    try {
+      await fetch(`${API_CONFIG.BASE_URL}/api/case/${activeCaseId}/feedback`, {
+        method: 'POST',
+        ...fetchAuthOptions('POST'),
+        headers: {
+          ...(fetchAuthOptions('POST').headers as Record<string, string>),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question, action }),
+      });
+    } catch {
+      // feedback is best-effort; never disrupt the live session over it
+    }
+  };
+
   const resetLiveCase = () => {
     setActiveCaseId('');
     setLiveHUD(null);
     setStreamingText('');
     setFinalReport('');
+    setConfidenceHistory([]);
     stopLive();
   };
 
@@ -153,6 +179,8 @@ export function useLiveCase(): LiveCase {
     streamingText,
     finalReport,
     isFinalizing,
+    confidenceHistory,
+    sendQuestionFeedback,
     isLive,
     startLive,
     stopLive,

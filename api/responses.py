@@ -145,6 +145,11 @@ class FinalizeCaseResponse(BaseModel):
     disclaimer: str
 
 
+class QuestionFeedbackResponse(BaseModel):
+    case_id: str
+    recorded: int
+
+
 class ReportStatusResponse(BaseModel):
     case_id: str
     status: str  # queued | running | complete | error
