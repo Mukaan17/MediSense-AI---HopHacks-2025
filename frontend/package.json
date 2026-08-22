@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@sentry/react": "^10.70.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "axios": "^1.6.0",

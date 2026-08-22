@@ -1,0 +1,6 @@
+# Optional tracing stack: install alongside requirements.txt to enable
+# OpenTelemetry spans (core/tracing.py). Without these packages - or
+# without OTEL_EXPORTER_OTLP_ENDPOINT - tracing is a strict no-op.
+opentelemetry-api>=1.25
+opentelemetry-sdk>=1.25
+opentelemetry-exporter-otlp-proto-http>=1.25

@@ -1,70 +1,99 @@
 # -*- coding: utf-8 -*-
-"""In-process metrics: counters and latency aggregates, exported in
-Prometheus text format at /metrics (auth-gated in clinical mode).
+"""Process metrics on prometheus_client: counters and latency histograms,
+exported in Prometheus text format at /metrics (auth-gated in clinical
+mode).
 
-Deliberately dependency-free: count/sum/min/max per series is enough to
-alert on and graph, and a real Prometheus client can replace this without
-changing call sites."""
+The call-site API (inc / observe / timed / render_prometheus) is unchanged
+from the earlier dependency-free implementation; what changed is the
+export: histograms with real buckets, so alert rules can use
+histogram_quantile instead of approximating percentiles with means.
 
+Conventions:
+- Counters export as  medisense_<name>_total{labels}
+- Latencies export as medisense_<name>_ms_bucket/_count/_sum{labels}
+- A metric's label set is fixed by its first use; later calls with
+  different labels are coerced (missing -> "", extras dropped) with a
+  one-time warning, because prometheus_client requires stable label names.
+
+`timed` also opens an OpenTelemetry span (core.tracing) so stage timings
+appear in traces when an OTLP endpoint is configured - a no-op otherwise.
+"""
+
+import logging
 import threading
 import time
 from contextlib import contextmanager
 from typing import Dict, Tuple
 
+from prometheus_client import CollectorRegistry, Counter, Histogram, generate_latest
+
+log = logging.getLogger("core.metrics")
+
+REGISTRY = CollectorRegistry()
+
+# Milliseconds; wide enough for LLM calls, fine enough for pipeline stages.
+LATENCY_BUCKETS_MS = (
+    5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000,
+)
+
 _lock = threading.Lock()
-_counters: Dict[Tuple[str, Tuple[Tuple[str, str], ...]], float] = {}
-_timings: Dict[Tuple[str, Tuple[Tuple[str, str], ...]], Dict[str, float]] = {}
+_counters: Dict[str, Counter] = {}
+_histograms: Dict[str, Histogram] = {}
+_label_schema: Dict[str, Tuple[str, ...]] = {}
+_schema_warned: set = set()
 
 
-def _key(name: str, labels: Dict[str, str]):
-    return (name, tuple(sorted((labels or {}).items())))
+def _labelnames(name: str, labels: Dict[str, str]) -> Tuple[str, ...]:
+    schema = _label_schema.get(name)
+    if schema is None:
+        schema = tuple(sorted(labels.keys()))
+        _label_schema[name] = schema
+    return schema
+
+
+def _coerce(name: str, schema: Tuple[str, ...], labels: Dict[str, str]) -> Dict[str, str]:
+    if tuple(sorted(labels.keys())) != schema and name not in _schema_warned:
+        _schema_warned.add(name)
+        log.warning("metric %r called with labels %s; schema is %s - coercing",
+                    name, sorted(labels.keys()), list(schema))
+    return {k: str(labels.get(k, "")) for k in schema}
 
 
 def inc(name: str, value: float = 1.0, **labels) -> None:
-    k = _key(name, labels)
     with _lock:
-        _counters[k] = _counters.get(k, 0.0) + value
+        schema = _labelnames(name, labels)
+        counter = _counters.get(name)
+        if counter is None:
+            counter = Counter(f"medisense_{name}", f"{name} (counter)",
+                              labelnames=schema, registry=REGISTRY)
+            _counters[name] = counter
+    coerced = _coerce(name, schema, labels)
+    (counter.labels(**coerced) if schema else counter).inc(value)
 
 
 def observe(name: str, value_ms: float, **labels) -> None:
-    k = _key(name, labels)
     with _lock:
-        t = _timings.setdefault(k, {"count": 0, "sum_ms": 0.0, "min_ms": float("inf"), "max_ms": 0.0})
-        t["count"] += 1
-        t["sum_ms"] += value_ms
-        t["min_ms"] = min(t["min_ms"], value_ms)
-        t["max_ms"] = max(t["max_ms"], value_ms)
+        schema = _labelnames(name, labels)
+        hist = _histograms.get(name)
+        if hist is None:
+            hist = Histogram(f"medisense_{name}_ms", f"{name} latency (ms)",
+                             labelnames=schema, buckets=LATENCY_BUCKETS_MS,
+                             registry=REGISTRY)
+            _histograms[name] = hist
+    coerced = _coerce(name, schema, labels)
+    (hist.labels(**coerced) if schema else hist).observe(value_ms)
 
 
 @contextmanager
 def timed(name: str, **labels):
+    from core.tracing import span
     start = time.perf_counter()
-    try:
-        yield
-    finally:
-        observe(name, (time.perf_counter() - start) * 1000, **labels)
-
-
-def _escape(value: str) -> str:
-    return str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
-
-
-def _fmt_labels(labels: Tuple[Tuple[str, str], ...]) -> str:
-    if not labels:
-        return ""
-    inner = ",".join(f'{k}="{_escape(v)}"' for k, v in labels)
-    return "{" + inner + "}"
+    with span(name, **labels):
+        try:
+            yield
+        finally:
+            observe(name, (time.perf_counter() - start) * 1000, **labels)
 
 
 def render_prometheus() -> str:
-    lines = []
-    with _lock:
-        for (name, labels), value in sorted(_counters.items()):
-            lines.append(f"medisense_{name}_total{_fmt_labels(labels)} {value:g}")
-        for (name, labels), t in sorted(_timings.items()):
-            base = f"medisense_{name}"
-            lab = _fmt_labels(labels)
-            lines.append(f"{base}_count{lab} {t['count']:g}")
-            lines.append(f"{base}_sum_ms{lab} {t['sum_ms']:.1f}")
-            lines.append(f"{base}_max_ms{lab} {t['max_ms']:.1f}")
-    return "\n".join(lines) + "\n"
+    return generate_latest(REGISTRY).decode("utf-8")

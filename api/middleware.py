@@ -18,6 +18,7 @@ from core.auth import (
     DEMO_USER, PUBLIC_PATHS, user_from_authorization,
 )
 from core.audit import audit_event, new_request_id
+from core.tracing import span as _trace_span
 from core import metrics
 
 log = logging.getLogger("api")
@@ -78,7 +79,10 @@ async def _security_middleware(request, call_next):
     request.state.user = user
     request.state.request_id = request_id
 
-    response = await call_next(request)
+    # No-op unless an OTLP endpoint is configured (core/tracing).
+    with _trace_span("http_request", method=request.method, path=core_path,
+                     request_id=request_id):
+        response = await call_next(request)
 
     # Audit: identifiers and outcomes only - never clinical content.
     duration_ms = (time.perf_counter() - start) * 1000

@@ -28,7 +28,10 @@ load_dotenv()
 from fastapi import FastAPI
 
 from core.auth import validate_clinical_config
+from core.error_tracking import maybe_init_sentry
 from core.retriever import warm_up as retriever_warm_up
+
+maybe_init_sentry()
 
 from api import middleware
 from api.routes import auth, cases, ehr, inference, system, voice, ws

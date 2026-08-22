@@ -12,7 +12,7 @@ env:
   BACKEND_LIGHT_DEPS: >-
     fastapi==0.116.1 uvicorn==0.30.6 pydantic==2.11.4 python-dotenv pyyaml
     requests numpy httpx python-multipart websockets bcrypt jinja2
-    python-jose[cryptography]>=3.5.0
+    prometheus-client python-jose[cryptography]>=3.5.0
 
 jobs:
   changes:

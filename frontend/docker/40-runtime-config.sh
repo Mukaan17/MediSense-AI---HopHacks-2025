@@ -4,6 +4,9 @@
 # same-origin requests through this image's nginx proxy.
 set -e
 cat > /usr/share/nginx/html/config.js <<EOF
-window.__MEDISENSE_CONFIG__ = { API_URL: "${API_URL:-}" };
+window.__MEDISENSE_CONFIG__ = {
+  API_URL: "${API_URL:-}",
+  SENTRY_DSN: "${SENTRY_DSN:-}"
+};
 EOF
 echo "runtime-config: API_URL='${API_URL:-}'"
