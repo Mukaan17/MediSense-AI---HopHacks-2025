@@ -65,11 +65,13 @@ from core.auth import (
     authenticate, create_access_token, user_from_authorization, user_from_ws_token,
 )
 from core.audit import audit_event, new_request_id
+from core import metrics
 from fastapi.responses import JSONResponse
 import time
 
 # ----------------- App & Logging ------------------
-logging.basicConfig(level=os.getenv("LOGLEVEL", "INFO"))
+from core.logging_setup import configure_logging
+configure_logging()
 log = logging.getLogger("api")
 from dotenv import load_dotenv
 load_dotenv()
@@ -136,12 +138,22 @@ async def _security_middleware(request, call_next):
     response = await call_next(request)
 
     # Audit: identifiers and outcomes only - never clinical content.
+    duration_ms = (time.perf_counter() - start) * 1000
     audit_event("request", request_id=request_id, user=user.get("username", ""),
                 method=request.method, path=path, status=response.status_code,
                 patient_id=request.query_params.get("patient_id"),
-                duration_ms=(time.perf_counter() - start) * 1000)
+                duration_ms=duration_ms)
+    route = path if not path.startswith("/ehr/patients/") else "/ehr/patients/{id}"
+    metrics.inc("requests", path=route, status=str(response.status_code))
+    metrics.observe("request_latency", duration_ms, path=route)
     response.headers["X-Request-ID"] = request_id
     return response
+
+
+@app.get("/metrics")
+def metrics_endpoint():
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(metrics.render_prometheus(), media_type="text/plain; version=0.0.4")
 
 
 @app.post("/auth/login")
@@ -1604,14 +1616,17 @@ def _recompute_case(case: Dict[str, Any],
     utterances = case.get("utterances", [])
     conversation = "\n".join(utterances)
 
-    extraction = extractor_generate(conversation) if conversation else {"extracted": {}}
+    with metrics.timed("stage_latency", stage="extract"):
+        extraction = extractor_generate(conversation) if conversation else {"extracted": {}}
     q = (extraction.get("retrieval_query") or conversation) if conversation else ""
-    docs = _retriever_instance().get_relevant_documents(q) if q else []
+    with metrics.timed("stage_latency", stage="retrieve"):
+        docs = _retriever_instance().get_relevant_documents(q) if q else []
     ctx = render_docs(docs) or ""
 
     extracted = extraction.get("extracted", {}) or {}
     text_findings = _scan_text_findings(extracted)
-    ranked = fuse(case["image_findings"], text_findings, topk=10)
+    with metrics.timed("stage_latency", stage="fuse"):
+        ranked = fuse(case["image_findings"], text_findings, topk=10)
     evidence = build_evidence(
         image_findings=case["image_findings"],
         text_findings=text_findings,

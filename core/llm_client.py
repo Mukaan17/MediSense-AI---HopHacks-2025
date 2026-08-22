@@ -14,6 +14,8 @@ from typing import Any, AsyncIterator, Dict, Iterable, List
 import requests
 from dotenv import load_dotenv
 
+from . import metrics
+
 _llm = None
 _llm_model = None
 _llm_temperature = None
@@ -80,9 +82,19 @@ async def stream_claude_tokens(prompt: str, model: str = None, system: str = "",
     }
     if system:
         kwargs["system"] = system
-    async with client.messages.stream(**kwargs) as stream:
-        async for text in stream.text_stream:
-            yield text
+    model_name = kwargs["model"]
+    with metrics.timed("llm_latency", provider="anthropic", model=model_name):
+        async with client.messages.stream(**kwargs) as stream:
+            async for text in stream.text_stream:
+                yield text
+            message = await stream.get_final_message()
+    usage = getattr(message, "usage", None)
+    if usage:
+        metrics.inc("llm_tokens", float(usage.input_tokens or 0),
+                    provider="anthropic", model=model_name, kind="input")
+        metrics.inc("llm_tokens", float(usage.output_tokens or 0),
+                    provider="anthropic", model=model_name, kind="output")
+    metrics.inc("llm_calls", provider="anthropic", model=model_name)
 
 
 async def invoke_claude_full(prompt: str, model: str = None, system: str = "",
@@ -97,8 +109,17 @@ async def invoke_claude_full(prompt: str, model: str = None, system: str = "",
     }
     if system:
         kwargs["system"] = system
-    async with client.messages.stream(**kwargs) as stream:
-        message = await stream.get_final_message()
+    model_name = kwargs["model"]
+    with metrics.timed("llm_latency", provider="anthropic", model=model_name):
+        async with client.messages.stream(**kwargs) as stream:
+            message = await stream.get_final_message()
+    usage = getattr(message, "usage", None)
+    if usage:
+        metrics.inc("llm_tokens", float(usage.input_tokens or 0),
+                    provider="anthropic", model=model_name, kind="input")
+        metrics.inc("llm_tokens", float(usage.output_tokens or 0),
+                    provider="anthropic", model=model_name, kind="output")
+    metrics.inc("llm_calls", provider="anthropic", model=model_name)
     parts = [block.text for block in message.content if getattr(block, "type", "") == "text"]
     return "\n".join(parts).strip()
 
@@ -170,6 +191,13 @@ class _GeminiInvokeClient:
             body = resp.json()
         except Exception as e:
             raise RuntimeError(f"Gemini returned non-JSON response: {e}") from e
+
+        usage = body.get("usageMetadata") or {}
+        metrics.inc("llm_tokens", float(usage.get("promptTokenCount") or 0),
+                    provider="gemini", model=self.model, kind="input")
+        metrics.inc("llm_tokens", float(usage.get("candidatesTokenCount") or 0),
+                    provider="gemini", model=self.model, kind="output")
+        metrics.inc("llm_calls", provider="gemini", model=self.model)
 
         candidates = body.get("candidates") or []
         if not candidates:
