@@ -1,4 +1,5 @@
 import { API_CONFIG } from '../config/api';
+import { getAuthToken } from '../services/api';
 
 // Server-side live transcription: capture mic audio with an AudioWorklet,
 // downsample to 16 kHz mono Int16 PCM, and stream raw frames over
@@ -53,7 +54,9 @@ function toWsBase(url: string): string {
 export async function startWhisperTranscriber(
   onFinalText: (text: string) => void
 ): Promise<() => void> {
-  const wsUrl = `${toWsBase(API_CONFIG.BASE_URL)}/ws/transcribe`;
+  const token = getAuthToken();
+  const wsUrl = `${toWsBase(API_CONFIG.BASE_URL)}/ws/transcribe` +
+    (token ? `?token=${encodeURIComponent(token)}` : '');
   const ws = new WebSocket(wsUrl);
   ws.binaryType = 'arraybuffer';
 

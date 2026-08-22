@@ -60,6 +60,13 @@ from core.clinical_diagnosis import (
 )
 from core.ehr_integration import create_ehr_integration_summary
 from core.app_mode import APP_MODE, is_demo, is_clinical, ehr_is_synthetic
+from core.auth import (
+    DEMO_USER, PUBLIC_PATHS, TOKEN_TTL_MINUTES,
+    authenticate, create_access_token, user_from_authorization, user_from_ws_token,
+)
+from core.audit import audit_event, new_request_id
+from fastapi.responses import JSONResponse
+import time
 
 # ----------------- App & Logging ------------------
 logging.basicConfig(level=os.getenv("LOGLEVEL", "INFO"))
@@ -86,6 +93,70 @@ else:
 app = FastAPI(title="Multimodal Clinical Reference (Advisory)")
 
 
+# --------------- Security middleware ----------------
+RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "240"))
+MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "25"))
+_rate_buckets: Dict[str, List[float]] = {}
+_rate_lock = threading.Lock()
+
+
+@app.middleware("http")
+async def _security_middleware(request, call_next):
+    request_id = new_request_id()
+    start = time.perf_counter()
+    path = request.url.path
+    client = request.client.host if request.client else "unknown"
+
+    content_length = request.headers.get("content-length")
+    if content_length and content_length.isdigit() and int(content_length) > MAX_UPLOAD_MB * 1024 * 1024:
+        return JSONResponse({"detail": f"Request too large (> {MAX_UPLOAD_MB} MB)"}, status_code=413)
+
+    if RATE_LIMIT_PER_MINUTE > 0 and path != "/health":
+        now = time.monotonic()
+        with _rate_lock:
+            bucket = _rate_buckets.setdefault(client, [])
+            cutoff = now - 60.0
+            while bucket and bucket[0] < cutoff:
+                bucket.pop(0)
+            if len(bucket) >= RATE_LIMIT_PER_MINUTE:
+                return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
+            bucket.append(now)
+
+    user = DEMO_USER
+    if path not in PUBLIC_PATHS and not path.startswith(("/docs", "/openapi")):
+        try:
+            user = user_from_authorization(request.headers.get("authorization"))
+        except HTTPException as e:
+            audit_event("auth_denied", request_id=request_id, method=request.method,
+                        path=path, status=e.status_code, detail=str(e.detail))
+            return JSONResponse({"detail": e.detail}, status_code=e.status_code)
+    request.state.user = user
+    request.state.request_id = request_id
+
+    response = await call_next(request)
+
+    # Audit: identifiers and outcomes only - never clinical content.
+    audit_event("request", request_id=request_id, user=user.get("username", ""),
+                method=request.method, path=path, status=response.status_code,
+                patient_id=request.query_params.get("patient_id"),
+                duration_ms=(time.perf_counter() - start) * 1000)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+@app.post("/auth/login")
+def auth_login(username: str = Form(...), password: str = Form(...)):
+    """Exchange credentials for a bearer token (required in clinical mode)."""
+    user = authenticate(username, password)
+    if not user:
+        audit_event("login_failed", user=username, path="/auth/login", status=401)
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_access_token(user["username"], user["role"])
+    audit_event("login", user=username, path="/auth/login", status=200)
+    return {"access_token": token, "token_type": "bearer",
+            "role": user["role"], "expires_in_minutes": TOKEN_TTL_MINUTES}
+
+
 @app.on_event("startup")
 async def _warm_up_models() -> None:
     # Load the vector store and cross-encoder off the request path so the
@@ -103,7 +174,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -1676,6 +1747,9 @@ async def ws_transcribe(ws: WebSocket):
     from core.live_stt import UtteranceBuffer, transcribe_pcm, stt_executor, fw_available
 
     await ws.accept()
+    if user_from_ws_token(ws.query_params.get("token")) is None:
+        await ws.close(code=4401, reason="Authentication required")
+        return
     if not await asyncio.get_running_loop().run_in_executor(stt_executor, fw_available):
         await ws.send_json({"error": "server-side transcription unavailable"})
         await ws.close()
@@ -1723,6 +1797,9 @@ async def ws_transcribe(ws: WebSocket):
 @app.websocket("/ws/case/{case_id}")
 async def ws_case(ws: WebSocket, case_id: str):
     await ws.accept()
+    if user_from_ws_token(ws.query_params.get("token")) is None:
+        await ws.close(code=4401, reason="Authentication required")
+        return
     if case_id not in _CASES:
         await ws.send_json({"error": "case_id not found"})
         await ws.close()

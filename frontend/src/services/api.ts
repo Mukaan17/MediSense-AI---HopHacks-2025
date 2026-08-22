@@ -23,10 +23,33 @@ const api = axios.create({
   },
 });
 
-// Request interceptor for logging
+export const TOKEN_STORAGE_KEY = 'medisense_token';
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthToken(token: string | null): void {
+  try {
+    if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    else localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    // storage unavailable; requests proceed unauthenticated
+  }
+}
+
+// Request interceptor: logging + bearer token (clinical mode)
 api.interceptors.request.use(
   (config) => {
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    const token = getAuthToken();
+    if (token && config.headers) {
+      (config.headers as any)['Authorization'] = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -43,9 +66,33 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API Response Error:', error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      // Token missing/expired in clinical mode: let the app show its login.
+      window.dispatchEvent(new CustomEvent('medisense:unauthorized'));
+    }
     return Promise.reject(error);
   }
 );
+
+// Exchange credentials for a bearer token (clinical mode)
+export async function login(username: string, password: string): Promise<APIResponse<any>> {
+  try {
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('password', password);
+    const response = await api.post('/auth/login', formData);
+    if (response.data?.access_token) {
+      setAuthToken(response.data.access_token);
+    }
+    return { success: true, data: response.data, timestamp: new Date().toISOString() };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.message,
+      timestamp: new Date().toISOString()
+    };
+  }
+}
 
 // Core API Services
 export const clinicalAPI = {
