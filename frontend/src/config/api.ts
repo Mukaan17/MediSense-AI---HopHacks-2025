@@ -1,11 +1,24 @@
 // API Configuration.
-// REACT_APP_API_URL='' (empty string) is meaningful: it makes requests
-// relative to the serving origin, which is how the nginx-proxied Docker
-// image runs - hence the explicit undefined check instead of ||.
+// Resolution order: runtime config (config.js, templated at container
+// start - one build runs against any backend) -> build-time env -> dev
+// default. An empty string is meaningful at every level: it makes requests
+// relative to the serving origin (the nginx-proxied Docker image) - hence
+// explicit undefined checks instead of ||.
+declare global {
+  interface Window {
+    __MEDISENSE_CONFIG__?: { API_URL?: string; SENTRY_DSN?: string };
+  }
+}
+
+const runtimeConfig =
+  (typeof window !== 'undefined' && window.__MEDISENSE_CONFIG__) || {};
+
 export const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_URL !== undefined
-    ? process.env.REACT_APP_API_URL
-    : 'http://localhost:8000',
+  BASE_URL: runtimeConfig.API_URL !== undefined
+    ? runtimeConfig.API_URL
+    : process.env.REACT_APP_API_URL !== undefined
+      ? process.env.REACT_APP_API_URL
+      : 'http://localhost:8000',
   TIMEOUT: 30000,
 };
 

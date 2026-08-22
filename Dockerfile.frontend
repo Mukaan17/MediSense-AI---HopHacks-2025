@@ -14,6 +14,11 @@ RUN GENERATE_SOURCEMAP=false npm run build
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html
 COPY frontend/nginx.conf /etc/nginx/templates/default.conf.template
+# Runtime config: templates config.js at container start so this image
+# runs against any backend without a rebuild (empty API_URL = same-origin).
+COPY frontend/docker/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
+RUN chmod +x /docker-entrypoint.d/40-runtime-config.sh
+ENV API_URL=""
 # envsubst (built into the nginx image entrypoint) fills ${BACKEND_HOST}
 ENV BACKEND_HOST=backend
 EXPOSE 80

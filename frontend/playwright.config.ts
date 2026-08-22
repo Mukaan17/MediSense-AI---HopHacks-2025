@@ -9,8 +9,9 @@ import { defineConfig } from '@playwright/test';
  *   npx playwright test e2e/demo
  *   APP_MODE=clinical npx playwright test e2e/clinical
  *
- * Prereq: a build pointing at the local backend -
- *   REACT_APP_API_URL=http://localhost:8000 npm run build
+ * Prereq: any production build (`npm run build`) - the static server
+ * injects runtime config pointing at the local backend, so the build does
+ * not need a baked-in API URL.
  *
  * The chromium binary is expected at PLAYWRIGHT_BROWSERS_PATH (CI installs
  * it with `npx playwright install chromium`); PW_CHROMIUM_PATH overrides the
