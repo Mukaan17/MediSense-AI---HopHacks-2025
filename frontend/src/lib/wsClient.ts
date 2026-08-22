@@ -24,6 +24,9 @@ export interface HUD {
   };
   diagnostic_suggestions?: string[];
   uncertainty_flags?: string[];
+  coach?: {
+    suggested?: Array<{ q: string; priority?: string; why?: string }>;
+  };
   evidence?: {
     posterior_shift?: {
       base_top?: { condition: string; score: number };
@@ -55,7 +58,11 @@ function normalizeHUD(payload: any): HUD {
   return hud;
 }
 
-export async function connectCaseWS(caseId: string, onUpdate: (hud: HUD) => void): Promise<void> {
+export async function connectCaseWS(
+  caseId: string,
+  onUpdate: (hud: HUD) => void,
+  onStreamingToken?: (token: string) => void
+): Promise<void> {
   disconnectCaseWS();
   currentCaseId = caseId;
 
@@ -68,7 +75,11 @@ export async function connectCaseWS(caseId: string, onUpdate: (hud: HUD) => void
     ws.onmessage = (event) => {
       try {
         const parsed = JSON.parse(event.data);
-        onUpdate(normalizeHUD(parsed));
+        if (parsed?.type === 'streaming_token') {
+          onStreamingToken?.(parsed.token || '');
+        } else {
+          onUpdate(normalizeHUD(parsed));
+        }
       } catch {
         // Ignore malformed payloads to keep live flow stable.
       }

@@ -1,20 +1,82 @@
 # -*- coding: utf-8 -*-
-"""Centralized LLM client for Google AI Studio (Gemini).
+"""Centralized LLM clients.
 
-This module intentionally keeps a simple `.invoke(prompt).content` interface so
-existing callers do not need provider-specific logic.
+Two providers:
+- Anthropic Claude (primary when ANTHROPIC_API_KEY is set): true async token
+  streaming for the live HUD and a deep final-report call.
+- Google AI Studio Gemini (fallback / default): synchronous
+  `.invoke(prompt).content` contract kept for all existing callers.
 """
 
 import os
-from typing import Any, Dict, Iterable, List
+from typing import Any, AsyncIterator, Dict, Iterable, List
 
 import requests
 from dotenv import load_dotenv
 
 _llm = None
 _llm_model = None
+_llm_temperature = None
 
 load_dotenv()
+
+# --------------- Anthropic (Claude) ---------------
+
+DEFAULT_LIVE_MODEL = "claude-haiku-4-5"
+DEFAULT_FINAL_MODEL = "claude-sonnet-4-6"
+
+_anthropic_async = None
+
+
+def anthropic_available() -> bool:
+    return bool(os.getenv("ANTHROPIC_API_KEY"))
+
+
+def _get_anthropic_async():
+    """Cached AsyncAnthropic client. Raises if the SDK or key is missing."""
+    global _anthropic_async
+    if _anthropic_async is None:
+        if not anthropic_available():
+            raise RuntimeError("ANTHROPIC_API_KEY not set")
+        from anthropic import AsyncAnthropic
+        _anthropic_async = AsyncAnthropic()
+    return _anthropic_async
+
+
+async def stream_claude_tokens(prompt: str, model: str = None, system: str = "",
+                               max_tokens: int = 512) -> AsyncIterator[str]:
+    """Async generator yielding text deltas as they arrive (true streaming)."""
+    client = _get_anthropic_async()
+    kwargs: Dict[str, Any] = {
+        "model": model or DEFAULT_LIVE_MODEL,
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if system:
+        kwargs["system"] = system
+    async with client.messages.stream(**kwargs) as stream:
+        async for text in stream.text_stream:
+            yield text
+
+
+async def invoke_claude_full(prompt: str, model: str = None, system: str = "",
+                             max_tokens: int = 4096) -> str:
+    """Full response for report generation. Streams under the hood so large
+    outputs don't hit HTTP timeouts."""
+    client = _get_anthropic_async()
+    kwargs: Dict[str, Any] = {
+        "model": model or DEFAULT_FINAL_MODEL,
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if system:
+        kwargs["system"] = system
+    async with client.messages.stream(**kwargs) as stream:
+        message = await stream.get_final_message()
+    parts = [block.text for block in message.content if getattr(block, "type", "") == "text"]
+    return "\n".join(parts).strip()
+
+# --------------- Gemini ---------------
 
 
 class _InvokeResponse:

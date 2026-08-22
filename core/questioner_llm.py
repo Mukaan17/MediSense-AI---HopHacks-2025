@@ -1,11 +1,20 @@
 import json
 import os
-from typing import Dict, Any, List
+from typing import Any, AsyncIterator, Dict, List
 
 from .llm_client import get_llm
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
+
+# Clinical guardrail: questions containing prescriptive language never reach
+# the clinician UI, whichever model generated them.
+PRESCRIPTIVE_TERMS = ("take", "start", "mg", "dose", "prescribe", "diagnose")
+
+
+def is_prescriptive(text: str) -> bool:
+    lowered = (text or "").lower()
+    return any(term in lowered for term in PRESCRIPTIVE_TERMS)
 
 SYSTEM = (
     "You are a clinical question generator for a chest-focused advisory system. "
@@ -92,7 +101,7 @@ def propose_questions_llm(state: Dict[str, Any], max_questions: int = 4) -> List
         txt = (q.get("q", "") or "").strip()
         if not txt:
             continue
-        if any(w in txt.lower() for w in ["take", "start", "mg", "dose", "prescribe", "diagnose"]):
+        if is_prescriptive(txt):
             continue
         pr = q.get("priority", "detail")
         if pr not in {"red-flag", "triage", "disposition", "detail"}:
@@ -102,3 +111,49 @@ def propose_questions_llm(state: Dict[str, Any], max_questions: int = 4) -> List
         why = (q.get("why", "") or "")[:140]
         clean.append({"q": txt, "priority": pr, "targets": tg[:3], "info_gain": max(0, min(1, ig)), "why": why})
     return clean[:max_questions]
+
+
+STREAM_SYSTEM = (
+    "You are a concise clinical question generator for an advisory system. "
+    "You DO NOT diagnose or prescribe. Output only short bullet-point "
+    "clarifying questions a clinician should ask next, red flags first."
+)
+
+
+async def stream_live_suggestions(state: Dict[str, Any], model: str = None) -> AsyncIterator[str]:
+    """Yield text tokens of 1-3 bullet-point clarifying questions via Claude.
+
+    Callers must run the final text through parse_bullet_questions(), which
+    applies the prescriptive-language guardrail."""
+    from .llm_client import stream_claude_tokens
+
+    prompt = (
+        "Given this partial clinical state, generate 1-3 short follow-up "
+        "questions a clinician should ask, each on its own line as a bullet "
+        "point. Questions only - no headers, no JSON, no advice.\n\n"
+        f"STATE: {json.dumps(state, ensure_ascii=False, default=str)[:1500]}"
+    )
+    async for token in stream_claude_tokens(prompt, model=model, system=STREAM_SYSTEM):
+        yield token
+
+
+def parse_bullet_questions(text: str, max_questions: int = 3) -> List[Dict[str, Any]]:
+    """Parse streamed bullet lines into the question dict shape used by the
+    HUD, applying the same prescriptive-language filter as the JSON path."""
+    questions: List[Dict[str, Any]] = []
+    for raw in (text or "").splitlines():
+        line = raw.strip().lstrip("•-*").strip()
+        if not line or len(line) < 4:
+            continue
+        if is_prescriptive(line):
+            continue
+        questions.append({
+            "q": line,
+            "priority": "detail",
+            "targets": [],
+            "info_gain": 0.5,
+            "why": "",
+        })
+        if len(questions) >= max_questions:
+            break
+    return questions
