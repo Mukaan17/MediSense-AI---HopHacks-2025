@@ -3,6 +3,7 @@ import os
 from typing import Any, AsyncIterator, Dict, List
 
 from .llm_client import get_llm
+from .utils import parse_llm_json
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
@@ -83,28 +84,7 @@ def propose_questions_llm(state: Dict[str, Any], max_questions: int = 4) -> List
     msg = PROMPT.format(schema=json.dumps(SCHEMA, indent=2), state=json.dumps(state, ensure_ascii=False))
     out = lm.invoke(f"{SYSTEM}\n\n{msg}").content.strip()
 
-    try:
-        data = json.loads(out)
-    except Exception:
-        try:
-            cleaned_resp = out.strip()
-            if cleaned_resp.startswith("```json"):
-                cleaned_resp = cleaned_resp[7:]
-            if cleaned_resp.startswith("```"):
-                cleaned_resp = cleaned_resp[3:]
-            if cleaned_resp.endswith("```"):
-                cleaned_resp = cleaned_resp[:-3]
-
-            start_idx = cleaned_resp.find("{")
-            end_idx = cleaned_resp.rfind("}")
-            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                json_str = cleaned_resp[start_idx : end_idx + 1]
-                data = json.loads(json_str)
-            else:
-                raise json.JSONDecodeError("No JSON found in cleaned response", cleaned_resp, 0)
-        except Exception:
-            start, end = out.find("{"), out.rfind("}")
-            data = json.loads(out[start : end + 1]) if start >= 0 and end > start else {"questions": []}
+    data = parse_llm_json(out, {"questions": []})
 
     qs = data.get("questions", [])[:max_questions]
     clean = []
