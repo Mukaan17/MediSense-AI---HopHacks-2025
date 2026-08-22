@@ -71,6 +71,18 @@ class LoginResponse(BaseModel):
     token_type: str
     role: str
     expires_in_minutes: int
+    csrf_token: Optional[str] = None
+
+
+class LogoutResponse(BaseModel):
+    status: str
+
+
+class MeResponse(BaseModel):
+    username: str
+    role: str
+    # False in demo mode (anonymous demo user), True for a real session.
+    authenticated: bool
 
 
 class WsTicketResponse(BaseModel):

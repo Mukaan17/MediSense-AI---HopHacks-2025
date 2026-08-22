@@ -15,7 +15,7 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 
 from core.auth import (
-    DEMO_USER, PUBLIC_PATHS, user_from_authorization,
+    DEMO_USER, PUBLIC_PATHS, user_from_request,
 )
 from core.audit import audit_event, new_request_id
 from core.tracing import span as _trace_span
@@ -71,7 +71,7 @@ async def _security_middleware(request, call_next):
     user = DEMO_USER
     if core_path not in PUBLIC_PATHS and not core_path.startswith(("/docs", "/openapi")):
         try:
-            user = user_from_authorization(request.headers.get("authorization"))
+            user = user_from_request(request)
         except HTTPException as e:
             audit_event("auth_denied", request_id=request_id, method=request.method,
                         path=path, status=e.status_code, detail=str(e.detail))

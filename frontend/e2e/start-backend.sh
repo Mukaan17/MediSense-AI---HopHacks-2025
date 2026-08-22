@@ -20,6 +20,8 @@ export FRONTEND_ORIGINS="${FRONTEND_ORIGINS:-http://localhost:3080,http://127.0.
 
 if [ "$APP_MODE" = "clinical" ]; then
   E2E_DIR="$(mktemp -d)"
+  # E2E runs over plain http; Secure cookies would not be replayed.
+  export AUTH_COOKIE_SECURE="false"
   export AUTH_SECRET_KEY="${AUTH_SECRET_KEY:-$("$PYTHON" -c 'import secrets; print(secrets.token_hex(32))')}"
   export AUTH_USERS_FILE="$E2E_DIR/users.json"
   "$PYTHON" - <<'PYEOF'

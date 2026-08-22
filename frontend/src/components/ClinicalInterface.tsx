@@ -9,7 +9,7 @@ import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 
 import { Patient, ClinicalReport, KnowledgeBaseMode, LLMStatus } from '../types';
-import { clinicalAPI, futureAPI, apiUtils, getAuthToken } from '../services/api';
+import { clinicalAPI, futureAPI, apiUtils, getMe } from '../services/api';
 import AppHeader from './AppHeader';
 import LoginModal from './LoginModal';
 import PatientForm from './PatientForm';
@@ -64,8 +64,13 @@ const ClinicalInterface: React.FC = () => {
           if (healthResponse.data?.app_mode) {
             const mode = healthResponse.data.app_mode === 'clinical' ? 'clinical' : 'demo';
             setAppMode(mode);
-            if (mode === 'clinical' && !getAuthToken()) {
-              setShowLogin(true);
+            if (mode === 'clinical') {
+              // Cookie sessions survive reloads; /auth/me tells us whether
+              // this browser already holds one.
+              const me = await getMe();
+              if (!me.success) {
+                setShowLogin(true);
+              }
             }
           }
           if (healthResponse.data?.llm) {

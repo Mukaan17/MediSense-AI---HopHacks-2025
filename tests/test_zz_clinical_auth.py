@@ -15,6 +15,8 @@ def clinical_client(tmp_path_factory):
     os.environ["APP_MODE"] = "clinical"
     os.environ["AUTH_SECRET_KEY"] = "t" * 64
     os.environ["AUTH_USERS_FILE"] = str(users_file)
+    # TestClient speaks plain http; Secure cookies wouldn't be replayed.
+    os.environ["AUTH_COOKIE_SECURE"] = "false"
 
     from core.auth import hash_password
     users_file.write_text(json.dumps(
@@ -26,6 +28,7 @@ def clinical_client(tmp_path_factory):
 
     os.environ["APP_MODE"] = "demo"
     os.environ.pop("AUTH_USERS_FILE", None)
+    os.environ.pop("AUTH_COOKIE_SECURE", None)
 
 
 def test_health_stays_public(clinical_client):
@@ -69,6 +72,78 @@ def test_mocks_refused_in_clinical(clinical_client):
                                 data={"patient_id": "X", "payload": "{}"},
                                 headers=headers).status_code == 403
     assert clinical_client.get("/ehr/patients", headers=headers).status_code == 403
+
+
+def _login(client):
+    r = client.post("/auth/login",
+                    data={"username": "drtest", "password": "correct-horse-9"})
+    assert r.status_code == 200
+    return r
+
+
+def test_login_sets_session_and_csrf_cookies(clinical_client):
+    clinical_client.cookies.clear()
+    r = _login(clinical_client)
+    assert "medisense_session" in r.cookies
+    assert "medisense_csrf" in r.cookies
+    assert r.json()["csrf_token"] == r.cookies["medisense_csrf"]
+    set_cookie = " ".join(r.headers.get_list("set-cookie")).lower()
+    assert "httponly" in set_cookie  # the session cookie is XSS-unreadable
+    assert "samesite=strict" in set_cookie
+
+
+def test_cookie_session_authenticates_get(clinical_client):
+    clinical_client.cookies.clear()
+    _login(clinical_client)
+    # No Authorization header: the cookie carries the session.
+    assert clinical_client.get("/auth/me").status_code == 200
+    assert clinical_client.get("/ehr/patients").status_code == 403  # synthetic ban, not 401
+
+
+def test_cookie_mutation_requires_csrf_header(clinical_client):
+    clinical_client.cookies.clear()
+    r = _login(clinical_client)
+    csrf = r.cookies["medisense_csrf"]
+    body = {"utterances": ["persistent cough"]}
+    denied = clinical_client.post("/infer", json=body)
+    assert denied.status_code == 403
+    assert "CSRF" in denied.json()["detail"]
+    allowed = clinical_client.post("/infer", json=body,
+                                   headers={"X-CSRF-Token": csrf})
+    assert allowed.status_code == 200
+
+
+def test_bearer_auth_still_works_and_skips_csrf(clinical_client):
+    clinical_client.cookies.clear()
+    token = _login(clinical_client).json()["access_token"]
+    clinical_client.cookies.clear()  # bearer only - no cookies at all
+    r = clinical_client.post("/infer", json={"utterances": ["persistent cough"]},
+                             headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+
+
+def test_ws_ticket_via_cookie_session(clinical_client):
+    clinical_client.cookies.clear()
+    r = _login(clinical_client)
+    ticket = clinical_client.post(
+        "/auth/ws-ticket", headers={"X-CSRF-Token": r.cookies["medisense_csrf"]})
+    assert ticket.status_code == 200
+    assert ticket.json()["ticket"]
+
+
+def test_logout_clears_session(clinical_client):
+    clinical_client.cookies.clear()
+    r = _login(clinical_client)
+    out = clinical_client.post(
+        "/auth/logout", headers={"X-CSRF-Token": r.cookies["medisense_csrf"]})
+    assert out.status_code == 200
+    clinical_client.cookies.clear()
+    assert clinical_client.get("/auth/me").status_code == 401
+
+
+def test_me_401_without_session(clinical_client):
+    clinical_client.cookies.clear()
+    assert clinical_client.get("/auth/me").status_code == 401
 
 
 def test_ws_requires_token(clinical_client):
@@ -116,4 +191,7 @@ def test_ws_ticket_flow(clinical_client):
 
 
 def test_ws_ticket_requires_auth(clinical_client):
+    # No bearer AND no session cookie (earlier tests leave cookies in the
+    # shared jar; with a cookie this would be a CSRF 403, not a 401).
+    clinical_client.cookies.clear()
     assert clinical_client.post("/auth/ws-ticket").status_code == 401

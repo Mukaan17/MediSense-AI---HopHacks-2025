@@ -27,6 +27,27 @@ WS_TICKET_TTL_SECONDS = int(os.getenv("WS_TICKET_TTL_SECONDS", "60"))
 
 ROLES = ("clinician", "admin")
 
+# Cookie sessions: the JWT rides an httpOnly cookie (XSS cannot read it),
+# paired with a double-submit CSRF token in a JS-readable cookie that
+# mutating requests must echo in a header. Bearer auth remains supported
+# for API clients and is exempt from CSRF (attackers can't set headers
+# cross-site).
+SESSION_COOKIE = "medisense_session"
+CSRF_COOKIE = "medisense_csrf"
+CSRF_HEADER = "x-csrf-token"
+_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def cookie_secure() -> bool:
+    """Secure cookie attribute; default on. Set AUTH_COOKIE_SECURE=false
+    only for plain-http local testing."""
+    return os.getenv("AUTH_COOKIE_SECURE", "true").strip().lower() not in ("0", "false", "no")
+
+
+def create_csrf_token() -> str:
+    import secrets
+    return secrets.token_hex(16)
+
 
 def _users_file() -> str:
     return os.getenv("AUTH_USERS_FILE", os.path.join("config", "users.json"))
@@ -123,6 +144,32 @@ def user_from_authorization(authorization: Optional[str]) -> Dict[str, Any]:
     user = decode_token(authorization.split(" ", 1)[1].strip())
     if user.get("scope") == "ws":
         raise HTTPException(status_code=401, detail="WS tickets are not valid for REST requests")
+    return user
+
+
+def user_from_request(request) -> Dict[str, Any]:
+    """Resolve the request user from either a Bearer header or the session
+    cookie. Cookie-authenticated mutating requests must present the
+    double-submit CSRF header; Bearer requests are CSRF-exempt."""
+    if not is_clinical():
+        return DEMO_USER
+
+    authorization = request.headers.get("authorization")
+    if authorization and authorization.lower().startswith("bearer "):
+        return user_from_authorization(authorization)
+
+    session_token = request.cookies.get(SESSION_COOKIE)
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Authentication required (Bearer token)")
+    user = decode_token(session_token)
+    if user.get("scope") == "ws":
+        raise HTTPException(status_code=401, detail="WS tickets are not valid for REST requests")
+
+    if request.method.upper() in _MUTATING_METHODS:
+        csrf_cookie = request.cookies.get(CSRF_COOKIE, "")
+        csrf_header = request.headers.get(CSRF_HEADER, "")
+        if not csrf_cookie or csrf_cookie != csrf_header:
+            raise HTTPException(status_code=403, detail="CSRF token missing or invalid")
     return user
 
 

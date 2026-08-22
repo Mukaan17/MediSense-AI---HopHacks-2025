@@ -111,9 +111,53 @@ export interface paths {
         put?: never;
         /**
          * Auth Login
-         * @description Exchange credentials for a bearer token (required in clinical mode).
+         * @description Exchange credentials for a session. The JWT is set as an httpOnly
+         *     cookie (with a double-submit CSRF cookie) and also returned in the body
+         *     for non-browser API clients using Bearer auth.
          */
         post: operations["auth_login_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Auth Logout
+         * @description End the cookie session. CSRF-protected like every cookie-authed
+         *     mutation (the middleware enforces it).
+         */
+        post: operations["auth_logout_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Auth Me
+         * @description Who am I? 401s in clinical mode without a session - the frontend
+         *     uses that to decide whether to show the login modal.
+         */
+        get: operations["auth_me_auth_me_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -601,9 +645,53 @@ export interface paths {
         put?: never;
         /**
          * Auth Login
-         * @description Exchange credentials for a bearer token (required in clinical mode).
+         * @description Exchange credentials for a session. The JWT is set as an httpOnly
+         *     cookie (with a double-submit CSRF cookie) and also returned in the body
+         *     for non-browser API clients using Bearer auth.
          */
         post: operations["auth_login_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Auth Logout
+         * @description End the cookie session. CSRF-protected like every cookie-authed
+         *     mutation (the middleware enforces it).
+         */
+        post: operations["auth_logout_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Auth Me
+         * @description Who am I? 401s in clinical mode without a session - the frontend
+         *     uses that to decide whether to show the login modal.
+         */
+        get: operations["auth_me_v1_auth_me_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1403,12 +1491,28 @@ export interface components {
         LoginResponse: {
             /** Access Token */
             access_token: string;
+            /** Csrf Token */
+            csrf_token?: string | null;
             /** Expires In Minutes */
             expires_in_minutes: number;
             /** Role */
             role: string;
             /** Token Type */
             token_type: string;
+        };
+        /** LogoutResponse */
+        LogoutResponse: {
+            /** Status */
+            status: string;
+        };
+        /** MeResponse */
+        MeResponse: {
+            /** Authenticated */
+            authenticated: boolean;
+            /** Role */
+            role: string;
+            /** Username */
+            username: string;
         };
         /** ReloadEhrResponse */
         ReloadEhrResponse: {
@@ -1704,6 +1808,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auth_logout_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoutResponse"];
+                };
+            };
+        };
+    };
+    auth_me_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
                 };
             };
         };
@@ -2446,6 +2590,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auth_logout_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoutResponse"];
+                };
+            };
+        };
+    };
+    auth_me_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
                 };
             };
         };

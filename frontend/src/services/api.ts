@@ -27,16 +27,55 @@ export type KnowledgeBaseModeResponse = components['schemas']['KnowledgeBaseMode
 export type CaseCreateResponse = components['schemas']['CaseCreateResponse'];
 export type FinalizeCaseResponse = components['schemas']['FinalizeCaseResponse'];
 export type TranscriptionResponse = components['schemas']['TranscriptionResponse'];
+export type MeResponse = components['schemas']['MeResponse'];
 
 const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
+  // Session auth rides an httpOnly cookie - XSS cannot read it, unlike the
+  // localStorage token this replaced.
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-export const TOKEN_STORAGE_KEY = 'medisense_token';
+// One-time migration: remove any token persisted by the pre-cookie builds.
+try {
+  localStorage.removeItem('medisense_token');
+} catch {
+  // storage unavailable - nothing to migrate
+}
+
+// Whether this browser holds a real clinical session (set after login or a
+// successful /auth/me). Demo mode leaves it false - demo sockets are open.
+let hasSession = false;
+
+export function sessionActive(): boolean {
+  return hasSession;
+}
+
+// Double-submit CSRF: mutating requests echo the JS-readable CSRF cookie
+// in a header; the httpOnly session cookie alone is never enough.
+export function getCsrfToken(): string | null {
+  try {
+    const match = document.cookie.match(/(?:^|;\s*)medisense_csrf=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** RequestInit fragment for raw fetch() calls: cookie credentials plus the
+ *  CSRF header on mutating methods. */
+export function fetchAuthOptions(method: string = 'GET'): RequestInit {
+  const headers: Record<string, string> = {};
+  const csrf = getCsrfToken();
+  if (csrf && method.toUpperCase() !== 'GET') {
+    headers['X-CSRF-Token'] = csrf;
+  }
+  return { credentials: 'include', headers };
+}
 
 // FastAPI errors carry `detail` as a string OR a list of validation-error
 // objects (422). Always reduce to a string: these values end up in toasts,
@@ -53,30 +92,13 @@ export function normalizeAPIError(error: any): string {
   return error?.message || 'An unexpected error occurred';
 }
 
-export function getAuthToken(): string | null {
-  try {
-    return localStorage.getItem(TOKEN_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function setAuthToken(token: string | null): void {
-  try {
-    if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
-    else localStorage.removeItem(TOKEN_STORAGE_KEY);
-  } catch {
-    // storage unavailable; requests proceed unauthenticated
-  }
-}
-
-// Request interceptor: logging + bearer token (clinical mode)
+// Request interceptor: logging + CSRF header for mutating requests
 api.interceptors.request.use(
   (config) => {
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
-    const token = getAuthToken();
-    if (token && config.headers) {
-      (config.headers as any)['Authorization'] = `Bearer ${token}`;
+    const csrf = getCsrfToken();
+    if (csrf && config.headers && (config.method || 'get').toLowerCase() !== 'get') {
+      (config.headers as any)['X-CSRF-Token'] = csrf;
     }
     // The instance default is application/json; FormData bodies must drop it
     // so the browser sets multipart/form-data with its boundary. Without
@@ -101,7 +123,8 @@ api.interceptors.response.use(
   (error) => {
     console.error('API Response Error:', error.response?.data || error.message);
     if (error.response?.status === 401) {
-      // Token missing/expired in clinical mode: let the app show its login.
+      // Session missing/expired in clinical mode: let the app show its login.
+      hasSession = false;
       window.dispatchEvent(new CustomEvent('medisense:unauthorized'));
     }
     return Promise.reject(error);
@@ -109,9 +132,9 @@ api.interceptors.response.use(
 );
 
 // Mint a short-lived WS-scoped ticket. WebSocket URLs carry this instead of
-// the 8h session JWT so proxy access logs never see a long-lived credential.
+// the session cookie so proxy access logs never see a long-lived credential.
 export async function getWsTicket(): Promise<string | null> {
-  if (!getAuthToken()) return null; // demo mode: sockets are open
+  if (!hasSession) return null; // demo mode: sockets are open
   try {
     const response = await api.post('/auth/ws-ticket');
     return response.data?.ticket || null;
@@ -120,15 +143,31 @@ export async function getWsTicket(): Promise<string | null> {
   }
 }
 
-// Exchange credentials for a bearer token (clinical mode)
+// Exchange credentials for an httpOnly cookie session (clinical mode).
 export async function login(username: string, password: string): Promise<APIResponse<LoginResponse>> {
   try {
     const formData = new FormData();
     formData.append('username', username);
     formData.append('password', password);
     const response = await api.post('/auth/login', formData);
-    if (response.data?.access_token) {
-      setAuthToken(response.data.access_token);
+    hasSession = true;
+    return { success: true, data: response.data, timestamp: new Date().toISOString() };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: normalizeAPIError(error),
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+
+// Session introspection: 401 in clinical mode without a session. A success
+// with authenticated=true marks this browser as holding a real session.
+export async function getMe(): Promise<APIResponse<MeResponse>> {
+  try {
+    const response = await api.get('/auth/me');
+    if (response.data?.authenticated) {
+      hasSession = true;
     }
     return { success: true, data: response.data, timestamp: new Date().toISOString() };
   } catch (error: any) {
@@ -138,6 +177,15 @@ export async function login(username: string, password: string): Promise<APIResp
       timestamp: new Date().toISOString()
     };
   }
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await api.post('/auth/logout');
+  } catch {
+    // best-effort
+  }
+  hasSession = false;
 }
 
 // Core API Services
