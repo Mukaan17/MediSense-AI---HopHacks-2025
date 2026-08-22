@@ -74,6 +74,18 @@ api.interceptors.response.use(
   }
 );
 
+// Mint a short-lived WS-scoped ticket. WebSocket URLs carry this instead of
+// the 8h session JWT so proxy access logs never see a long-lived credential.
+export async function getWsTicket(): Promise<string | null> {
+  if (!getAuthToken()) return null; // demo mode: sockets are open
+  try {
+    const response = await api.post('/auth/ws-ticket');
+    return response.data?.ticket || null;
+  } catch {
+    return null;
+  }
+}
+
 // Exchange credentials for a bearer token (clinical mode)
 export async function login(username: string, password: string): Promise<APIResponse<any>> {
   try {

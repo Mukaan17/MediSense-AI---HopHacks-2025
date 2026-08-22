@@ -23,6 +23,7 @@ from .app_mode import is_clinical
 
 ALGORITHM = "HS256"
 TOKEN_TTL_MINUTES = int(os.getenv("AUTH_TOKEN_TTL_MINUTES", "480"))
+WS_TICKET_TTL_SECONDS = int(os.getenv("WS_TICKET_TTL_SECONDS", "60"))
 USERS_FILE = os.getenv("AUTH_USERS_FILE", os.path.join("config", "users.json"))
 
 ROLES = ("clinician", "admin")
@@ -75,13 +76,26 @@ def create_access_token(username: str, role: str) -> str:
     return jwt.encode(payload, _secret or "demo-secret", algorithm=ALGORITHM)
 
 
+def create_ws_ticket(username: str, role: str) -> str:
+    """Short-lived, WS-scoped token. WebSockets authenticate via a URL query
+    parameter (browsers cannot set WS headers), and URLs end up in proxy
+    access logs - so the URL carries a ~60s ticket, never the 8h session JWT
+    (CWE-598). REST rejects tickets, so a logged one is near-worthless."""
+    from jose import jwt
+    now = int(time.time())
+    payload = {"sub": username, "role": role, "scope": "ws", "iat": now,
+               "exp": now + WS_TICKET_TTL_SECONDS}
+    return jwt.encode(payload, _secret or "demo-secret", algorithm=ALGORITHM)
+
+
 def decode_token(token: str) -> Dict[str, Any]:
     from jose import jwt, JWTError
     try:
         payload = jwt.decode(token, _secret or "demo-secret", algorithms=[ALGORITHM])
     except JWTError as e:
         raise HTTPException(status_code=401, detail=f"Invalid or expired token: {e}")
-    return {"username": payload.get("sub"), "role": payload.get("role", "clinician")}
+    return {"username": payload.get("sub"), "role": payload.get("role", "clinician"),
+            "scope": payload.get("scope", "session")}
 
 
 DEMO_USER = {"username": "demo", "role": "clinician"}
@@ -96,7 +110,10 @@ def user_from_authorization(authorization: Optional[str]) -> Dict[str, Any]:
         return DEMO_USER
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="Authentication required (Bearer token)")
-    return decode_token(authorization.split(" ", 1)[1].strip())
+    user = decode_token(authorization.split(" ", 1)[1].strip())
+    if user.get("scope") == "ws":
+        raise HTTPException(status_code=401, detail="WS tickets are not valid for REST requests")
+    return user
 
 
 def user_from_ws_token(token: Optional[str]) -> Optional[Dict[str, Any]]:

@@ -6,7 +6,7 @@ adversarial review findings and their fixes, and the final verification
 evidence.
 
 - **Tree state:** branch `claude/medisense-repo-setup-560vwg`, base `490478f`
-- **Gates at close:** 45/45 backend tests, 4/4 frontend tests,
+- **Gates at close:** 47/47 backend tests, 4/4 frontend tests,
   `tsc --noEmit` clean, `CI=true npm run build` clean
 
 ## Part II defect register — status
@@ -73,7 +73,24 @@ were fixed in the P13 round and covered with regression tests where testable:
 
 ## Security review round
 
-See the addendum below (run after the fixes above).
+An independent security-focused pass over the complete diff (auth middleware,
+JWT issuance/validation, mode gating, deserialization surfaces, temp-file
+handling, Redis serialization, nginx/Docker/CI changes) cleared every area
+examined - notably: the `demo-secret` signing fallback is unreachable in
+clinical mode (boot refuses without AUTH_SECRET_KEY), algorithms are pinned
+(no confusion), the PUBLIC_PATHS prefixes shadow no sensitive routes, and the
+case store is pure JSON (no pickle). One finding met the bar:
+
+- **WS bearer token in the URL (CWE-598, medium):** clinical-mode WebSockets
+  authenticated with the 8-hour session JWT as a `?token=` query parameter,
+  and the same change set's nginx proxy logs full request lines - persisting
+  live clinician credentials into access-log infrastructure. **Fixed:**
+  `POST /auth/ws-ticket` mints a ~60 s WS-scoped ticket that the browser
+  clients now put in socket URLs instead of the session JWT; REST rejects
+  ticket-scoped tokens outright, so a logged ticket is useless beyond its
+  expiry and scope; nginx additionally disables access logging for `/ws/`
+  paths. Regression-tested (ticket authenticates a socket, is refused by
+  REST, and minting requires a session).
 
 ## Environment limitations (honest bounds of this verification)
 
