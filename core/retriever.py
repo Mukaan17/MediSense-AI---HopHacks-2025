@@ -177,6 +177,14 @@ def get_retriever():
     return _retriever
 
 
+def reset() -> None:
+    """Drop the cached store so the next call re-initializes - used by the
+    reload endpoint after a KB rebuild (init is otherwise once-per-process)."""
+    global _retriever, _init_attempted
+    _retriever = None
+    _init_attempted = False
+
+
 def warm_up() -> None:
     """Eagerly initialize the store and the cross-encoder so the first live
     query doesn't pay model-load (or download) latency."""

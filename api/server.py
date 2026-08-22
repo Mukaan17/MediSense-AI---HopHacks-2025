@@ -23,7 +23,7 @@ from core.extract import extractor_generate
 from core.answer import answerer_generate
 from core.retriever import (
     get_retriever, render_docs, get_doc_count, get_top_k,
-    warm_up as retriever_warm_up,
+    warm_up as retriever_warm_up, reset as retriever_reset,
     PERSIST_DIR, COLLECTION, EMB_MODEL
 )
 try:
@@ -412,7 +412,10 @@ def _load_ehr() -> None:
                 for local_path in _candidate_local_image_paths(xpath):
                     if not os.path.exists(local_path):
                         continue
-                    if os.getenv("SKIP_HASH"):
+                    # Hashing every linked image couples startup time to
+                    # dataset size; default is skip (set SKIP_HASH=0 to
+                    # enable content-hash EHR matching with local images).
+                    if os.getenv("SKIP_HASH", "1").strip().lower() not in ("0", "false", "no"):
                         continue
                     digest = _sha256_file(local_path)
                     if not digest:
@@ -441,8 +444,10 @@ ALIASES = {
     "Pleural Other": "pleural_other_suspected",
 }
 
-# --- in-memory case store for hackathon flow ---
-_CASES: Dict[str, Dict[str, Any]] = {}
+# --- live-case store: Redis when REDIS_URL is set (shared across
+# workers/tasks, TTL-expired), else per-process memory with TTL + cap ---
+from core.case_store import make_case_store
+_case_store = make_case_store()
 
 # ----------------- Schemas ------------------------
 class InferRequest(BaseModel):
@@ -639,6 +644,7 @@ def health():
         "status": "ok",
         "app_mode": APP_MODE,
         "ehr_synthetic": ehr_is_synthetic(EHR_JSON),
+        "case_store": _case_store.backend,
         "collection": COLLECTION,
         "persist_dir": PERSIST_DIR,
         "emb_model": EMB_MODEL,
@@ -1375,6 +1381,17 @@ def reload_ehr():
     _load_ehr()
     return {"ehr_loaded": len(EHR_RECORDS), "ehr_source": EHR_JSON}
 
+@app.post("/reload_retriever")
+def reload_retriever():
+    """Re-initialize the RAG store after a KB rebuild (init is otherwise
+    once-per-process). Re-warms on a background thread."""
+    global _retriever
+    count_before = get_doc_count()
+    retriever_reset()
+    _retriever = None
+    threading.Thread(target=retriever_warm_up, daemon=True).start()
+    return {"status": "reloading", "doc_count_before": count_before}
+
 # Tip:
 #   uvicorn api.server:app --host 0.0.0.0 --port 8000
 # Env:
@@ -1413,14 +1430,14 @@ async def create_voice_case(
     domains = bucket_domains(normalized) if normalized else {}
 
     case_id = str(uuid.uuid4())
-    _CASES[case_id] = {
+    _case_store.put(case_id, {
         "filename": filename,
         "image_findings": preds,
         "ehr": ehr,
         "ranked": ranked,
         "domains": domains,
         "utterances": [],
-    }
+    })
 
     if live:
         return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, ehr, [], max_candidates, min_conf, None)}
@@ -1462,14 +1479,14 @@ async def create_case(
     domains = bucket_domains(normalized) if normalized else {}
 
     case_id = str(uuid.uuid4())
-    _CASES[case_id] = {
+    _case_store.put(case_id, {
         "filename": filename,
         "image_findings": preds,
         "ehr": ehr,
         "ranked": ranked,
         "domains": domains,
         "utterances": [],
-    }
+    })
 
     if live:
         return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, ehr, [], max_candidates, min_conf, None)}
@@ -1489,11 +1506,12 @@ def transcribe_step(
     min_conf: float = Query(0.60, ge=0.0, le=1.0),
     min_margin: float = Query(0.03, ge=0.0, le=0.2)
 ):
-    case = _CASES.get(case_id)
+    case = _case_store.get(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="case_id not found")
 
     case["utterances"].append(body.utterance)
+    _case_store.put(case_id, case)
     conversation = "\n".join(case["utterances"])
 
     extraction = extractor_generate(conversation)
@@ -1694,7 +1712,7 @@ def _final_report_prompt(conversation: str, ehr_ctx: str, ranked: List[Dict[str,
 @app.post("/api/case/{case_id}/finalize")
 async def finalize_case(case_id: str):
     """Deep advisory report over the full conversation once a live case ends."""
-    case = _CASES.get(case_id)
+    case = _case_store.get(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="case_id not found")
     utterances = case.get("utterances", [])
@@ -1800,12 +1818,11 @@ async def ws_case(ws: WebSocket, case_id: str):
     if user_from_ws_token(ws.query_params.get("token")) is None:
         await ws.close(code=4401, reason="Authentication required")
         return
-    if case_id not in _CASES:
+    case = _case_store.get(case_id)
+    if case is None:
         await ws.send_json({"error": "case_id not found"})
         await ws.close()
         return
-
-    case = _CASES[case_id]
 
     async def _send_update(latest_utterance: Optional[str] = None,
                            latest_speaker: Optional[str] = None):
@@ -1858,6 +1875,7 @@ async def ws_case(ws: WebSocket, case_id: str):
                     case.setdefault("utterances", []).append(prefixed)
                     latest_utt, latest_speaker = utt.strip(), speaker
             if latest_utt is not None:
+                _case_store.put(case_id, case)
                 await _send_update(latest_utterance=latest_utt, latest_speaker=latest_speaker)
     except WebSocketDisconnect:
         return
