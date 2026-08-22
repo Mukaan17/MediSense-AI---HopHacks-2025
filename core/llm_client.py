@@ -83,11 +83,15 @@ async def stream_claude_tokens(prompt: str, model: str = None, system: str = "",
     if system:
         kwargs["system"] = system
     model_name = kwargs["model"]
-    with metrics.timed("llm_latency", provider="anthropic", model=model_name):
-        async with client.messages.stream(**kwargs) as stream:
-            async for text in stream.text_stream:
-                yield text
-            message = await stream.get_final_message()
+    try:
+        with metrics.timed("llm_latency", provider="anthropic", model=model_name):
+            async with client.messages.stream(**kwargs) as stream:
+                async for text in stream.text_stream:
+                    yield text
+                message = await stream.get_final_message()
+    except Exception:
+        metrics.inc("llm_errors", provider="anthropic", model=model_name)
+        raise
     usage = getattr(message, "usage", None)
     if usage:
         metrics.inc("llm_tokens", float(usage.input_tokens or 0),
@@ -110,9 +114,13 @@ async def invoke_claude_full(prompt: str, model: str = None, system: str = "",
     if system:
         kwargs["system"] = system
     model_name = kwargs["model"]
-    with metrics.timed("llm_latency", provider="anthropic", model=model_name):
-        async with client.messages.stream(**kwargs) as stream:
-            message = await stream.get_final_message()
+    try:
+        with metrics.timed("llm_latency", provider="anthropic", model=model_name):
+            async with client.messages.stream(**kwargs) as stream:
+                message = await stream.get_final_message()
+    except Exception:
+        metrics.inc("llm_errors", provider="anthropic", model=model_name)
+        raise
     usage = getattr(message, "usage", None)
     if usage:
         metrics.inc("llm_tokens", float(usage.input_tokens or 0),
@@ -176,6 +184,7 @@ class _GeminiInvokeClient:
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=self.timeout_s)
         except Exception as e:
+            metrics.inc("llm_errors", provider="gemini", model=self.model)
             raise RuntimeError(f"Gemini request failed: {e}") from e
 
         if resp.status_code >= 400:
@@ -185,6 +194,7 @@ class _GeminiInvokeClient:
                 detail = str((body.get("error") or {}).get("message") or body)
             except Exception:
                 detail = resp.text[:500]
+            metrics.inc("llm_errors", provider="gemini", model=self.model)
             raise RuntimeError(f"Gemini API error ({resp.status_code}): {detail}")
 
         try:
