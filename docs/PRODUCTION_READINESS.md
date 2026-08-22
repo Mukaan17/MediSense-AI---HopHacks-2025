@@ -2,6 +2,8 @@
 
 Rigorous gap analysis after the remediation roadmap (`docs/MASTER_PLAN.md`,
 `docs/REAUDIT.md`) and the modularization pass (`docs/ARCHITECTURE.md`).
+Direction and sequencing for the open items live in
+`docs/IMPROVEMENT_ROADMAP.md`.
 Items marked **[gate]** should block a real clinical go-live. Items marked
 **[done]** were closed by the follow-up hardening round (R1–R8); what
 remains open is ranked within each category.
