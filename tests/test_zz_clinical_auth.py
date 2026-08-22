@@ -38,6 +38,13 @@ def test_unauthenticated_rejected(clinical_client):
     assert clinical_client.post("/infer", json={"utterances": ["x"]}).status_code == 401
 
 
+def test_v1_mount_gated_identically(clinical_client):
+    # The auth gate normalizes the /v1 prefix: same 401 on the versioned
+    # mount, and /v1/health stays public.
+    assert clinical_client.post("/v1/infer", json={"utterances": ["x"]}).status_code == 401
+    assert clinical_client.get("/v1/health").status_code == 200
+
+
 def test_bad_credentials_rejected(clinical_client):
     r = clinical_client.post("/auth/login", data={"username": "drtest", "password": "wrong"})
     assert r.status_code == 401

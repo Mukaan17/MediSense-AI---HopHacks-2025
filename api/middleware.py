@@ -35,6 +35,10 @@ async def _security_middleware(request, call_next):
     request_id = new_request_id()
     start = time.perf_counter()
     path = request.url.path
+    # Routes are dual-mounted at / and /v1; policy checks (public paths,
+    # rate-limit exemption, audit patient-id extraction) use the unprefixed
+    # form so both mounts behave identically. Audit/metrics keep `path`.
+    core_path = path[3:] if path.startswith("/v1/") else path
     # Behind the nginx proxy / ALB every connection shares the proxy's IP;
     # the first X-Forwarded-For hop (set by our nginx) identifies the client.
     forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
@@ -49,7 +53,7 @@ async def _security_middleware(request, call_next):
             and "chunked" in (request.headers.get("transfer-encoding") or "").lower():
         return JSONResponse({"detail": "Content-Length required"}, status_code=411)
 
-    if RATE_LIMIT_PER_MINUTE > 0 and path != "/health":
+    if RATE_LIMIT_PER_MINUTE > 0 and core_path != "/health":
         now = time.monotonic()
         with _rate_lock:
             cutoff = now - 60.0
@@ -64,7 +68,7 @@ async def _security_middleware(request, call_next):
             bucket.append(now)
 
     user = DEMO_USER
-    if path not in PUBLIC_PATHS and not path.startswith(("/docs", "/openapi")):
+    if core_path not in PUBLIC_PATHS and not core_path.startswith(("/docs", "/openapi")):
         try:
             user = user_from_authorization(request.headers.get("authorization"))
         except HTTPException as e:
@@ -79,7 +83,7 @@ async def _security_middleware(request, call_next):
     # Audit: identifiers and outcomes only - never clinical content.
     duration_ms = (time.perf_counter() - start) * 1000
     patient_id = request.query_params.get("patient_id")
-    if not patient_id and path.startswith("/ehr/patients/"):
+    if not patient_id and core_path.startswith("/ehr/patients/"):
         patient_id = path.rsplit("/", 1)[-1]
     audit_event("request", request_id=request_id, user=user.get("username", ""),
                 method=request.method, path=path, status=response.status_code,

@@ -40,13 +40,12 @@ app = FastAPI(title="Multimodal Clinical Reference (Advisory)")
 
 middleware.install(app)
 
-app.include_router(system.router)
-app.include_router(auth.router)
-app.include_router(inference.router)
-app.include_router(voice.router)
-app.include_router(ehr.router)
-app.include_router(cases.router)
-app.include_router(ws.router)
+# Dual-mount: every route is served at its historical root path and under
+# /v1. New clients should use /v1; the root mount stays for compatibility.
+for _router in (system.router, auth.router, inference.router, voice.router,
+                ehr.router, cases.router, ws.router):
+    app.include_router(_router)
+    app.include_router(_router, prefix="/v1")
 
 
 @app.on_event("startup")

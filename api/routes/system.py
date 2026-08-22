@@ -32,6 +32,12 @@ from api.state import (
 from api.guards import (
     _demo_only,
 )
+from api.responses import (
+    HealthResponse,
+    KnowledgeBaseModeResponse,
+    ReloadEhrResponse,
+    ReloadRetrieverResponse,
+)
 
 router = APIRouter()
 
@@ -40,7 +46,7 @@ def metrics_endpoint():
     from fastapi.responses import PlainTextResponse
     return PlainTextResponse(metrics.render_prometheus(), media_type="text/plain; version=0.0.4")
 
-@router.get("/health")
+@router.get("/health", response_model=HealthResponse)
 def health():
     count = get_doc_count()
     return {
@@ -62,7 +68,7 @@ def health():
         }
     }
 
-@router.get("/knowledge_base/mode")
+@router.get("/knowledge_base/mode", response_model=KnowledgeBaseModeResponse)
 def get_knowledge_base_mode():
     """Get current knowledge base mode"""
     return {
@@ -71,7 +77,7 @@ def get_knowledge_base_mode():
         "last_updated": "2024-01-01T00:00:00Z"
     }
 
-@router.post("/knowledge_base/mode")
+@router.post("/knowledge_base/mode", response_model=KnowledgeBaseModeResponse)
 def set_knowledge_base_mode(mode: str = Form(...)):
     """Set knowledge base mode"""
     _demo_only("Knowledge base mode toggle")
@@ -81,13 +87,13 @@ def set_knowledge_base_mode(mode: str = Form(...)):
         "last_updated": datetime.now().isoformat()
     }
 
-@router.post("/reload_ehr")
+@router.post("/reload_ehr", response_model=ReloadEhrResponse)
 def reload_ehr():
     """Reload EHR JSON without restarting the server (optional convenience)."""
     _load_ehr()
     return {"ehr_loaded": len(EHR_RECORDS), "ehr_source": EHR_JSON}
 
-@router.post("/reload_retriever")
+@router.post("/reload_retriever", response_model=ReloadRetrieverResponse)
 def reload_retriever():
     """Re-initialize the RAG store after a KB rebuild (init is otherwise
     once-per-process). Re-warms on a background thread."""
