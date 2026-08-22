@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Operational endpoints: health, metrics, hot reloads, KB mode."""
+"""Operational endpoints: health, metrics, hot reloads, KB facts."""
 
+import json
 import logging
 import threading
-from datetime import datetime
+from pathlib import Path
 
 from fastapi import (
     APIRouter, Form,
@@ -15,6 +16,7 @@ from core.retriever import (
 )
 from core.voice_transcription import voice_service
 from core.app_mode import get_app_mode, ehr_is_synthetic
+from core.llm_client import anthropic_available, gemini_available
 from core import metrics
 
 log = logging.getLogger("api")
@@ -61,6 +63,9 @@ def health():
         "doc_count": (count if count >= 0 else None),
         "ehr_loaded": len(EHR_RECORDS),
         "image_model_loaded": _img_model is not None,
+        # Booleans only - never key material. The frontend uses these to
+        # show a degraded-mode banner instead of failing silently.
+        "llm": {"anthropic": anthropic_available(), "gemini": gemini_available()},
         "voice_transcription": {
             "whisperx_model_loaded": voice_service.whisperx_model is not None,
             "diarization_model_loaded": voice_service.diarize_model is not None,
@@ -68,24 +73,47 @@ def health():
         }
     }
 
+def _kb_facts() -> dict:
+    """Real facts about the loaded knowledge base - never invented sources.
+
+    Reads the store manifest the KB builder writes; a store built before
+    the manifest carried file names reports empty sources with a rebuild
+    hint rather than fabricating a list."""
+    manifest = {}
+    manifest_path = Path(PERSIST_DIR) / "config.json"
+    if manifest_path.exists():
+        try:
+            with open(manifest_path) as f:
+                manifest = json.load(f) or {}
+        except Exception:
+            manifest = {}
+    sources = manifest.get("files") or []
+    count = get_doc_count()
+    return {
+        "mode": "local",
+        "sources": sources,
+        "doc_count": (count if count >= 0 else None),
+        "emb_model": manifest.get("emb_model"),
+        "built_at": manifest.get("built_at"),
+        "last_updated": manifest.get("built_at"),
+        "description": (
+            "Local demonstration corpus - not a licensed clinical reference."
+            if sources else
+            "Knowledge store has no source manifest; rebuild the KB to record one."
+        ),
+    }
+
 @router.get("/knowledge_base/mode", response_model=KnowledgeBaseModeResponse)
 def get_knowledge_base_mode():
-    """Get current knowledge base mode"""
-    return {
-        "mode": "clinical",
-        "sources": ["Clinical Guidelines", "UpToDate", "PubMed"],
-        "last_updated": "2024-01-01T00:00:00Z"
-    }
+    """Facts about the loaded knowledge base."""
+    return _kb_facts()
 
 @router.post("/knowledge_base/mode", response_model=KnowledgeBaseModeResponse)
 def set_knowledge_base_mode(mode: str = Form(...)):
-    """Set knowledge base mode"""
+    """Kept for API compatibility: there is a single local store, so the
+    requested mode is echoed but the facts are the same."""
     _demo_only("Knowledge base mode toggle")
-    return {
-        "mode": mode,
-        "sources": ["Clinical Guidelines", "UpToDate", "PubMed"],
-        "last_updated": datetime.now().isoformat()
-    }
+    return {**_kb_facts(), "mode": mode}
 
 @router.post("/reload_ehr", response_model=ReloadEhrResponse)
 def reload_ehr():

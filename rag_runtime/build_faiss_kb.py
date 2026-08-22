@@ -107,8 +107,15 @@ def build_kb(files: List[Path], emb_model: str, persist_dir: Path, reset: bool,
         json.dump(texts, f, ensure_ascii=False)
     with open(persist_dir / "metas.json", "w", encoding="utf-8") as f:
         json.dump(metas, f, ensure_ascii=False)
+    from datetime import datetime, timezone
     with open(persist_dir / "config.json", "w") as f:
-        json.dump({"emb_model": emb_model, "dim": dim, "count": len(texts)}, f, indent=2)
+        json.dump({
+            "emb_model": emb_model,
+            "dim": dim,
+            "count": len(texts),
+            "files": [p.name for p in files],
+            "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }, f, indent=2)
     # Drop stale pickle files from pre-JSON builds so nothing loads them.
     for legacy in ("texts.pkl", "metas.pkl"):
         try:

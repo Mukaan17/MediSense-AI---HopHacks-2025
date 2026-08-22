@@ -39,6 +39,10 @@ def anthropic_available() -> bool:
     return bool(os.getenv("ANTHROPIC_API_KEY"))
 
 
+def gemini_available() -> bool:
+    return bool(os.getenv("GEMINI_API_KEY"))
+
+
 def get_live_model() -> str:
     """Model for low-latency live HUD suggestions."""
     cfg = _models_cfg()

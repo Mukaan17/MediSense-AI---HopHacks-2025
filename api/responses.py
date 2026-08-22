@@ -23,6 +23,11 @@ class VoiceModelsStatus(BaseModel):
     alignment_model_loaded: bool
 
 
+class LLMStatus(BaseModel):
+    anthropic: bool
+    gemini: bool
+
+
 class HealthResponse(BaseModel):
     status: str
     app_mode: str
@@ -35,13 +40,18 @@ class HealthResponse(BaseModel):
     doc_count: Optional[int] = None
     ehr_loaded: int
     image_model_loaded: bool
+    llm: LLMStatus
     voice_transcription: VoiceModelsStatus
 
 
 class KnowledgeBaseModeResponse(BaseModel):
     mode: str
     sources: List[str]
-    last_updated: str
+    doc_count: Optional[int] = None
+    emb_model: Optional[str] = None
+    built_at: Optional[str] = None
+    last_updated: Optional[str] = None
+    description: str
 
 
 class ReloadEhrResponse(BaseModel):

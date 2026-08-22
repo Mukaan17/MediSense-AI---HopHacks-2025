@@ -8,7 +8,7 @@ import {
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 
-import { Patient, ClinicalReport, KnowledgeBaseMode } from '../types';
+import { Patient, ClinicalReport, KnowledgeBaseMode, LLMStatus } from '../types';
 import { clinicalAPI, futureAPI, apiUtils, getAuthToken } from '../services/api';
 import AppHeader from './AppHeader';
 import LoginModal from './LoginModal';
@@ -32,11 +32,12 @@ const ClinicalInterface: React.FC = () => {
   const [conversation, setConversation] = useState<string[]>([]);
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [clinicalReport, setClinicalReport] = useState<ClinicalReport | null>(null);
+  // Populated from the backend's store manifest - starts empty, never invented.
   const [knowledgeBaseMode, setKnowledgeBaseMode] = useState<KnowledgeBaseMode>({
-    mode: 'clinical',
-    sources: ['Clinical Guidelines', 'UpToDate'],
-    lastUpdated: new Date().toISOString()
+    mode: 'local',
+    sources: [],
   });
+  const [llmStatus, setLlmStatus] = useState<LLMStatus | null>(null);
   const [ehrPatients, setEhrPatients] = useState<any[]>([]);
   const [selectedEhrPatient, setSelectedEhrPatient] = useState<string>('');
   const [appMode, setAppMode] = useState<'demo' | 'clinical'>('demo');
@@ -67,6 +68,9 @@ const ClinicalInterface: React.FC = () => {
               setShowLogin(true);
             }
           }
+          if (healthResponse.data?.llm) {
+            setLlmStatus(healthResponse.data.llm);
+          }
         } else {
           console.warn('Backend health check failed:', healthResponse.error);
           toast.error('Backend connection failed. Please ensure the server is running.');
@@ -76,6 +80,12 @@ const ClinicalInterface: React.FC = () => {
         const ehrResponse = await futureAPI.listEHRPatients();
         if (ehrResponse.success && ehrResponse.data?.patients) {
           setEhrPatients(ehrResponse.data.patients);
+        }
+
+        // Real knowledge-base facts (sources, doc count, build date)
+        const kbResponse = await futureAPI.getKnowledgeBaseMode();
+        if (kbResponse.success && kbResponse.data) {
+          setKnowledgeBaseMode(kbResponse.data);
         }
       } catch (error) {
         console.error('Initialization error:', error);
@@ -257,6 +267,21 @@ const ClinicalInterface: React.FC = () => {
       />
 
       <LoginModal open={showLogin} onSuccess={handleLoginSuccess} />
+
+      {/* Degraded-mode visibility: never let missing AI configuration fail
+          silently. Both providers absent -> prominent banner; primary absent
+          with fallback present -> quieter notice. */}
+      {llmStatus && !llmStatus.anthropic && !llmStatus.gemini && (
+        <div role="status" className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 text-center">
+          AI assistance degraded — no language model is configured. Analysis runs on
+          retrieval and deterministic rules only.
+        </div>
+      )}
+      {llmStatus && !llmStatus.anthropic && llmStatus.gemini && (
+        <div role="status" className="bg-gray-100 border-b border-gray-200 text-gray-700 text-xs px-4 py-1 text-center">
+          Running on the fallback language model only.
+        </div>
+      )}
 
       {/* Live Coach HUD - Always show, minimized when no case */}
       <LiveCoach caseId={activeCaseId || 'no-case'} />
