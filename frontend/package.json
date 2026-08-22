@@ -22,7 +22,9 @@
     "dev": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "e2e:demo": "playwright test e2e/demo",
+    "e2e:clinical": "APP_MODE=clinical playwright test e2e/clinical"
   },
   "eslintConfig": {
     "extends": [
@@ -43,6 +45,7 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/jest": "^30.0.0",
     "autoprefixer": "10.4.14",
     "postcss": "8.4.24",
