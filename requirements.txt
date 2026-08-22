@@ -30,7 +30,7 @@ chromadb==0.5.11
 sentence-transformers==2.7.0
 anthropic>=1.0
 faster-whisper>=1.0.0
-huggingface_hub==0.23.5
+huggingface_hub==1.28.0
 safetensors==0.4.3
 accelerate==0.30.1
 
