@@ -82,7 +82,9 @@ def propose_questions_llm(state: Dict[str, Any], max_questions: int = 4) -> List
     state["max_questions"] = max_questions
     lm = get_llm(model=GEMINI_MODEL, temperature=TEMPERATURE)
     msg = PROMPT.format(schema=json.dumps(SCHEMA, indent=2), state=json.dumps(state, ensure_ascii=False))
-    out = lm.invoke(f"{SYSTEM}\n\n{msg}").content.strip()
+    full_prompt = f"{SYSTEM}\n\n{msg}"
+    out = (lm.invoke_json(full_prompt) if hasattr(lm, "invoke_json")
+           else lm.invoke(full_prompt)).content.strip()
 
     data = parse_llm_json(out, {"questions": []})
 

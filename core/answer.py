@@ -27,7 +27,11 @@ def answerer_generate(extraction: Dict[str, Any], retrieved_context: str) -> Dic
     }
     
     try:
-        resp = get_llm().invoke(prompt).content
+        lm = get_llm()
+        # JSON response mode when the client supports it; salvage parsing
+        # below remains the safety net either way.
+        resp = (lm.invoke_json(prompt) if hasattr(lm, "invoke_json")
+                else lm.invoke(prompt)).content
     except Exception as e:
         print(f"LLM answer generation error: {e}")
         return fallback
