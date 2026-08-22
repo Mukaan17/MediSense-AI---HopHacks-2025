@@ -16,9 +16,9 @@ pandas==2.2.2
 scikit-learn==1.4.2
 
 # ---------- API server ----------
-fastapi==0.116.1
+fastapi==0.141.1
 uvicorn==0.30.6
-starlette==0.47.3
+starlette==1.6.0
 pydantic==2.11.4
 python-multipart==0.0.9
 python-dotenv==1.0.1

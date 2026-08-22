@@ -78,14 +78,45 @@ green.
 
 ## Supply-chain status (last local audit)
 
-- `pip-audit`: python-jose upgraded to >= 3.5.0 (fixed PYSEC-2024-232/233,
-  PYSEC-2025-185). Remaining known findings: `ecdsa` (transitive of
-  python-jose, no fixed release), `transformers 4.57.x` (pinned by the
-  sentence-transformers stack; scheduled-update lane item).
-- `npm audit fix` applied: 54 -> 28 findings (2 critical -> 0); the
-  CRA -> Vite migration (I3b) then cleared the react-scripts transitives
-  and a postcss bump closed the last advisory: **0 npm audit findings**.
-  Vite also cut the production build from ~40 s to ~2 s.
-- Dependabot (`.github/dependabot.yml`) now opens weekly grouped update
-  PRs for pip, npm, and GitHub Actions; CI's advisory `supply-chain` job
-  re-runs both audits on every push.
+Both CI audits are **blocking** as of I17, and the image-build jobs gate
+on them plus a Trivy scan of the built image (fixable HIGH/CRITICAL
+fails the build), generate an SPDX SBOM artifact (syft), and cosign-sign
+the pushed digest when `COSIGN_PRIVATE_KEY` is configured. Accepted
+findings are ignored by exact ID (`pip-audit --ignore-vuln`,
+`.trivyignore`); every ignore must have a triage entry here.
+
+### Accepted findings (triage)
+
+- **ecdsa 0.19.2 - PYSEC-2026-1325 / CVE-2024-23342** (Minerva timing
+  attack on P-256). Transitive of python-jose; no fixed release exists.
+  Retires when python-jose drops ecdsa or a fixed ecdsa ships.
+- **transformers 4.57.x - PYSEC-2025-217, PYSEC-2026-2288/2289/2290**
+  (CVE-2025-14929, CVE-2026-1839, CVE-2026-4372, CVE-2026-5241). Fixes
+  land in transformers 5.x, which requires sentence-transformers
+  2.7.0 -> 6.0.0 - an embedding-stack major that forces a KB rebuild and
+  retrieval re-eval, so it is a scheduled work package, not a rider. All
+  four are load-untrusted-model vectors; this deployment loads only the
+  pinned MiniLM/ms-marco models. Outside the CI-audited light set
+  (caught by the Trivy image scan; listed in `.trivyignore`).
+
+### Fixed by upgrade
+
+- `python-jose >= 3.5.0` (I-series start): PYSEC-2024-232/233,
+  PYSEC-2025-185.
+- `fastapi 0.116.1 -> 0.141.1` + `starlette 0.47.3 -> 1.6.0` (I17):
+  cleared six starlette advisories, including PYSEC-2026-161 (Host-header
+  poisoning of `request.url.path`, which this app's path-based auth
+  exemptions made directly relevant) and PYSEC-2026-1942 (Range-header
+  DoS). The exported `openapi.json` was byte-identical across the
+  upgrade; all 147 backend tests pass unchanged.
+- npm: `npm audit fix` (54 -> 28, criticals cleared), then the
+  CRA -> Vite migration (I3b) cleared the react-scripts transitives and
+  a postcss bump closed the last advisory: **0 npm audit findings**.
+  `npm audit --audit-level=high` is safely blocking at zero.
+- CI's audit job upgrades pip/setuptools before auditing so findings
+  against the runner image's bundled tooling (pip 24.x, setuptools 79.x)
+  don't masquerade as app findings.
+
+Dependabot (`.github/dependabot.yml`) opens weekly grouped update PRs
+for pip, npm, and GitHub Actions; the blocking `supply-chain` job
+re-runs both audits on every push.

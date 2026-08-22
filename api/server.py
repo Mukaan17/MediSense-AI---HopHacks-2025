@@ -16,6 +16,7 @@ This module wires them together and stays the stable entry point:
 """
 
 import threading
+from contextlib import asynccontextmanager
 
 from core.logging_setup import configure_logging
 
@@ -45,7 +46,16 @@ from api.routes import auth, cases, ehr, history, inference, system, voice, ws
 # Clinical mode must never boot unsigned.
 validate_clinical_config()
 
-app = FastAPI(title="Multimodal Clinical Reference (Advisory)")
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    # Load the vector store and cross-encoder off the request path so the
+    # first live query doesn't pay model-load (or download) latency.
+    threading.Thread(target=retriever_warm_up, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="Multimodal Clinical Reference (Advisory)",
+              lifespan=_lifespan)
 
 middleware.install(app)
 
@@ -75,10 +85,3 @@ for _router in (system.router, auth.router, inference.router, voice.router,
                 ehr.router, cases.router, history.router, ws.router):
     app.include_router(_router)
     app.include_router(_router, prefix="/v1")
-
-
-@app.on_event("startup")
-async def _warm_up_models() -> None:
-    # Load the vector store and cross-encoder off the request path so the
-    # first live query doesn't pay model-load (or download) latency.
-    threading.Thread(target=retriever_warm_up, daemon=True).start()

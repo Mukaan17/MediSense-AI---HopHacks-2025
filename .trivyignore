@@ -1,0 +1,18 @@
+# Accepted image-scan findings. Every entry here needs a matching triage
+# note in docs/PERF_BASELINE.md ("Supply-chain status") naming why it is
+# accepted and what retires it. CI's Trivy gate blocks on anything NOT
+# listed here (fixable HIGH/CRITICAL).
+
+# transformers 4.57.x - fixes land in transformers 5.x, which requires
+# upgrading sentence-transformers 2.7.0 -> 6.0.0 (embedding-stack major:
+# needs a KB rebuild + retrieval re-eval; scheduled-lane item). All four
+# are load-untrusted-model vectors; this deployment only loads pinned
+# first-party models (MiniLM, ms-marco cross-encoder).
+CVE-2025-14929
+CVE-2026-1839
+CVE-2026-4372
+CVE-2026-5241
+
+# ecdsa Minerva timing attack - transitive of python-jose, no fixed
+# release exists. Redundant with ignore-unfixed, kept for documentation.
+CVE-2024-23342
