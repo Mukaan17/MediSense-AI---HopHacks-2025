@@ -140,7 +140,7 @@ uvicorn api.server:app --host 0.0.0.0 --port 8000
 
 ```bash
 cd frontend
-# optional: export REACT_APP_API_URL=http://localhost:8000
+# optional: export VITE_API_URL=http://localhost:8000
 npm start
 ```
 

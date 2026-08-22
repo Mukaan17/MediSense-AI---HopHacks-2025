@@ -62,7 +62,6 @@ const ClinicalInterface: React.FC = () => {
         // Health check
         const healthResponse = await clinicalAPI.healthCheck();
         if (healthResponse.success) {
-          console.log('Backend connected:', healthResponse.data);
           if (healthResponse.data?.app_mode) {
             const mode = healthResponse.data.app_mode === 'clinical' ? 'clinical' : 'demo';
             setAppMode(mode);

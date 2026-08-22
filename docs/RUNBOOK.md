@@ -15,11 +15,12 @@ point here live in `deploy/prometheus-alerts.yml`; latency budgets in
   `GET /api/case/{id}/report`. Without the worker or Redis, finalize runs
   inline exactly as before. Live STT concurrency is `STT_WORKERS`
   (default 1).
-- **Frontend**: nginx serving the CRA build, proxying unknown paths and
-  `/ws/` to the backend (`frontend/nginx.conf`).
+- **Frontend**: nginx serving the Vite build (runtime config injected
+  into `config.js` by the container entrypoint), proxying unknown paths
+  and `/ws/` to the backend (`frontend/nginx.conf`).
 - **Modes**: `APP_MODE=demo` (open, synthetic EHR) vs `APP_MODE=clinical`
-  (JWT auth required, synthetic EHR refused; boot fails without
-  `AUTH_SECRET_KEY` + `AUTH_USERS_FILE`).
+  (auth required - httpOnly session cookie or Bearer JWT, synthetic EHR
+  refused; boot fails without `AUTH_SECRET_KEY` + `AUTH_USERS_FILE`).
 
 ## Restart / reload
 
