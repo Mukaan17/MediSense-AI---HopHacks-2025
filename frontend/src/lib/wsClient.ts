@@ -45,7 +45,7 @@ function toWsBase(url: string): string {
   return url.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:').replace(/\/$/, '');
 }
 
-function normalizeHUD(payload: any): HUD {
+export function normalizeHUD(payload: any): HUD {
   const hud: HUD = payload || {};
 
   if (!hud.ranked && Array.isArray(payload?.fusion?.top10)) {
