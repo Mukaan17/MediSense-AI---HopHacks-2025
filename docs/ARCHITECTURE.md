@@ -73,6 +73,12 @@ Conventions that keep it that way:
 
 ## Frontend
 
+Toolchain: Vite + vitest (TypeScript 5, `strict` + `noUnusedLocals`);
+`npm run build` outputs to `build/`. API types are generated from the
+committed OpenAPI contract (`npm run gen:api`). Runtime configuration
+comes from `config.js` (`window.__MEDISENSE_CONFIG__`), templated at
+container start - one build runs against any backend.
+
 ```
 src/
   lib/

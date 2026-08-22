@@ -1,4 +1,3 @@
-import React from 'react';
 import { Toaster } from 'react-hot-toast';
 import ClinicalInterface from './components/ClinicalInterface';
 import './index.css';

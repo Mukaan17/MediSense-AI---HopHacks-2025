@@ -52,9 +52,10 @@ green.
   PYSEC-2025-185). Remaining known findings: `ecdsa` (transitive of
   python-jose, no fixed release), `transformers 4.57.x` (pinned by the
   sentence-transformers stack; scheduled-update lane item).
-- `npm audit fix` applied: 54 -> 28 findings (2 critical -> 0). The
-  remaining 28 are react-scripts (CRA) build-time transitives - not
-  shipped to the browser - and clear only with a CRA -> Vite migration.
+- `npm audit fix` applied: 54 -> 28 findings (2 critical -> 0); the
+  CRA -> Vite migration (I3b) then cleared the react-scripts transitives
+  and a postcss bump closed the last advisory: **0 npm audit findings**.
+  Vite also cut the production build from ~40 s to ~2 s.
 - Dependabot (`.github/dependabot.yml`) now opens weekly grouped update
   PRs for pip, npm, and GitHub Actions; CI's advisory `supply-chain` job
   re-runs both audits on every push.

@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@types/node": "^16.18.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "axios": "^1.6.0",
@@ -12,26 +11,17 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.0",
-    "react-hot-toast": "^2.4.0",
-    "react-scripts": "^5.0.1",
-    "typescript": "^4.9.0",
-    "web-vitals": "^2.1.0"
+    "react-hot-toast": "^2.4.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "dev": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run",
     "e2e:demo": "playwright test e2e/demo",
     "e2e:clinical": "APP_MODE=clinical playwright test e2e/clinical",
-    "gen:api": "openapi-typescript ../openapi.json -o src/api/schema.d.ts"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "gen:api": "openapi-typescript ../openapi.json -o src/api/schema.d.ts",
+    "preview": "vite preview"
   },
   "browserslist": {
     "production": [
@@ -47,15 +37,16 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "@types/jest": "^30.0.0",
+    "@types/node": "^22.20.1",
+    "@vitejs/plugin-react": "^6.1.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "autoprefixer": "10.4.14",
-    "openapi-typescript": "^6.7.6",
-    "postcss": "8.4.24",
-    "tailwindcss": "3.3.2"
-  },
-  "jest": {
-    "transformIgnorePatterns": [
-      "node_modules/(?!axios)/"
-    ]
+    "jsdom": "^30.0.1",
+    "openapi-typescript": "^7.13.0",
+    "postcss": "^8.5.26",
+    "tailwindcss": "3.3.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
   }
 }
