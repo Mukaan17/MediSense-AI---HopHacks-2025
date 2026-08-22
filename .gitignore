@@ -401,3 +401,6 @@ logs/audit.log
 # Playwright artifacts
 frontend/test-results/
 frontend/playwright-report/
+
+# Mutation testing cache
+.mutmut-cache

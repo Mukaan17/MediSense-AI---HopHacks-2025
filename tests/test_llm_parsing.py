@@ -76,3 +76,25 @@ def test_non_dict_json_returns_default():
 def test_json_sanitize_alias():
     assert json_sanitize('{"x": 1}', DEFAULT) == {"x": 1}
     assert json_sanitize("garbage", DEFAULT) is DEFAULT
+
+
+def test_fence_wins_over_unbalanced_brace_noise():
+    # The widest {...} span is unparseable here, so only the fence path can
+    # recover the object (kills mutants that break the fence regex).
+    text = 'note { broken\n```json\n{"a": 1}\n```\ntail'
+    assert parse_llm_json(text, DEFAULT) == {"a": 1}
+
+
+def test_clamp_confidence_bounds():
+    from core.utils import clamp_confidence
+    assert clamp_confidence("not a number") == 0.0
+    assert clamp_confidence(-3) == 0.0
+    assert clamp_confidence(1.7) == 1.0
+    assert clamp_confidence("0.5") == 0.5
+
+
+def test_top_n_bounds():
+    from core.utils import top_n
+    assert top_n([1, 2, 3], 2) == [1, 2]
+    assert top_n([1, 2, 3], 0) == []
+    assert top_n([1, 2, 3], -1) == []

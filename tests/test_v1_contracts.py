@@ -29,8 +29,11 @@ def test_knowledge_base_reports_real_facts(client):
     for src in body["sources"]:
         assert src.endswith(".json"), f"unexpected non-manifest source: {src}"
     if body["sources"]:
-        assert isinstance(body["doc_count"], int) and body["doc_count"] > 0
         assert body["built_at"]
+        # doc_count is None when the vector stack isn't installed (light CI
+        # set); when the store loads, it must be a positive count.
+        if body["doc_count"] is not None:
+            assert isinstance(body["doc_count"], int) and body["doc_count"] > 0
     assert body["description"]
 
 

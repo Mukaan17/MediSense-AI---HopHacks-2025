@@ -4,6 +4,9 @@ on:
   push:
     branches: [main, full-application]
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"  # weekly mutation-testing report
 
 env:
   # Pinned to requirements.txt so the exported OpenAPI schema and test
@@ -51,7 +54,7 @@ jobs:
         # and unnecessary here: the server degrades gracefully without the
         # optional stacks, and the tests assert exactly that degraded
         # contract plus all pure-python logic.
-        run: pip install $BACKEND_LIGHT_DEPS pytest pytest-cov
+        run: pip install $BACKEND_LIGHT_DEPS pytest pytest-cov hypothesis
       - name: Lint
         run: |
           pip install ruff
@@ -62,10 +65,13 @@ jobs:
         run: |
           python scripts/export_openapi.py
           git diff --exit-code openapi.json
-      - name: Run tests (with coverage)
+      - name: Run tests (with coverage ratchet)
+        # Floor set from the measured light-set baseline (57%) minus margin
+        # for the missing local rag_store; raise deliberately, never lower.
         run: |
           python -m pytest tests/ -q \
-            --cov=api --cov=core --cov=rag_runtime --cov-report=term
+            --cov=api --cov=core --cov=rag_runtime --cov-report=term \
+            --cov-fail-under=50
 
   test-frontend:
     name: Frontend type-check, tests, build
@@ -158,6 +164,27 @@ jobs:
         run: npx playwright test e2e/clinical
         env:
           APP_MODE: clinical
+
+  mutation-tests:
+    name: Mutation testing (report-only)
+    runs-on: ubuntu-latest
+    # Report-only by design (approved decision D6): informs suite quality
+    # without being able to flake CI red. Runs on demand and weekly.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Run mutmut on the parser and chunker
+        run: |
+          pip install $BACKEND_LIGHT_DEPS pytest hypothesis "mutmut==2.4.5"
+          mutmut run --paths-to-mutate core/utils.py \
+            --runner "python -m pytest -x -q tests/test_llm_parsing.py" \
+            --no-progress || true
+          mutmut results || true
 
   supply-chain:
     name: Dependency audit (advisory)

@@ -39,6 +39,20 @@ Frontend (jest): unit coverage concentrated in `lib/` (reportMapper,
 wsClient normalization); components are covered by the Playwright smoke
 (`frontend/e2e/`), not jest.
 
+## Mutation testing (report-only, decision D6)
+
+`mutmut` against focused test runners, recorded 2026-08-22:
+
+- `core/utils.py` (LLM JSON parsing + helpers): **73% killed** (24/33).
+  The 9 survivors are log-string mutations and one behavior-equivalent
+  guard rewrite - acceptable residue.
+- `rag_runtime/chunking.py`: **48% killed** (74/154). Survivors
+  concentrate in `extract_meta`/`docs_from_json` (metadata extraction),
+  which the chunking tests don't target - the next place to add tests.
+
+CI runs the report weekly (`mutation-tests` job, workflow_dispatch or
+schedule); it can never block a merge.
+
 ## Retrieval quality
 
 `tests/test_retrieval_eval.py` guards the KB with a labeled query set:
