@@ -8,7 +8,11 @@ point here live in `deploy/prometheus-alerts.yml`; latency budgets in
 
 - **Backend**: FastAPI, `uvicorn api.server:app` (entrypoint
   `docker/entrypoint.sh`, `UVICORN_WORKERS` processes). State: in-memory or
-  Redis case store (`REDIS_URL`), FAISS store on disk (`RAG_PERSIST_DIR`).
+  Redis case store (`REDIS_URL`), FAISS store on disk (`RAG_PERSIST_DIR`),
+  and — when `CASE_DB_URL` is set — a durable SQL case store (snapshots,
+  append-only event timeline, reports) behind the fast store. The history
+  endpoints (`/api/cases`, `/api/case/{id}/timeline`) return 503 without
+  it; that is configuration, not an outage.
 - **Worker**: `arq worker.settings.WorkerSettings` (same image) consumes
   finalize-report jobs when `FINALIZE_MODE=queue`; results flow back
   through the shared case store and clients poll
@@ -87,8 +91,15 @@ it. Clinical mode: give Prometheus a service bearer token for /metrics
 ### auth-failures
 1. Spike of 401s with varied usernames in `logs/audit.log`
    (`event: login_failed`) = probing; block at the ALB/nginx layer.
-2. Uniform 401s from one client = expired token loop in a stale frontend
-   session; harmless, but confirm the frontend re-login modal appears.
+2. Uniform 401s from one client = expired session (cookie or token) in a
+   stale frontend tab; harmless, but confirm the re-login modal appears.
+3. 403s with "CSRF token missing" from browsers = the frontend and
+   backend disagree on cookies - check that both are served same-origin
+   (or that `AUTH_COOKIE_SECURE` matches the scheme in a test rig).
+   Bearer API clients are CSRF-exempt by design.
+4. OIDC mode: callback failures name the step (state, token exchange,
+   JWKS); verify `OIDC_ISSUER`/`OIDC_REDIRECT_URI` against the IdP
+   config before suspecting the code.
 
 ### slow-pipeline
 1. `medisense_stage_latency_*` on `/metrics` shows which stage (extract /
@@ -118,3 +129,7 @@ it. Clinical mode: give Prometheus a service bearer token for /metrics
   that must be on durable storage; they are deliberately gitignored.
 - Redis persistence is not configured in compose; treat live cases as
   ephemeral by design.
+- The durable case store (`CASE_DB_URL`, Postgres in compose/RDS in prod)
+  holds clinical content: include it in the database backup policy, run
+  `alembic upgrade head` on schema changes, and size retention with
+  `CASE_RETENTION_DAYS` (enforced by the worker's cron).

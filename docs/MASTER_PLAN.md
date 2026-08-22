@@ -1,5 +1,10 @@
 # MediSense Master Plan
 
+> **Historical record** — this audit and roadmap were fully executed
+> (P0–P13, then R1–R8, then I0–I17). For the current state see
+> `docs/ARCHITECTURE.md` and `docs/PRODUCTION_READINESS.md`; for what
+> shipped, `CHANGELOG.md`.
+
 Audit of the 5-improvement competition plan against the codebase, the consolidated
 platform defect register, and the approved integrated roadmap: corrected improvements
 first, then clinical-grade production hardening with a demo-mode switch, closing with
