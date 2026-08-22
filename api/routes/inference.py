@@ -17,7 +17,7 @@ from core.retriever import (
 from core.fusion import fuse
 from core.evidence_engine import build_evidence
 from core.domains import bucket_domains
-from core.clinical_diagnosis import (
+from core.diagnosis import (
     generate_structured_differential_diagnosis, analyze_risk_factors,
     generate_red_flag_alerts, generate_brief_diagnosis_summary,
 )

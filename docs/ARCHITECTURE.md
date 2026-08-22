@@ -31,15 +31,18 @@ api/
                     /infer_from_image_only
     voice.py        /voice_transcribe /voice_infer /multimodal_voice_infer
     ehr.py          /ehr/* (listing + demo-only mockups)
-    cases.py        /api/case* lifecycle, finalize, WS /ws/case/{id},
-                    WS /ws/transcribe
+    cases.py        /api/case* REST lifecycle + finalize
+    ws.py           WS /ws/case/{id} (live HUD), WS /ws/transcribe (STT)
 
 core/               domain logic, no FastAPI imports:
-  extract, fusion, evidence_engine, retriever, answer, clinical_diagnosis,
-  questioner_llm, summarize, diagnostic_suggestions, domains, imaging,
-  modeling_biomedclip, voice_transcription, live_stt, llm_client (Claude +
-  Gemini + routing), app_mode, auth, audit, metrics, case_store, config,
-  logging_setup, ehr_integration, utils
+  extract, fusion, evidence_engine, retriever, answer, questioner_llm,
+  summarize, diagnostic_suggestions, domains, imaging, modeling_biomedclip,
+  voice_transcription, live_stt, llm_client (Claude + Gemini + routing),
+  app_mode, auth, audit, metrics, case_store, config, logging_setup,
+  ehr_integration, utils
+  diagnosis/        structured differential (differential.py), deterministic
+                    risk/red-flag rules (risk.py), brief summary (summary.py);
+                    core/clinical_diagnosis.py remains as a compat shim
 
 rag_runtime/        offline KB builders + shared chunking
 ```
@@ -71,12 +74,16 @@ src/
     pcmTranscriber.ts AudioWorklet -> 16 kHz PCM -> /ws/transcribe
     transcriber.ts    browser Web Speech fallback
   services/api.ts     axios instance, auth token storage, endpoint wrappers
+  hooks/
+    useLiveCase.ts    live-case lifecycle: case creation, WS connect,
+                      pending-utterance queue, HUD/streaming state, finalize
   components/
-    ClinicalInterface.tsx  container: state + view switching (876 lines,
-                           down from 1,151; further extraction candidates
-                           are listed in docs/PRODUCTION_READINESS.md)
+    ClinicalInterface.tsx  container: state + view switching (685 lines,
+                           down from 1,151 via reportMapper, AppHeader,
+                           LoginModal, LiveAnalysisPanel, useLiveCase)
     AppHeader.tsx          title, mode chip, demo-only toggles
     LoginModal.tsx         clinical-mode sign-in
+    LiveAnalysisPanel.tsx  the Live RAG Analysis HUD card + final report
     PatientForm, VoiceRecorder, ConversationChat, DifferentialDiagnosis,
     RedFlagAlerts, XAIExplanation, ClinicalReportView, LiveCoach, ...
 ```
