@@ -165,6 +165,31 @@ jobs:
         env:
           APP_MODE: clinical
 
+  live-llm-eval:
+    name: Live LLM fixture refresh + replay (needs keys)
+    runs-on: ubuntu-latest
+    # On-demand only: refreshes fixtures against live models when the org
+    # has configured API-key secrets, then re-runs the replay tests.
+    # Without keys the recording script exits cleanly and replay runs
+    # against the committed fixtures.
+    if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Record fixtures and replay
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          pip install $BACKEND_LIGHT_DEPS pytest anthropic
+          python scripts/record_llm_fixtures.py
+          python -m pytest tests/test_llm_replay.py -q
+          git diff --stat fixtures/llm/ || true
+
   mutation-tests:
     name: Mutation testing (report-only)
     runs-on: ubuntu-latest

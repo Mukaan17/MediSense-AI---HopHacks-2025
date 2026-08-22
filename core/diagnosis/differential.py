@@ -57,7 +57,9 @@ def generate_structured_differential_diagnosis(
         "citations": []
     }
     try:
-        resp = get_llm().invoke(prompt).content
+        lm = get_llm()
+        resp = (lm.invoke_json(prompt) if hasattr(lm, "invoke_json")
+                else lm.invoke(prompt)).content
     except Exception as e:
         print(f"⚠️  Structured diagnosis generation error: {e}")
         return fallback

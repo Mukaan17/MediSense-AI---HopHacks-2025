@@ -43,6 +43,49 @@ def gemini_available() -> bool:
     return bool(os.getenv("GEMINI_API_KEY"))
 
 
+def _system_blocks(system: str):
+    """System prompt as content blocks with a cache breakpoint. Prompt
+    caching is a prefix match and only prefixes >=~1024 tokens cache, so
+    this is a free hook: it never hurts, and long stable system prompts
+    start caching without further code change."""
+    return [{"type": "text", "text": system,
+             "cache_control": {"type": "ephemeral"}}]
+
+
+async def invoke_claude_json(prompt: str, schema: Dict[str, Any], model: str = None,
+                             system: str = "", max_tokens: int = 4096) -> Dict[str, Any]:
+    """Schema-constrained JSON via structured outputs: the API guarantees
+    the response text parses against `schema`, making salvage parsing a
+    fallback rather than the contract."""
+    import json as _json
+
+    client = _get_anthropic_async()
+    kwargs: Dict[str, Any] = {
+        "model": model or get_final_model(),
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+        "output_config": {"format": {"type": "json_schema", "schema": schema}},
+    }
+    if system:
+        kwargs["system"] = _system_blocks(system)
+    model_name = kwargs["model"]
+    try:
+        with metrics.timed("llm_latency", provider="anthropic", model=model_name):
+            message = await client.messages.create(**kwargs)
+    except Exception:
+        metrics.inc("llm_errors", provider="anthropic", model=model_name)
+        raise
+    usage = getattr(message, "usage", None)
+    if usage:
+        metrics.inc("llm_tokens", float(usage.input_tokens or 0),
+                    provider="anthropic", model=model_name, kind="input")
+        metrics.inc("llm_tokens", float(usage.output_tokens or 0),
+                    provider="anthropic", model=model_name, kind="output")
+    metrics.inc("llm_calls", provider="anthropic", model=model_name)
+    text = next((b.text for b in message.content if getattr(b, "type", "") == "text"), "")
+    return _json.loads(text)
+
+
 def get_live_model() -> str:
     """Model for low-latency live HUD suggestions."""
     cfg = _models_cfg()
@@ -85,7 +128,7 @@ async def stream_claude_tokens(prompt: str, model: str = None, system: str = "",
         "messages": [{"role": "user", "content": prompt}],
     }
     if system:
-        kwargs["system"] = system
+        kwargs["system"] = _system_blocks(system)
     model_name = kwargs["model"]
     try:
         with metrics.timed("llm_latency", provider="anthropic", model=model_name):
@@ -116,7 +159,7 @@ async def invoke_claude_full(prompt: str, model: str = None, system: str = "",
         "messages": [{"role": "user", "content": prompt}],
     }
     if system:
-        kwargs["system"] = system
+        kwargs["system"] = _system_blocks(system)
     model_name = kwargs["model"]
     try:
         with metrics.timed("llm_latency", provider="anthropic", model=model_name):
@@ -170,7 +213,12 @@ class _GeminiInvokeClient:
             return f"{role}: {content}"
         return str(prompt)
 
-    def invoke(self, prompt: Any) -> _InvokeResponse:
+    def invoke_json(self, prompt: Any) -> _InvokeResponse:
+        """JSON response mode: the API returns syntactically valid JSON
+        (responseMimeType), demoting fence/prose salvage to a fallback."""
+        return self.invoke(prompt, response_json=True)
+
+    def invoke(self, prompt: Any, response_json: bool = False) -> _InvokeResponse:
         text = self._to_text(prompt).strip()
         if not text:
             return _InvokeResponse("")
@@ -182,6 +230,7 @@ class _GeminiInvokeClient:
             "generationConfig": {
                 "temperature": self.temperature,
                 "maxOutputTokens": self.max_output_tokens,
+                **({"responseMimeType": "application/json"} if response_json else {}),
             },
         }
 
