@@ -22,11 +22,11 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
   const [transcript, setTranscript] = useState('');
   const stopSTTRef = useRef<(() => void) | null>(null);
   const liveSendRef = useRef<((text: string) => void) | null>(null);
-  const stopLiveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const stopLiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {

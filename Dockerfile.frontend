@@ -4,11 +4,9 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ .
-# Empty REACT_APP_API_URL = same-origin requests, served through this
-# image's nginx proxy (see nginx.conf). Override for split-origin setups.
-ARG REACT_APP_API_URL=""
-ENV REACT_APP_API_URL=${REACT_APP_API_URL}
-RUN GENERATE_SOURCEMAP=false npm run build
+# The build carries no baked API URL: runtime config.js (templated at
+# container start) decides which backend this image talks to.
+RUN npm run build
 
 # Production Stage: static files + reverse proxy to the backend
 FROM nginx:alpine

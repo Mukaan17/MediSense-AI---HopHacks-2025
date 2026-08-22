@@ -88,12 +88,9 @@ jobs:
           npm run gen:api
           git diff --exit-code src/api/schema.d.ts
       - run: npx tsc --noEmit
-      - run: npm test -- --watchAll=false --coverage
+      - run: npm test -- --coverage
       - name: Production build
         run: npm run build
-        env:
-          CI: "true"
-          GENERATE_SOURCEMAP: "false"
 
   contract-tests:
     name: API contract fuzz (schemathesis)
@@ -150,9 +147,6 @@ jobs:
         run: |
           npm ci
           npm run build
-        env:
-          CI: "true"
-          GENERATE_SOURCEMAP: "false"
       - name: Install chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
