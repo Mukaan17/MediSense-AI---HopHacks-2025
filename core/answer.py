@@ -5,19 +5,18 @@
 # @Last Modified time: 2025-09-13 17:10:34
 import json
 from typing import Dict, Any
-from .config import load_prompt, load_allowed_labels
+from .config import render_prompt, load_allowed_labels
 from .llm_client import get_llm
 from .utils import parse_llm_json
 
 ALLOWED = set(load_allowed_labels().get("issues_allowed", []))
 
 def answerer_generate(extraction: Dict[str, Any], retrieved_context: str) -> Dict[str, Any]:
-    prompt_tmpl = load_prompt("answer")
-    prompt = (
-        prompt_tmpl
-        .replace("{{ allowed_labels }}", ", ".join(sorted(ALLOWED)))
-        .replace("{{ extraction }}", json.dumps(extraction.get("extracted", {})))
-        .replace("{{ context }}", retrieved_context or "(no context provided)")
+    prompt = render_prompt(
+        "answer",
+        allowed_labels=", ".join(sorted(ALLOWED)),
+        extraction=json.dumps(extraction.get("extracted", {})),
+        context=retrieved_context or "(no context provided)",
     )
 
     fallback = {

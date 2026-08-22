@@ -70,6 +70,25 @@ def load_prompt(name: str) -> str:
         return f.read()
 
 
+# StrictUndefined so a typo'd or missing template variable fails loudly at
+# render time instead of silently shipping "{{ var }}" to the LLM.
+# autoescape stays off: these are LLM prompts, not HTML.
+_prompt_env = None
+
+def render_prompt(name: str, **context: Any) -> str:
+    """Render config/prompts/<name>.j2 with real Jinja2 semantics."""
+    global _prompt_env
+    if _prompt_env is None:
+        from jinja2 import Environment, FileSystemLoader, StrictUndefined
+        _prompt_env = Environment(
+            loader=FileSystemLoader(str(CFG_DIR / "prompts")),
+            undefined=StrictUndefined,
+            autoescape=False,
+            keep_trailing_newline=True,
+        )
+    return _prompt_env.get_template(f"{name}.j2").render(**context)
+
+
 def load_symptom_map() -> Dict[str, Any]:
     try:
         with open(CFG_DIR / "symptom_map.json", "r") as f:
