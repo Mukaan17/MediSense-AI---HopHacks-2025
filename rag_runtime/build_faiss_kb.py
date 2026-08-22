@@ -9,7 +9,6 @@ Usage:
 import argparse
 import json
 import os
-import pickle
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List
@@ -101,14 +100,21 @@ def build_kb(files: List[Path], emb_model: str, persist_dir: Path, reset: bool,
     index = faiss.IndexFlatIP(dim)
     index.add(embeddings)
 
-    # Save index, texts, and metadata
+    # Save index, texts, and metadata. JSON, not pickle: the store may sit on
+    # a shared volume, and JSON removes the deserialization attack class.
     faiss.write_index(index, str(persist_dir / "index.faiss"))
-    with open(persist_dir / "texts.pkl", "wb") as f:
-        pickle.dump(texts, f)
-    with open(persist_dir / "metas.pkl", "wb") as f:
-        pickle.dump(metas, f)
+    with open(persist_dir / "texts.json", "w", encoding="utf-8") as f:
+        json.dump(texts, f, ensure_ascii=False)
+    with open(persist_dir / "metas.json", "w", encoding="utf-8") as f:
+        json.dump(metas, f, ensure_ascii=False)
     with open(persist_dir / "config.json", "w") as f:
         json.dump({"emb_model": emb_model, "dim": dim, "count": len(texts)}, f, indent=2)
+    # Drop stale pickle files from pre-JSON builds so nothing loads them.
+    for legacy in ("texts.pkl", "metas.pkl"):
+        try:
+            (persist_dir / legacy).unlink(missing_ok=True)
+        except OSError as e:
+            print(f"[WARN] Could not remove legacy {legacy}: {e}")
 
     print(f"[KB] Done. Indexed {len(texts)} documents (dim={dim}) → {persist_dir}")
 
