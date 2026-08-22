@@ -60,6 +60,22 @@ topical recall@5 must stay >= 0.8 over the 811-chunk store (currently
 5/5). Rebuilding the KB or swapping the embedding model must keep this
 green.
 
+## Model benchmarks (I10 groundwork, recorded 2026-08-22)
+
+- **STT** (`scripts/stt_benchmark.py`, committed speech fixture, CPU int8):
+  tiny.en p50 0.78 s / WER 0.05; base.en p50 1.17 s / WER 0.05. Same
+  accuracy on this fixture at ~50% more latency - tiny.en keeps the live
+  slot on evidence, not habit. Re-run against a larger recorded set before
+  any change (`models/registry.yaml`).
+- **Embeddings** (`scripts/embedding_experiment.py`): all-MiniLM-L6-v2 vs
+  NeuML/pubmedbert-base-embeddings both score 1.00 topical recall@5 on
+  the 5-query labeled set - the set is too small to discriminate. Grow
+  the labeled set before an adoption decision; no swap made.
+- **Calibration**: temperature scaling is wired into the imaging head
+  (`CXR_CALIBRATION`, identity when unfitted); fitting requires a real
+  held-out eval set (owner: dataset access), gate via
+  `scripts/model_gate.py`.
+
 ## Supply-chain status (last local audit)
 
 - `pip-audit`: python-jose upgraded to >= 3.5.0 (fixed PYSEC-2024-232/233,
