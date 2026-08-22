@@ -20,7 +20,7 @@ _llm_temperature = None
 
 load_dotenv()
 
-# --------------- Anthropic (Claude) ---------------
+# --------------- Model routing ---------------
 
 DEFAULT_LIVE_MODEL = "claude-haiku-4-5"
 DEFAULT_FINAL_MODEL = "claude-sonnet-4-6"
@@ -28,8 +28,34 @@ DEFAULT_FINAL_MODEL = "claude-sonnet-4-6"
 _anthropic_async = None
 
 
+def _models_cfg() -> Dict[str, Any]:
+    from .config import load_models
+    return (load_models() or {}).get("llm", {}) or {}
+
+
 def anthropic_available() -> bool:
     return bool(os.getenv("ANTHROPIC_API_KEY"))
+
+
+def get_live_model() -> str:
+    """Model for low-latency live HUD suggestions."""
+    cfg = _models_cfg()
+    if anthropic_available():
+        return os.getenv("LIVE_MODEL", cfg.get("live_hud", DEFAULT_LIVE_MODEL))
+    return os.getenv("GEMINI_MODEL", cfg.get("fallback_live", "gemini-2.5-flash-lite"))
+
+
+def get_final_model() -> str:
+    """Model for the deep post-conversation report."""
+    cfg = _models_cfg()
+    if anthropic_available():
+        return os.getenv("FINAL_MODEL", cfg.get("final_report", DEFAULT_FINAL_MODEL))
+    return cfg.get("fallback_final", "gemini-2.5-flash")
+
+
+def get_fallback_final_model() -> str:
+    """Gemini model used when a Claude final-report call fails."""
+    return _models_cfg().get("fallback_final", "gemini-2.5-flash")
 
 
 def _get_anthropic_async():
@@ -48,7 +74,7 @@ async def stream_claude_tokens(prompt: str, model: str = None, system: str = "",
     """Async generator yielding text deltas as they arrive (true streaming)."""
     client = _get_anthropic_async()
     kwargs: Dict[str, Any] = {
-        "model": model or DEFAULT_LIVE_MODEL,
+        "model": model or get_live_model(),
         "max_tokens": max_tokens,
         "messages": [{"role": "user", "content": prompt}],
     }
@@ -65,7 +91,7 @@ async def invoke_claude_full(prompt: str, model: str = None, system: str = "",
     outputs don't hit HTTP timeouts."""
     client = _get_anthropic_async()
     kwargs: Dict[str, Any] = {
-        "model": model or DEFAULT_FINAL_MODEL,
+        "model": model or get_final_model(),
         "max_tokens": max_tokens,
         "messages": [{"role": "user", "content": prompt}],
     }
@@ -161,8 +187,12 @@ class _GeminiInvokeClient:
 
 
 def get_llm(model: str = None, temperature: float = None):
-    """Return a cached Gemini client with `.invoke(...).content` contract."""
-    global _llm, _llm_model
+    """Return a cached Gemini client with `.invoke(...).content` contract.
+
+    The cache is keyed on (model, temperature): callers requesting a
+    different temperature get a matching client instead of silently
+    inheriting the cached one's setting."""
+    global _llm, _llm_model, _llm_temperature
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY not set. Please set your Google AI Studio API key.")
@@ -170,10 +200,11 @@ def get_llm(model: str = None, temperature: float = None):
     requested_model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
     temp = float(temperature if temperature is not None else os.getenv("LLM_TEMPERATURE", "0.1"))
 
-    if _llm is None or _llm_model != requested_model:
+    if _llm is None or _llm_model != requested_model or _llm_temperature != temp:
         _llm = _GeminiInvokeClient(api_key=api_key, model=requested_model, temperature=temp)
         _llm_model = requested_model
-        print(f"[LLM] Initialized Gemini model: {_llm_model}")
+        _llm_temperature = temp
+        print(f"[LLM] Initialized Gemini model: {_llm_model} (temperature={temp})")
 
     return _llm
 

@@ -42,7 +42,13 @@ from core.questioner_llm import (
     stream_live_suggestions,
     parse_bullet_questions,
 )
-from core.llm_client import anthropic_available, invoke_claude_full, get_llm
+from core.llm_client import (
+    anthropic_available,
+    invoke_claude_full,
+    get_llm,
+    get_final_model,
+    get_fallback_final_model,
+)
 from core.summarize import summarize_live
 from core.diagnostic_suggestions import generate_diagnostic_suggestions
 from core.voice_transcription import voice_service
@@ -1555,20 +1561,20 @@ async def finalize_case(case_id: str):
     report = None
     if anthropic_available():
         try:
-            from core.llm_client import DEFAULT_FINAL_MODEL
-            model_used = os.getenv("FINAL_MODEL", DEFAULT_FINAL_MODEL)
+            model_used = get_final_model()
             report = await invoke_claude_full(prompt, model=model_used,
                                               system=FINAL_REPORT_SYSTEM)
         except Exception as e:
             log.warning(f"[finalize] Claude report failed, falling back to Gemini: {e}")
             report = None
     if report is None:
+        fallback_model = get_fallback_final_model()
         def _gemini_report() -> str:
-            lm = get_llm()
+            lm = get_llm(model=fallback_model)
             return lm.invoke(f"{FINAL_REPORT_SYSTEM}\n\n{prompt}").content
         try:
             report = await asyncio.to_thread(_gemini_report)
-            model_used = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+            model_used = fallback_model
         except Exception as e:
             raise HTTPException(status_code=503, detail=f"No LLM available for report: {e}")
 

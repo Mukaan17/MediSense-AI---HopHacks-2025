@@ -1,0 +1,9 @@
+# LLM routing. The Claude models serve when ANTHROPIC_API_KEY is set;
+# the Gemini fallbacks serve otherwise (and when a Claude call fails).
+# Env overrides: LIVE_MODEL, FINAL_MODEL (Claude side); GEMINI_MODEL (live
+# fallback).
+llm:
+  live_hud: "claude-haiku-4-5"          # low-latency streaming suggestions
+  final_report: "claude-sonnet-4-6"     # deep post-conversation report
+  fallback_live: "gemini-2.5-flash-lite"
+  fallback_final: "gemini-2.5-flash"

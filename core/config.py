@@ -43,6 +43,14 @@ def load_rag() -> Dict[str, Any]:
                 pass
         return data
 
+def load_models() -> Dict[str, Any]:
+    """LLM routing table from config/models.yaml; {} when absent."""
+    try:
+        with open(CFG_DIR / "models.yaml", "r") as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        return {}
+
 def load_allowed_labels() -> Dict[str, Any]:
     """Return the union of all labels across domains.yaml.
     Falls back to labels.json if domains.yaml is missing or malformed.
