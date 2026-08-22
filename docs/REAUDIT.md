@@ -1,5 +1,9 @@
 # Final Re-Audit
 
+> **Historical record** — the closing audit of the P-series remediation.
+> Two further rounds (R1–R8, I0–I17) landed after it; the current gap
+> register is `docs/PRODUCTION_READINESS.md`.
+
 Closing step of the approved roadmap (`docs/MASTER_PLAN.md`): the original
 defect register re-walked item by item against the finished tree, the
 adversarial review findings and their fixes, and the final verification

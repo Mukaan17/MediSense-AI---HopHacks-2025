@@ -1,5 +1,10 @@
 # Improvement Roadmap
 
+> **Historical record** — this roadmap was turned into
+> `docs/IMPLEMENTATION_PLAN.md` and executed as work packages I0–I17
+> (see that document's execution record). Items it marks as open may be
+> closed; `docs/PRODUCTION_READINESS.md` is the live gap register.
+
 Direction and sequencing for taking the platform from "clean and hardened"
 to genuinely production-grade. This complements `docs/PRODUCTION_READINESS.md`
 (the gap register — what is open vs. closed) with *how to get there and in
