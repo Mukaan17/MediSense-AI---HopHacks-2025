@@ -33,7 +33,16 @@ def is_clinical() -> bool:
     return get_app_mode() == "clinical"
 
 
+def ehr_source() -> str:
+    """Where EHR records come from: 'file' (default) or 'fhir'
+    (SMART-on-FHIR connector, core/fhir)."""
+    return os.getenv("EHR_SOURCE", "file").strip().lower()
+
+
 def ehr_is_synthetic(ehr_json_path: str) -> bool:
     """The bundled dataset pairs MIMIC demo patients with unrelated CheXpert
-    images - fine for demos, never for clinical use."""
+    images - fine for demos, never for clinical use. A FHIR-sourced roster
+    is real EHR by definition."""
+    if ehr_source() == "fhir":
+        return False
     return os.path.basename(ehr_json_path or "") == DEFAULT_SYNTHETIC_EHR
