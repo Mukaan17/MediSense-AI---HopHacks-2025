@@ -10,10 +10,23 @@ import {
   MultimodalInferRequest,
   ClinicalReport,
   EHRIntegration,
-  KnowledgeBaseMode,
   APIResponse
 } from '../types';
 import { API_CONFIG } from '../config/api';
+import { components } from '../api/schema';
+
+// Response contracts generated from the backend's OpenAPI schema
+// (`npm run gen:api`). A breaking backend change fails compilation here
+// instead of failing at runtime in a clinic.
+export type HealthResponse = components['schemas']['HealthResponse'];
+export type LoginResponse = components['schemas']['LoginResponse'];
+export type WsTicketResponse = components['schemas']['WsTicketResponse'];
+export type EHRPatientsResponse = components['schemas']['EHRPatientsResponse'];
+export type EHRPatientDetailResponse = components['schemas']['EHRPatientDetailResponse'];
+export type KnowledgeBaseModeResponse = components['schemas']['KnowledgeBaseModeResponse'];
+export type CaseCreateResponse = components['schemas']['CaseCreateResponse'];
+export type FinalizeCaseResponse = components['schemas']['FinalizeCaseResponse'];
+export type TranscriptionResponse = components['schemas']['TranscriptionResponse'];
 
 const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
@@ -108,7 +121,7 @@ export async function getWsTicket(): Promise<string | null> {
 }
 
 // Exchange credentials for a bearer token (clinical mode)
-export async function login(username: string, password: string): Promise<APIResponse<any>> {
+export async function login(username: string, password: string): Promise<APIResponse<LoginResponse>> {
   try {
     const formData = new FormData();
     formData.append('username', username);
@@ -130,7 +143,7 @@ export async function login(username: string, password: string): Promise<APIResp
 // Core API Services
 export const clinicalAPI = {
   // Health check
-  async healthCheck(): Promise<APIResponse<any>> {
+  async healthCheck(): Promise<APIResponse<HealthResponse>> {
     try {
       const response = await api.get('/health');
       return {
@@ -228,7 +241,7 @@ export const clinicalAPI = {
   },
 
   // Voice transcription
-  async voiceTranscribe(audioFile: File, description?: string): Promise<APIResponse<any>> {
+  async voiceTranscribe(audioFile: File, description?: string): Promise<APIResponse<TranscriptionResponse>> {
     try {
       const formData = new FormData();
       formData.append('file', audioFile);
@@ -410,7 +423,7 @@ export const futureAPI = {
   },
 
   // EHR patient management
-  async listEHRPatients(): Promise<APIResponse<any>> {
+  async listEHRPatients(): Promise<APIResponse<EHRPatientsResponse>> {
     try {
       const response = await api.get('/ehr/patients');
       return {
@@ -427,7 +440,7 @@ export const futureAPI = {
     }
   },
 
-  async getEHRPatient(patientId: string): Promise<APIResponse<any>> {
+  async getEHRPatient(patientId: string): Promise<APIResponse<EHRPatientDetailResponse>> {
     try {
       const response = await api.get(`/ehr/patients/${patientId}`);
       return {
@@ -445,7 +458,7 @@ export const futureAPI = {
   },
 
   // Knowledge Base Management
-  async getKnowledgeBaseMode(): Promise<APIResponse<KnowledgeBaseMode>> {
+  async getKnowledgeBaseMode(): Promise<APIResponse<KnowledgeBaseModeResponse>> {
     try {
       const response = await api.get('/knowledge_base/mode');
       return {
@@ -462,7 +475,7 @@ export const futureAPI = {
     }
   },
 
-  async setKnowledgeBaseMode(mode: string): Promise<APIResponse<KnowledgeBaseMode>> {
+  async setKnowledgeBaseMode(mode: string): Promise<APIResponse<KnowledgeBaseModeResponse>> {
     try {
       const formData = new FormData();
       formData.append('mode', mode);

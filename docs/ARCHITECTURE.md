@@ -63,6 +63,13 @@ Conventions that keep it that way:
   `core/`; a route composes and serializes.
 - **Lint gate:** `ruff check .` (correctness classes: E9/F) runs in CI
   before tests.
+- **Contract gate:** `openapi.json` at the repo root is the committed API
+  contract (`python scripts/export_openapi.py`); CI fails on drift, the
+  frontend's TypeScript types are generated from it
+  (`npm run gen:api` -> `src/api/schema.d.ts`, also freshness-checked),
+  and a schemathesis job fuzzes every operation for undocumented server
+  errors. CI is path-filtered: frontend-only changes skip backend jobs
+  and vice versa, and the two images build and push independently.
 
 ## Frontend
 

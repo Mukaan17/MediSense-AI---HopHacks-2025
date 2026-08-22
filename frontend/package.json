@@ -24,7 +24,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "e2e:demo": "playwright test e2e/demo",
-    "e2e:clinical": "APP_MODE=clinical playwright test e2e/clinical"
+    "e2e:clinical": "APP_MODE=clinical playwright test e2e/clinical",
+    "gen:api": "openapi-typescript ../openapi.json -o src/api/schema.d.ts"
   },
   "eslintConfig": {
     "extends": [
@@ -48,6 +49,7 @@
     "@playwright/test": "^1.62.1",
     "@types/jest": "^30.0.0",
     "autoprefixer": "10.4.14",
+    "openapi-typescript": "^6.7.6",
     "postcss": "8.4.24",
     "tailwindcss": "3.3.2"
   },
