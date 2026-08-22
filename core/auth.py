@@ -131,7 +131,8 @@ def decode_token(token: str) -> Dict[str, Any]:
 
 DEMO_USER = {"username": "demo", "role": "clinician"}
 
-PUBLIC_PATHS = {"/health", "/auth/login", "/docs", "/openapi.json", "/redoc"}
+PUBLIC_PATHS = {"/health", "/auth/login", "/auth/oidc/login", "/auth/oidc/callback",
+                "/docs", "/openapi.json", "/redoc"}
 
 
 def user_from_authorization(authorization: Optional[str]) -> Dict[str, Any]:
