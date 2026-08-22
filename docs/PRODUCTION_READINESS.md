@@ -65,10 +65,13 @@ remains open is ranked within each category.
 3. **IdP integration.** File-based users + JWTs cannot be revoked; front an
    OIDC provider (hospital SSO), add refresh/logout semantics, and shorten
    the 8-hour TTL.
-4. **[partly done] Supply chain.** Dependabot (pip/npm/actions, weekly,
-   grouped) + an advisory pip-audit/npm-audit CI job are in place;
-   python-jose upgraded past its CVEs and npm criticals cleared. Still
-   open: image scanning (Trivy), SBOM, and making the audit job blocking.
+4. **[done] Supply chain.** Dependabot (pip/npm/actions, weekly, grouped);
+   pip-audit and npm-audit are **blocking** with per-ID accepted-findings
+   triage in `docs/PERF_BASELINE.md`; image builds gate on a Trivy scan
+   (fixable HIGH/CRITICAL fails), publish an SPDX SBOM artifact, and
+   cosign-sign the pushed digest once the owner configures
+   `COSIGN_PRIVATE_KEY`. fastapi/starlette upgraded past six starlette
+   advisories (incl. a Host-header path-check bypass).
 5. **[done] Pickle in the RAG store.** The store is JSON
    (`texts.json`/`metas.json`); `.pkl` remains read-compatible only.
 6. **In-cluster TLS.** nginx -> backend is plaintext inside the network
