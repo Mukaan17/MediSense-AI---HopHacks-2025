@@ -1,26 +1,27 @@
-version: '3.8'
-
+# CPU-first stack: works on any laptop. For GPU imaging capacity, layer the
+# override:  docker compose -f docker-compose.yml -f docker-compose.gpu.yml up
 services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.cpu
     ports:
       - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - LOGLEVEL=INFO
+      - REDIS_URL=redis://redis:6379/0
+      # The nginx frontend serves same-origin, so no extra CORS origin is
+      # needed for it; keep localhost for the dev server.
+      - FRONTEND_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173
     volumes:
       - ./data:/app/data
       - ./rag_store:/app/rag_store
       - ./logs:/app/logs
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - LOGLEVEL=INFO
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
+      - model_cache:/app/cache
+    depends_on:
+      - redis
 
   frontend:
     build:
@@ -28,11 +29,14 @@ services:
       dockerfile: Dockerfile.frontend
     ports:
       - "80:80"
+    environment:
+      - BACKEND_HOST=backend
     depends_on:
       - backend
 
-#  # Optional: Vector DB if you want to inspect it
-#  chromadb:
-#    image: chromadb/chroma
-#    ports:
-#      - "8001:8000"
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+
+volumes:
+  model_cache:

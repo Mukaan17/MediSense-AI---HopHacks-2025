@@ -1,6 +1,11 @@
-// API Configuration
+// API Configuration.
+// REACT_APP_API_URL='' (empty string) is meaningful: it makes requests
+// relative to the serving origin, which is how the nginx-proxied Docker
+// image runs - hence the explicit undefined check instead of ||.
 export const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
+  BASE_URL: process.env.REACT_APP_API_URL !== undefined
+    ? process.env.REACT_APP_API_URL
+    : 'http://localhost:8000',
   TIMEOUT: 30000,
 };
 

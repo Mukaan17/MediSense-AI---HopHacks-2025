@@ -61,6 +61,8 @@ RUN mkdir -p /app/cache/huggingface /app/cache/torch
 EXPOSE 8000
 
 # Run the integrated server (which can now use custom_ops)
-CMD ["python", "run_integrated_server.py"]
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+CMD ["/entrypoint.sh"]
 
 

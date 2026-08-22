@@ -1,0 +1,18 @@
+# GPU override: swaps the backend to the CUDA image with an NVIDIA
+# reservation. Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CXR_DEVICE=cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

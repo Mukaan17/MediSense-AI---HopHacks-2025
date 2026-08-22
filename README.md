@@ -241,15 +241,23 @@ python3 smoke_test.py
 
 ## Docker
 
-Run both services:
+CPU stack (default - works on any laptop; includes Redis for shared live-case
+state; the entrypoint builds the RAG knowledge base on first boot):
 
 ```bash
-docker-compose up --build
+cp .env.example .env   # fill in keys
+docker compose up --build
+```
+
+GPU imaging capacity:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 ```
 
 Endpoints:
-- Backend: `http://localhost:8000`
-- Frontend: `http://localhost:80`
+- Frontend (serves the app and proxies the API + WebSockets - single origin, no CORS): `http://localhost:80`
+- Backend directly: `http://localhost:8000`
 
 ## API Endpoints (Primary)
 
