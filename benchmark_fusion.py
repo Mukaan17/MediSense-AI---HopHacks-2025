@@ -1,7 +1,6 @@
 import time
 import torch
 import math
-import sys
 
 # Try imports
 try:

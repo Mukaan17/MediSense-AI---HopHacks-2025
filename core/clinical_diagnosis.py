@@ -10,7 +10,7 @@ Provides structured differential diagnosis with risk factors, red flags, and cli
 
 import json
 import re
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from .config import load_prompt, load_allowed_labels
 from .llm_client import get_llm
 

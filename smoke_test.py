@@ -15,7 +15,7 @@ import os
 import sys
 import wave
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests

@@ -24,24 +24,34 @@ from .app_mode import is_clinical
 ALGORITHM = "HS256"
 TOKEN_TTL_MINUTES = int(os.getenv("AUTH_TOKEN_TTL_MINUTES", "480"))
 WS_TICKET_TTL_SECONDS = int(os.getenv("WS_TICKET_TTL_SECONDS", "60"))
-USERS_FILE = os.getenv("AUTH_USERS_FILE", os.path.join("config", "users.json"))
 
 ROLES = ("clinician", "admin")
 
-_secret = os.getenv("AUTH_SECRET_KEY", "")
-if is_clinical() and not _secret:
-    raise RuntimeError(
-        "APP_MODE=clinical requires AUTH_SECRET_KEY (generate one with: openssl rand -hex 32)")
+
+def _users_file() -> str:
+    return os.getenv("AUTH_USERS_FILE", os.path.join("config", "users.json"))
+
+
+def _get_secret() -> str:
+    return os.getenv("AUTH_SECRET_KEY", "")
+
+
+def validate_clinical_config() -> None:
+    """Called at app startup: clinical mode must never serve unsigned."""
+    if is_clinical() and not _get_secret():
+        raise RuntimeError(
+            "APP_MODE=clinical requires AUTH_SECRET_KEY (generate one with: openssl rand -hex 32)")
 
 
 def _load_users() -> Dict[str, Dict[str, Any]]:
+    path = _users_file()
     try:
-        with open(USERS_FILE, "r") as f:
+        with open(path, "r") as f:
             return json.load(f) or {}
     except FileNotFoundError:
         return {}
     except Exception as e:
-        print(f"[AUTH] Failed to read users file {USERS_FILE}: {e}")
+        print(f"[AUTH] Failed to read users file {path}: {e}")
         return {}
 
 
@@ -73,7 +83,7 @@ def create_access_token(username: str, role: str) -> str:
     now = int(time.time())
     payload = {"sub": username, "role": role, "iat": now,
                "exp": now + TOKEN_TTL_MINUTES * 60}
-    return jwt.encode(payload, _secret or "demo-secret", algorithm=ALGORITHM)
+    return jwt.encode(payload, _get_secret() or "demo-secret", algorithm=ALGORITHM)
 
 
 def create_ws_ticket(username: str, role: str) -> str:
@@ -85,13 +95,13 @@ def create_ws_ticket(username: str, role: str) -> str:
     now = int(time.time())
     payload = {"sub": username, "role": role, "scope": "ws", "iat": now,
                "exp": now + WS_TICKET_TTL_SECONDS}
-    return jwt.encode(payload, _secret or "demo-secret", algorithm=ALGORITHM)
+    return jwt.encode(payload, _get_secret() or "demo-secret", algorithm=ALGORITHM)
 
 
 def decode_token(token: str) -> Dict[str, Any]:
     from jose import jwt, JWTError
     try:
-        payload = jwt.decode(token, _secret or "demo-secret", algorithms=[ALGORITHM])
+        payload = jwt.decode(token, _get_secret() or "demo-secret", algorithms=[ALGORITHM])
     except JWTError as e:
         raise HTTPException(status_code=401, detail=f"Invalid or expired token: {e}")
     return {"username": payload.get("sub"), "role": payload.get("role", "clinician"),

@@ -10,10 +10,9 @@ This module provides audio transcription capabilities with speaker diarization.
 
 import os
 import tempfile
-import json
 import uuid
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 try:
     import librosa
 except Exception:  # pragma: no cover - optional dependency
@@ -236,7 +235,7 @@ class VoiceTranscriptionService:
         # Generate description if not provided
         if not description:
             all_text = " ".join([seg.get("text", "") for seg in result.get("segments", [])])
-            description = f"Audio conversation with multiple speakers detected."
+            description = "Audio conversation with multiple speakers detected."
         
         print(f"📝 Formatting {len(result.get('segments', []))} segments...")
         

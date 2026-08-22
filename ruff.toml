@@ -1,0 +1,15 @@
+# Lint policy: correctness classes only - undefined names, syntax errors,
+# unused imports/variables. Style rules are deliberately out of scope for
+# now; tighten incrementally.
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E9", "F"]
+ignore = [
+  "F841",  # unused local variables: several deliberate in degraded paths
+]
+
+[lint.per-file-ignores]
+# Re-export surface for compatibility
+"api/__init__.py" = ["F401"]

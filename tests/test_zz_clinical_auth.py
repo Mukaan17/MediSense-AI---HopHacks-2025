@@ -1,8 +1,8 @@
-"""Clinical-mode auth tests. Named zz_ so they run last: they reload the
-server module in clinical mode and restore demo mode afterwards; the other
-modules' session client keeps its reference to the demo app object."""
+"""Clinical-mode auth tests. Mode and auth config are read per call, so
+these tests flip APP_MODE with plain environment variables - no module
+reloads - against the same app object the demo tests use. Named zz_ only
+so the mode flip runs after the demo-mode modules."""
 
-import importlib
 import json
 import os
 
@@ -16,22 +16,16 @@ def clinical_client(tmp_path_factory):
     os.environ["AUTH_SECRET_KEY"] = "t" * 64
     os.environ["AUTH_USERS_FILE"] = str(users_file)
 
-    import core.app_mode, core.auth, api.server
-    importlib.reload(core.app_mode)
-    importlib.reload(core.auth)
-    importlib.reload(api.server)
-
     from core.auth import hash_password
     users_file.write_text(json.dumps(
         {"drtest": {"password_hash": hash_password("correct-horse-9"), "role": "clinician"}}))
 
+    from api.server import app
     from fastapi.testclient import TestClient
-    yield TestClient(api.server.app)
+    yield TestClient(app)
 
     os.environ["APP_MODE"] = "demo"
-    importlib.reload(core.app_mode)
-    importlib.reload(core.auth)
-    importlib.reload(api.server)
+    os.environ.pop("AUTH_USERS_FILE", None)
 
 
 def test_health_stays_public(clinical_client):

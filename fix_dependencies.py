@@ -9,7 +9,6 @@ Fix dependency conflicts by uninstalling conflicting packages and reinstalling c
 """
 
 import subprocess
-import sys
 
 def run_command(cmd, description):
     """Run a command and handle errors"""
