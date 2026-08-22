@@ -9,6 +9,7 @@ import re
 import json
 import hashlib
 import logging
+import threading
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -21,6 +22,7 @@ from core.extract import extractor_generate
 from core.answer import answerer_generate
 from core.retriever import (
     get_retriever, render_docs, get_doc_count, get_top_k,
+    warm_up as retriever_warm_up,
     PERSIST_DIR, COLLECTION, EMB_MODEL
 )
 try:
@@ -69,6 +71,13 @@ else:
 
 
 app = FastAPI(title="Multimodal Clinical Reference (Advisory)")
+
+
+@app.on_event("startup")
+async def _warm_up_models() -> None:
+    # Load the vector store and cross-encoder off the request path so the
+    # first live query doesn't pay model-load (or download) latency.
+    threading.Thread(target=retriever_warm_up, daemon=True).start()
 
 # Add CORS middleware (configurable via FRONTEND_ORIGINS env var)
 origins_env = os.getenv(
