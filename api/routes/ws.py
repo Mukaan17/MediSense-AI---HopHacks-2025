@@ -19,6 +19,7 @@ log = logging.getLogger("api")
 
 from api.state import (
     _case_store,
+    record_case_event,
 )
 from api.pipeline import (
     _apply_questions,
@@ -119,6 +120,8 @@ async def ws_case(ws: WebSocket, case_id: str):
                     log.warning(f"[coach] question generation failed: {e}")
             _apply_questions(hud, questions)
 
+        record_case_event(case_id, "hud_update",
+                          {"dx": hud.get("dx"), "conf": hud.get("conf")})
         await ws.send_json(hud)
 
     await _send_update()
@@ -132,6 +135,8 @@ async def ws_case(ws: WebSocket, case_id: str):
             prefixed = f"{speaker}: {utt.strip()}" if speaker in ("patient", "doctor") else utt.strip()
             case.setdefault("utterances", []).append(prefixed)
             _case_store.put(case_id, case)
+            record_case_event(case_id, "utterance_added",
+                              {"text": utt.strip()[:500], "speaker": speaker})
             return utt.strip(), speaker
         return None
 

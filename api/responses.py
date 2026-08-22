@@ -145,6 +145,32 @@ class FinalizeCaseResponse(BaseModel):
     disclaimer: str
 
 
+class CaseSummary(BaseModel):
+    case_id: str
+    patient_id: Optional[str] = None
+    created_at: str
+    updated_at: str
+    utterance_count: int
+    top_condition: Optional[str] = None
+
+
+class CaseListResponse(BaseModel):
+    cases: List[CaseSummary]
+    count: int
+
+
+class TimelineEvent(BaseModel):
+    ts: str
+    type: str
+    payload: Dict[str, Any]
+
+
+class TimelineResponse(BaseModel):
+    case_id: str
+    events: List[TimelineEvent]
+    count: int
+
+
 class QuestionFeedbackResponse(BaseModel):
     case_id: str
     recorded: int

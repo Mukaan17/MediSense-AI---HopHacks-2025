@@ -263,3 +263,26 @@ def reset_retriever_singleton() -> None:
 
 
 _load_ehr()
+
+
+def record_case_event(case_id: str, event_type: str, payload=None) -> None:
+    """Append to the durable case timeline; a no-op unless the active store
+    carries the persistence layer (CASE_DB_URL). Never raises."""
+    append = getattr(_case_store, "append_event", None)
+    if append is None:
+        return
+    try:
+        append(case_id, event_type, payload or {})
+    except Exception:
+        pass
+
+
+def save_case_report(case_id: str, report: str, model=None, fusion=None) -> None:
+    """Store a generated report durably; no-op without the persistence layer."""
+    save = getattr(_case_store, "save_report", None)
+    if save is None:
+        return
+    try:
+        save(case_id, report, model, fusion or {})
+    except Exception:
+        pass

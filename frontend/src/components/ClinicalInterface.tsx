@@ -21,12 +21,13 @@ import LiveCoach from './LiveCoach';
 import VoiceRecorder from './VoiceRecorder';
 import ConversationChat, { ConversationChatRef } from './ConversationChat';
 import LiveAnalysisPanel from './LiveAnalysisPanel';
+import CaseHistory from './CaseHistory';
 import { processAPIResponse } from '../lib/reportMapper';
 import { useLiveCase } from '../hooks/useLiveCase';
 
 const ClinicalInterface: React.FC = () => {
   // State management
-  const [currentView, setCurrentView] = useState<'input' | 'results' | 'report'>('input');
+  const [currentView, setCurrentView] = useState<'input' | 'results' | 'report' | 'history'>('input');
   const [isLoading, setIsLoading] = useState(false);
   const [patient, setPatient] = useState<Patient>({});
   const [conversation, setConversation] = useState<string[]>([]);
@@ -297,6 +298,17 @@ const ClinicalInterface: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <AnimatePresence mode="wait">
+          {currentView === 'history' && (
+            <motion.div
+              key="history"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <CaseHistory onBack={() => setCurrentView('input')} />
+            </motion.div>
+          )}
+
           {currentView === 'input' && (
             <motion.div
               key="input"
@@ -576,7 +588,7 @@ const ClinicalInterface: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-center space-x-4">
+              <div className="flex justify-center space-x-4 print:hidden">
                 <button
                   onClick={handleInference}
                   disabled={isLoading || (conversation.length === 0 && !uploadedImage)}
@@ -611,6 +623,13 @@ const ClinicalInterface: React.FC = () => {
                       <span>Structured Diagnosis</span>
                     </div>
                   )}
+                </button>
+
+                <button
+                  onClick={() => setCurrentView('history')}
+                  className="btn-secondary px-6 py-3 text-lg"
+                >
+                  Case History
                 </button>
               </div>
             </motion.div>
