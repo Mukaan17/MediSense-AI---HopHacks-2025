@@ -41,6 +41,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/case/{case_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Question Feedback
+         * @description Record the clinician's verdict on a suggested question. This is the
+         *     feedback loop's raw material: accepted/dismissed streams become labeled
+         *     data for question ranking (durable timeline lands with persistence).
+         */
+        post: operations["question_feedback_api_case__case_id__feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/case/{case_id}/finalize": {
         parameters: {
             query?: never;
@@ -569,6 +591,28 @@ export interface paths {
          * @description Create a case for voice-only transcription (no image)
          */
         post: operations["create_voice_case_v1_api_case_voice_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/api/case/{case_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Question Feedback
+         * @description Record the clinician's verdict on a suggested question. This is the
+         *     feedback loop's raw material: accepted/dismissed streams become labeled
+         *     data for question ranking (durable timeline lands with persistence).
+         */
+        post: operations["question_feedback_v1_api_case__case_id__feedback_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1514,6 +1558,20 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** QuestionFeedbackIn */
+        QuestionFeedbackIn: {
+            /** Action */
+            action: string;
+            /** Question */
+            question: string;
+        };
+        /** QuestionFeedbackResponse */
+        QuestionFeedbackResponse: {
+            /** Case Id */
+            case_id: string;
+            /** Recorded */
+            recorded: number;
+        };
         /** ReloadEhrResponse */
         ReloadEhrResponse: {
             /** Ehr Loaded */
@@ -1664,6 +1722,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseCreateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    question_feedback_api_case__case_id__feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionFeedbackIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionFeedbackResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2446,6 +2539,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseCreateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    question_feedback_v1_api_case__case_id__feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionFeedbackIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionFeedbackResponse"];
                 };
             };
             /** @description Validation Error */

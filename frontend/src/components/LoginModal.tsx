@@ -27,7 +27,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div role="dialog" aria-modal="true" aria-label="Clinical sign in" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <form
         onSubmit={handleSubmit}
         className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4"
@@ -38,6 +38,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onSuccess }) => {
         </div>
         <input
           className="input-field w-full"
+          aria-label="Username"
           placeholder="Username"
           autoComplete="username"
           value={form.username}
@@ -46,6 +47,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onSuccess }) => {
         <input
           className="input-field w-full"
           type="password"
+          aria-label="Password"
           placeholder="Password"
           autoComplete="current-password"
           value={form.password}

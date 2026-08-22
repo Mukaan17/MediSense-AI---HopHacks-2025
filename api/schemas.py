@@ -15,3 +15,9 @@ class InferRequest(BaseModel):
 
 class TranscribeIn(BaseModel):
     utterance: str
+
+class QuestionFeedbackIn(BaseModel):
+    question: str
+    # accepted = the clinician asked it; dismissed = judged not useful.
+    # This stream becomes labeled training data for question ranking.
+    action: str  # "accepted" | "dismissed"

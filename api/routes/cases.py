@@ -41,11 +41,13 @@ from api.guards import (
     _call_llm,
 )
 from api.schemas import (
+    QuestionFeedbackIn,
     TranscribeIn,
 )
 from api.responses import (
     CaseCreateResponse,
     FinalizeCaseResponse,
+    QuestionFeedbackResponse,
     ReportStatusResponse,
 )
 from api.pipeline import (
@@ -236,6 +238,26 @@ def transcribe_step(
         "rag_advisory": advisory,
         "coach": {"suggested": questions}
     }
+
+@router.post("/api/case/{case_id}/feedback", response_model=QuestionFeedbackResponse)
+def question_feedback(case_id: str, body: QuestionFeedbackIn):
+    """Record the clinician's verdict on a suggested question. This is the
+    feedback loop's raw material: accepted/dismissed streams become labeled
+    data for question ranking (durable timeline lands with persistence)."""
+    import time as _time
+    case = _case_store.get(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="case_id not found")
+    action = (body.action or "").strip().lower()
+    if action not in ("accepted", "dismissed"):
+        raise HTTPException(status_code=422, detail="action must be 'accepted' or 'dismissed'")
+    case.setdefault("feedback", []).append({
+        "question": body.question.strip()[:300],
+        "action": action,
+        "ts": _time.time(),
+    })
+    _case_store.put(case_id, case)
+    return {"case_id": case_id, "recorded": len(case["feedback"])}
 
 @router.post("/api/case/{case_id}/finalize", response_model=FinalizeCaseResponse)
 async def finalize_case(case_id: str):
