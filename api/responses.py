@@ -123,8 +123,21 @@ class FusionSummary(BaseModel):
 
 
 class FinalizeCaseResponse(BaseModel):
+    """Inline mode returns the full report (status='complete'); queue mode
+    returns status='queued' and the client polls /api/case/{id}/report."""
     case_id: str
-    report: str
+    status: str = "complete"
+    report: Optional[str] = None
     model: Optional[str] = None
-    fusion: FusionSummary
+    fusion: Optional[FusionSummary] = None
     disclaimer: str
+
+
+class ReportStatusResponse(BaseModel):
+    case_id: str
+    status: str  # queued | running | complete | error
+    report: Optional[str] = None
+    model: Optional[str] = None
+    fusion: Optional[FusionSummary] = None
+    disclaimer: Optional[str] = None
+    error: Optional[str] = None

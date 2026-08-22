@@ -3,7 +3,7 @@
 The two WebSocket endpoints live in routes/ws.py."""
 
 import logging
-import asyncio
+import os
 import uuid
 
 from fastapi import (
@@ -20,10 +20,6 @@ from core.evidence_engine import build_evidence
 from core.domains import bucket_domains
 from core.questioner_llm import (
     propose_questions_llm,
-)
-from core.llm_client import (
-    anthropic_available, invoke_claude_full, get_llm,
-    get_final_model, get_fallback_final_model,
 )
 
 log = logging.getLogger("api")
@@ -50,16 +46,15 @@ from api.schemas import (
 from api.responses import (
     CaseCreateResponse,
     FinalizeCaseResponse,
+    ReportStatusResponse,
 )
 from api.pipeline import (
-    FINAL_REPORT_SYSTEM,
     _compact_live,
     _confidence_and_margin,
-    _final_report_prompt,
-    _recompute_case,
     _scan_text_findings,
     _scope_hint,
     _summarize_ehr,
+    generate_final_report,
 )
 
 router = APIRouter()
@@ -244,7 +239,9 @@ def transcribe_step(
 
 @router.post("/api/case/{case_id}/finalize", response_model=FinalizeCaseResponse)
 async def finalize_case(case_id: str):
-    """Deep advisory report over the full conversation once a live case ends."""
+    """Deep advisory report over the full conversation once a live case
+    ends. FINALIZE_MODE=queue (with Redis + an arq worker) moves the slow
+    LLM call off the request path; the default stays inline."""
     case = _case_store.get(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="case_id not found")
@@ -252,37 +249,49 @@ async def finalize_case(case_id: str):
     if not utterances:
         raise HTTPException(status_code=400, detail="case has no utterances to summarize")
 
-    _, _, details = await asyncio.to_thread(_recompute_case, case)
-    conversation = "\n".join(utterances)
-    ehr_ctx = _summarize_ehr(case.get("ehr")) if case.get("ehr") else ""
-    prompt = _final_report_prompt(conversation, ehr_ctx, details["ranked"], details["ctx"])
+    if os.getenv("FINALIZE_MODE", "inline").strip().lower() == "queue":
+        pool = await _get_arq_pool()
+        if pool is not None:
+            case["report_job"] = {"status": "queued"}
+            _case_store.put(case_id, case)
+            await pool.enqueue_job("finalize_report_job", case_id)
+            return {"case_id": case_id, "status": "queued",
+                    "disclaimer": "Advisory reference only - not a diagnosis. Correlate clinically."}
+        log.warning("[finalize] FINALIZE_MODE=queue but no worker pool; running inline")
 
-    model_used = None
-    report = None
-    if anthropic_available():
-        try:
-            model_used = get_final_model()
-            report = await invoke_claude_full(prompt, model=model_used,
-                                              system=FINAL_REPORT_SYSTEM)
-        except Exception as e:
-            log.warning(f"[finalize] Claude report failed, falling back to Gemini: {e}")
-            report = None
-    if report is None:
-        fallback_model = get_fallback_final_model()
-        def _gemini_report() -> str:
-            lm = get_llm(model=fallback_model)
-            return lm.invoke(f"{FINAL_REPORT_SYSTEM}\n\n{prompt}").content
-        try:
-            report = await asyncio.to_thread(_gemini_report)
-            model_used = fallback_model
-        except Exception as e:
-            raise HTTPException(status_code=503, detail=f"No LLM available for report: {e}")
+    try:
+        result = await generate_final_report(case)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    return {"case_id": case_id, "status": "complete", **result}
 
-    return {
-        "case_id": case_id,
-        "report": report,
-        "model": model_used,
-        "fusion": {"top10": details["ranked"], "top_confidence": details["top_conf"],
-                   "margin": details["margin"]},
-        "disclaimer": "Advisory reference only - not a diagnosis. Correlate clinically.",
-    }
+@router.get("/api/case/{case_id}/report", response_model=ReportStatusResponse)
+def report_status(case_id: str):
+    """Status/result of a queued finalize job (poll after status=queued)."""
+    case = _case_store.get(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="case_id not found")
+    job = case.get("report_job")
+    if not job:
+        raise HTTPException(status_code=404, detail="no report has been requested for this case")
+    return {"case_id": case_id, **job}
+
+_arq_pool = None
+
+async def _get_arq_pool():
+    """Lazily create (and cache) the arq Redis pool; None when Redis or
+    arq is unavailable, which drops finalize back to inline mode."""
+    global _arq_pool
+    if _arq_pool is not None:
+        return _arq_pool
+    url = os.getenv("REDIS_URL", "").strip()
+    if not url:
+        return None
+    try:
+        from arq import create_pool
+        from arq.connections import RedisSettings
+        _arq_pool = await create_pool(RedisSettings.from_dsn(url))
+    except Exception as e:
+        log.warning(f"[finalize] arq pool unavailable: {e}")
+        _arq_pool = None
+    return _arq_pool

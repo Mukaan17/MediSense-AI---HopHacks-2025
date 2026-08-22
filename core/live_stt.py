@@ -28,9 +28,14 @@ MAX_BUFFER_MS = int(os.getenv("STT_MAX_BUFFER_MS", "15000"))
 
 STT_MODEL = os.getenv("STT_LIVE_MODEL", "tiny.en")
 
-# Single worker: chunks from all connections are serialized through one
-# model instance, which is how ctranslate2 stays memory-sane on CPU.
-stt_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="live-stt")
+# Transcription concurrency. Default 1 preserves the serialized behavior;
+# raising STT_WORKERS sizes both this pool and the model's internal worker
+# count (one shared ctranslate2 model, which stays memory-sane on CPU) so
+# concurrent speakers stop queueing behind each other. See
+# docs/ARCHITECTURE.md for the flag-gated dedicated-worker design that
+# takes this out of process entirely.
+STT_WORKERS = max(1, int(os.getenv("STT_WORKERS", "1")))
+stt_executor = ThreadPoolExecutor(max_workers=STT_WORKERS, thread_name_prefix="live-stt")
 
 _fw_model = None
 _fw_error: Optional[str] = None
@@ -46,7 +51,8 @@ def _get_model():
     if _fw_model is None and _fw_error is None:
         try:
             from faster_whisper import WhisperModel
-            _fw_model = WhisperModel(STT_MODEL, device="cpu", compute_type="int8")
+            _fw_model = WhisperModel(STT_MODEL, device="cpu", compute_type="int8",
+                                     num_workers=STT_WORKERS)
             print(f"[STT] faster-whisper {STT_MODEL} loaded (live chunks)")
         except Exception as e:  # pragma: no cover - optional dependency
             _fw_error = str(e)
