@@ -394,3 +394,18 @@ VOICE_INTEGRATION_README.md
 .claude/
 CLAUDE_MEMORY.md
 **/CLAUDE_MEMORY.md
+# Auth users and audit logs never enter the repo
+config/users.json
+logs/audit.log
+
+# Playwright artifacts
+frontend/test-results/
+frontend/playwright-report/
+
+# Mutation testing cache
+.mutmut-cache
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+*.tfstate*

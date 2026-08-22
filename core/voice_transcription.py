@@ -10,10 +10,9 @@ This module provides audio transcription capabilities with speaker diarization.
 
 import os
 import tempfile
-import json
 import uuid
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 try:
     import librosa
 except Exception:  # pragma: no cover - optional dependency
@@ -161,10 +160,12 @@ class VoiceTranscriptionService:
             # Normalize audio
             audio = librosa.util.normalize(audio)
             
-            # Create temporary file for processed audio
-            processed_path = tempfile.mktemp(suffix=".wav")
+            # Create temporary file for processed audio (mkstemp instead of
+            # the race-prone deprecated mktemp)
+            fd, processed_path = tempfile.mkstemp(suffix=".wav")
+            os.close(fd)
             sf.write(processed_path, audio, sr)
-            
+
             return processed_path
         except Exception as e:
             print(f"Error preprocessing audio: {e}")
@@ -234,7 +235,7 @@ class VoiceTranscriptionService:
         # Generate description if not provided
         if not description:
             all_text = " ".join([seg.get("text", "") for seg in result.get("segments", [])])
-            description = f"Audio conversation with multiple speakers detected."
+            description = "Audio conversation with multiple speakers detected."
         
         print(f"📝 Formatting {len(result.get('segments', []))} segments...")
         
@@ -337,8 +338,13 @@ class VoiceTranscriptionService:
         # Generate session ID
         session_id = str(uuid.uuid4())
         
-        # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
+        # Save uploaded file temporarily, keeping the real container suffix
+        # (browser recordings are typically webm/opus, not wav) so the
+        # decoder isn't misled by the extension.
+        suffix = os.path.splitext(filename or "")[1].lower() or ".wav"
+        if suffix not in (".wav", ".webm", ".ogg", ".mp3", ".m4a", ".flac", ".mp4"):
+            suffix = ".wav"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
             temp_file.write(file_content)
             temp_file_path = temp_file.name
         

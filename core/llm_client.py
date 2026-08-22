@@ -1,20 +1,184 @@
 # -*- coding: utf-8 -*-
-"""Centralized LLM client for Google AI Studio (Gemini).
+"""Centralized LLM clients.
 
-This module intentionally keeps a simple `.invoke(prompt).content` interface so
-existing callers do not need provider-specific logic.
+Two providers:
+- Anthropic Claude (primary when ANTHROPIC_API_KEY is set): true async token
+  streaming for the live HUD and a deep final-report call.
+- Google AI Studio Gemini (fallback / default): synchronous
+  `.invoke(prompt).content` contract kept for all existing callers.
 """
 
 import os
-from typing import Any, Dict, Iterable, List
+from typing import Any, AsyncIterator, Dict, Iterable, List
 
 import requests
 from dotenv import load_dotenv
 
+from . import metrics
+
 _llm = None
 _llm_model = None
+_llm_temperature = None
 
 load_dotenv()
+
+# --------------- Model routing ---------------
+
+DEFAULT_LIVE_MODEL = "claude-haiku-4-5"
+DEFAULT_FINAL_MODEL = "claude-sonnet-4-6"
+
+_anthropic_async = None
+
+
+def _models_cfg() -> Dict[str, Any]:
+    from .config import load_models
+    return (load_models() or {}).get("llm", {}) or {}
+
+
+def anthropic_available() -> bool:
+    return bool(os.getenv("ANTHROPIC_API_KEY"))
+
+
+def gemini_available() -> bool:
+    return bool(os.getenv("GEMINI_API_KEY"))
+
+
+def _system_blocks(system: str):
+    """System prompt as content blocks with a cache breakpoint. Prompt
+    caching is a prefix match and only prefixes >=~1024 tokens cache, so
+    this is a free hook: it never hurts, and long stable system prompts
+    start caching without further code change."""
+    return [{"type": "text", "text": system,
+             "cache_control": {"type": "ephemeral"}}]
+
+
+async def invoke_claude_json(prompt: str, schema: Dict[str, Any], model: str = None,
+                             system: str = "", max_tokens: int = 4096) -> Dict[str, Any]:
+    """Schema-constrained JSON via structured outputs: the API guarantees
+    the response text parses against `schema`, making salvage parsing a
+    fallback rather than the contract."""
+    import json as _json
+
+    client = _get_anthropic_async()
+    kwargs: Dict[str, Any] = {
+        "model": model or get_final_model(),
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+        "output_config": {"format": {"type": "json_schema", "schema": schema}},
+    }
+    if system:
+        kwargs["system"] = _system_blocks(system)
+    model_name = kwargs["model"]
+    try:
+        with metrics.timed("llm_latency", provider="anthropic", model=model_name):
+            message = await client.messages.create(**kwargs)
+    except Exception:
+        metrics.inc("llm_errors", provider="anthropic", model=model_name)
+        raise
+    usage = getattr(message, "usage", None)
+    if usage:
+        metrics.inc("llm_tokens", float(usage.input_tokens or 0),
+                    provider="anthropic", model=model_name, kind="input")
+        metrics.inc("llm_tokens", float(usage.output_tokens or 0),
+                    provider="anthropic", model=model_name, kind="output")
+    metrics.inc("llm_calls", provider="anthropic", model=model_name)
+    text = next((b.text for b in message.content if getattr(b, "type", "") == "text"), "")
+    return _json.loads(text)
+
+
+def get_live_model() -> str:
+    """Model for low-latency live HUD suggestions."""
+    cfg = _models_cfg()
+    if anthropic_available():
+        return os.getenv("LIVE_MODEL", cfg.get("live_hud", DEFAULT_LIVE_MODEL))
+    return os.getenv("GEMINI_MODEL", cfg.get("fallback_live", "gemini-2.5-flash-lite"))
+
+
+def get_final_model() -> str:
+    """Model for the deep post-conversation report."""
+    cfg = _models_cfg()
+    if anthropic_available():
+        return os.getenv("FINAL_MODEL", cfg.get("final_report", DEFAULT_FINAL_MODEL))
+    return cfg.get("fallback_final", "gemini-2.5-flash")
+
+
+def get_fallback_final_model() -> str:
+    """Gemini model used when a Claude final-report call fails."""
+    return _models_cfg().get("fallback_final", "gemini-2.5-flash")
+
+
+def _get_anthropic_async():
+    """Cached AsyncAnthropic client. Raises if the SDK or key is missing."""
+    global _anthropic_async
+    if _anthropic_async is None:
+        if not anthropic_available():
+            raise RuntimeError("ANTHROPIC_API_KEY not set")
+        from anthropic import AsyncAnthropic
+        _anthropic_async = AsyncAnthropic()
+    return _anthropic_async
+
+
+async def stream_claude_tokens(prompt: str, model: str = None, system: str = "",
+                               max_tokens: int = 512) -> AsyncIterator[str]:
+    """Async generator yielding text deltas as they arrive (true streaming)."""
+    client = _get_anthropic_async()
+    kwargs: Dict[str, Any] = {
+        "model": model or get_live_model(),
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if system:
+        kwargs["system"] = _system_blocks(system)
+    model_name = kwargs["model"]
+    try:
+        with metrics.timed("llm_latency", provider="anthropic", model=model_name):
+            async with client.messages.stream(**kwargs) as stream:
+                async for text in stream.text_stream:
+                    yield text
+                message = await stream.get_final_message()
+    except Exception:
+        metrics.inc("llm_errors", provider="anthropic", model=model_name)
+        raise
+    usage = getattr(message, "usage", None)
+    if usage:
+        metrics.inc("llm_tokens", float(usage.input_tokens or 0),
+                    provider="anthropic", model=model_name, kind="input")
+        metrics.inc("llm_tokens", float(usage.output_tokens or 0),
+                    provider="anthropic", model=model_name, kind="output")
+    metrics.inc("llm_calls", provider="anthropic", model=model_name)
+
+
+async def invoke_claude_full(prompt: str, model: str = None, system: str = "",
+                             max_tokens: int = 4096) -> str:
+    """Full response for report generation. Streams under the hood so large
+    outputs don't hit HTTP timeouts."""
+    client = _get_anthropic_async()
+    kwargs: Dict[str, Any] = {
+        "model": model or get_final_model(),
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if system:
+        kwargs["system"] = _system_blocks(system)
+    model_name = kwargs["model"]
+    try:
+        with metrics.timed("llm_latency", provider="anthropic", model=model_name):
+            async with client.messages.stream(**kwargs) as stream:
+                message = await stream.get_final_message()
+    except Exception:
+        metrics.inc("llm_errors", provider="anthropic", model=model_name)
+        raise
+    usage = getattr(message, "usage", None)
+    if usage:
+        metrics.inc("llm_tokens", float(usage.input_tokens or 0),
+                    provider="anthropic", model=model_name, kind="input")
+        metrics.inc("llm_tokens", float(usage.output_tokens or 0),
+                    provider="anthropic", model=model_name, kind="output")
+    metrics.inc("llm_calls", provider="anthropic", model=model_name)
+    parts = [block.text for block in message.content if getattr(block, "type", "") == "text"]
+    return "\n".join(parts).strip()
+
+# --------------- Gemini ---------------
 
 
 class _InvokeResponse:
@@ -49,7 +213,12 @@ class _GeminiInvokeClient:
             return f"{role}: {content}"
         return str(prompt)
 
-    def invoke(self, prompt: Any) -> _InvokeResponse:
+    def invoke_json(self, prompt: Any) -> _InvokeResponse:
+        """JSON response mode: the API returns syntactically valid JSON
+        (responseMimeType), demoting fence/prose salvage to a fallback."""
+        return self.invoke(prompt, response_json=True)
+
+    def invoke(self, prompt: Any, response_json: bool = False) -> _InvokeResponse:
         text = self._to_text(prompt).strip()
         if not text:
             return _InvokeResponse("")
@@ -61,12 +230,14 @@ class _GeminiInvokeClient:
             "generationConfig": {
                 "temperature": self.temperature,
                 "maxOutputTokens": self.max_output_tokens,
+                **({"responseMimeType": "application/json"} if response_json else {}),
             },
         }
 
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=self.timeout_s)
         except Exception as e:
+            metrics.inc("llm_errors", provider="gemini", model=self.model)
             raise RuntimeError(f"Gemini request failed: {e}") from e
 
         if resp.status_code >= 400:
@@ -76,12 +247,20 @@ class _GeminiInvokeClient:
                 detail = str((body.get("error") or {}).get("message") or body)
             except Exception:
                 detail = resp.text[:500]
+            metrics.inc("llm_errors", provider="gemini", model=self.model)
             raise RuntimeError(f"Gemini API error ({resp.status_code}): {detail}")
 
         try:
             body = resp.json()
         except Exception as e:
             raise RuntimeError(f"Gemini returned non-JSON response: {e}") from e
+
+        usage = body.get("usageMetadata") or {}
+        metrics.inc("llm_tokens", float(usage.get("promptTokenCount") or 0),
+                    provider="gemini", model=self.model, kind="input")
+        metrics.inc("llm_tokens", float(usage.get("candidatesTokenCount") or 0),
+                    provider="gemini", model=self.model, kind="output")
+        metrics.inc("llm_calls", provider="gemini", model=self.model)
 
         candidates = body.get("candidates") or []
         if not candidates:
@@ -99,8 +278,12 @@ class _GeminiInvokeClient:
 
 
 def get_llm(model: str = None, temperature: float = None):
-    """Return a cached Gemini client with `.invoke(...).content` contract."""
-    global _llm, _llm_model
+    """Return a cached Gemini client with `.invoke(...).content` contract.
+
+    The cache is keyed on (model, temperature): callers requesting a
+    different temperature get a matching client instead of silently
+    inheriting the cached one's setting."""
+    global _llm, _llm_model, _llm_temperature
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY not set. Please set your Google AI Studio API key.")
@@ -108,10 +291,11 @@ def get_llm(model: str = None, temperature: float = None):
     requested_model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
     temp = float(temperature if temperature is not None else os.getenv("LLM_TEMPERATURE", "0.1"))
 
-    if _llm is None or _llm_model != requested_model:
+    if _llm is None or _llm_model != requested_model or _llm_temperature != temp:
         _llm = _GeminiInvokeClient(api_key=api_key, model=requested_model, temperature=temp)
         _llm_model = requested_model
-        print(f"[LLM] Initialized Gemini model: {_llm_model}")
+        _llm_temperature = temp
+        print(f"[LLM] Initialized Gemini model: {_llm_model} (temperature={temp})")
 
     return _llm
 

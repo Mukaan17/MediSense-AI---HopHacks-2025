@@ -3,17 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, Square, Play, Pause, Trash2, Brain } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { startBrowserTranscriber } from '../lib/transcriber';
+import { startWhisperTranscriber } from '../lib/pcmTranscriber';
 
 interface VoiceRecorderProps {
   onTranscription: (transcript: string) => void;
   onVoiceInference?: (audioFile: File) => void;
   onStartLive?: () => ((text: string) => void) | void; // returns send function
   onStopLive?: () => void;
-  onInterimTranscript?: (transcript: string) => void; // for real-time chat updates
   className?: string;
 }
 
-const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceInference, onStartLive, onStopLive, onInterimTranscript, className = '' }) => {
+const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceInference, onStartLive, onStopLive, className = '' }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -22,10 +22,11 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
   const [transcript, setTranscript] = useState('');
   const stopSTTRef = useRef<(() => void) | null>(null);
   const liveSendRef = useRef<((text: string) => void) | null>(null);
+  const stopLiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
@@ -40,6 +41,12 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
 
   const startRecording = async () => {
     try {
+      // A pending deferred stop from the previous recording would tear down
+      // the live session we are about to reuse.
+      if (stopLiveTimerRef.current) {
+        clearTimeout(stopLiveTimerRef.current);
+        stopLiveTimerRef.current = null;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -54,7 +61,10 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' });
+        // Label the blob with the recorder's real container type
+        // (typically audio/webm;codecs=opus) instead of pretending it's WAV.
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const blob = new Blob(chunks, { type: mimeType });
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioURL(url);
@@ -69,24 +79,25 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
         setRecordingTime(prev => prev + 1);
       }, 1000);
 
-      // Start browser STT immediately and push final chunks live
+      // Start live STT and push final utterances to notes + the live case WS.
+      // Server-side transcription (AudioWorklet -> PCM -> faster-whisper) is
+      // preferred: it works in every browser. The Chrome-only Web Speech API
+      // remains the fallback when the backend STT socket is unavailable.
       try {
         if (onStartLive) {
           const sender = onStartLive();
           if (typeof sender === 'function') liveSendRef.current = sender;
         }
-        stopSTTRef.current = startBrowserTranscriber(
-          (txt: string) => {
-            // Interim results for live chat updates
-            onInterimTranscript?.(txt);
-            liveSendRef.current?.(txt);
-          },
-          (txt: string) => {
-            // Final results for clinical notes
-            onTranscription(txt);
-            liveSendRef.current?.(txt);
-          }
-        );
+        const onFinalText = (txt: string) => {
+          onTranscription(txt);
+          liveSendRef.current?.(txt);
+        };
+        try {
+          stopSTTRef.current = await startWhisperTranscriber(onFinalText);
+        } catch (serverErr) {
+          console.warn('Server STT unavailable, using browser STT:', serverErr);
+          stopSTTRef.current = startBrowserTranscriber(onFinalText);
+        }
       } catch (e) {
         // Fallback: will only do post-stop transcription
         console.warn('Live STT not available:', e);
@@ -106,9 +117,15 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
-      // Stop live STT + WS
+      // Stop live STT; defer the live-session teardown so the server-side
+      // flush transcript (up to ~3s after Stop) still reaches the case WS.
       if (stopSTTRef.current) { try { stopSTTRef.current(); } catch {} stopSTTRef.current = null; }
-      if (onStopLive) onStopLive();
+      if (onStopLive) {
+        stopLiveTimerRef.current = setTimeout(() => {
+          stopLiveTimerRef.current = null;
+          onStopLive();
+        }, 3500);
+      }
       toast.success('Recording stopped');
     }
   };
@@ -191,7 +208,9 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   if (audioBlob) {
-                    const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
+                    const ext = audioBlob.type.includes('webm') ? 'webm'
+                      : audioBlob.type.includes('ogg') ? 'ogg' : 'wav';
+                    const audioFile = new File([audioBlob], `recording.${ext}`, { type: audioBlob.type });
                     onVoiceInference(audioFile);
                   }
                 }}

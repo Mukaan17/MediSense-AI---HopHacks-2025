@@ -10,7 +10,6 @@ Tests image-only functionality without requiring LLM API keys.
 """
 
 import requests
-import json
 import sys
 
 def test_image_only():

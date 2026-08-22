@@ -1,0 +1,38 @@
+# Model registry: every deployable model artifact is described here so a
+# checkpoint swap is a reviewed change with recorded metrics, not a file
+# copy. scripts/model_gate.py compares a candidate entry against the
+# current one and fails on regression.
+#
+# sha256 is of the checkpoint file; recompute with `sha256sum <file>`.
+
+imaging_cxr:
+  current:
+    checkpoint: biovil_finetuned_best.pt      # resolved via CXR_CKPT env
+    sha256: null                              # fill when the artifact is pinned
+    trained: "2025-09-13"
+    eval_set: "synthetic-paired CheXpert val split (demo-grade)"
+    metrics:
+      val_macro_auroc: 0.78
+    calibration: null                         # models/calibration_cxr.json once fitted
+    notes: >-
+      Demo-grade head. Production requires a fine-tune on credentialed
+      CheXpert/MIMIC-CXR with a held-out eval and fitted calibration
+      (docs/IMPROVEMENT_ROADMAP.md section 1).
+
+embedding_kb:
+  current:
+    model: sentence-transformers/all-MiniLM-L6-v2
+    dim: 384
+    metrics:
+      topical_recall_at_5: 1.0                # tests/test_retrieval_eval.py labeled set
+    notes: >-
+      General-purpose embeddings. Candidate medical models are evaluated
+      with scripts/embedding_experiment.py before adoption.
+
+stt_live:
+  current:
+    model: tiny.en                            # STT_LIVE_MODEL env
+    compute: cpu-int8
+    notes: >-
+      Latency-first pick. Compare candidates with scripts/stt_benchmark.py
+      (latency + WER on the committed fixture) before changing.

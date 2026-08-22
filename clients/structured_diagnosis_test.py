@@ -5,7 +5,6 @@ Test client for the new structured differential diagnosis endpoint
 
 import json
 import requests
-from typing import Dict, Any
 
 # Server configuration
 BASE_URL = "http://localhost:8000"

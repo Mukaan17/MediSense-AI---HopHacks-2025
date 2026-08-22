@@ -102,6 +102,7 @@ export interface ClinicalReport {
   citations: string[];
   generatedAt: string;
   confidence: number;
+  xai?: XAIExplanation;
 }
 
 export interface EHRIntegration {
@@ -117,10 +118,21 @@ export interface EHRIntegration {
   };
 }
 
+// Real facts about the loaded knowledge base, as reported by the backend.
+// The UI renders only what the store manifest actually contains.
 export interface KnowledgeBaseMode {
-  mode: 'clinical' | 'research';
+  mode: string;
   sources: string[];
-  lastUpdated: string;
+  doc_count?: number | null;
+  emb_model?: string | null;
+  built_at?: string | null;
+  last_updated?: string | null;
+  description?: string;
+}
+
+export interface LLMStatus {
+  anthropic: boolean;
+  gemini: boolean;
 }
 
 export interface APIResponse<T> {
@@ -134,14 +146,14 @@ export interface APIResponse<T> {
 export interface InferRequest {
   utterances: string[];
   patient?: Patient;
-  mode?: 'clinical' | 'research';
+  mode?: string;
 }
 
 export interface MultimodalInferRequest {
   utterances: string[];
   patient?: Patient;
   image?: File;
-  mode?: 'clinical' | 'research';
+  mode?: string;
 }
 
 export interface QuickEntryRequest {

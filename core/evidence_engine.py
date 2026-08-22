@@ -218,6 +218,11 @@ def build_evidence(
                 "contribution": round(contrib, 4),
             }
         )
+        # Surface EHR-driven shifts in the human-readable reasons the UI
+        # renders - they were only in ehr_evidence before.
+        if s.get("reason"):
+            sign = "+" if contrib >= 0 else ""
+            shift_reasons.append(f"EHR {s['reason']} -> {issue} ({sign}{round(contrib, 2)})")
 
     adjusted_probs = {k: _sigmoid(v) for k, v in logits.items()}
     adjusted_top10 = sorted(

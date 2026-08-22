@@ -43,6 +43,14 @@ def load_rag() -> Dict[str, Any]:
                 pass
         return data
 
+def load_models() -> Dict[str, Any]:
+    """LLM routing table from config/models.yaml; {} when absent."""
+    try:
+        with open(CFG_DIR / "models.yaml", "r") as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        return {}
+
 def load_allowed_labels() -> Dict[str, Any]:
     """Return the union of all labels across domains.yaml.
     Falls back to labels.json if domains.yaml is missing or malformed.
@@ -60,6 +68,25 @@ def load_allowed_labels() -> Dict[str, Any]:
 def load_prompt(name: str) -> str:
     with open(CFG_DIR / "prompts" / f"{name}.j2", "r") as f:
         return f.read()
+
+
+# StrictUndefined so a typo'd or missing template variable fails loudly at
+# render time instead of silently shipping "{{ var }}" to the LLM.
+# autoescape stays off: these are LLM prompts, not HTML.
+_prompt_env = None
+
+def render_prompt(name: str, **context: Any) -> str:
+    """Render config/prompts/<name>.j2 with real Jinja2 semantics."""
+    global _prompt_env
+    if _prompt_env is None:
+        from jinja2 import Environment, FileSystemLoader, StrictUndefined
+        _prompt_env = Environment(
+            loader=FileSystemLoader(str(CFG_DIR / "prompts")),
+            undefined=StrictUndefined,
+            autoescape=False,
+            keep_trailing_newline=True,
+        )
+    return _prompt_env.get_template(f"{name}.j2").render(**context)
 
 
 def load_symptom_map() -> Dict[str, Any]:
