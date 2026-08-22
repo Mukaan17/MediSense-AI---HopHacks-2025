@@ -31,7 +31,7 @@ from core.auth import validate_clinical_config
 from core.retriever import warm_up as retriever_warm_up
 
 from api import middleware
-from api.routes import auth, cases, ehr, inference, system, voice
+from api.routes import auth, cases, ehr, inference, system, voice, ws
 
 # Clinical mode must never boot unsigned.
 validate_clinical_config()
@@ -46,6 +46,7 @@ app.include_router(inference.router)
 app.include_router(voice.router)
 app.include_router(ehr.router)
 app.include_router(cases.router)
+app.include_router(ws.router)
 
 
 @app.on_event("startup")

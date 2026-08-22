@@ -20,14 +20,9 @@ import ClinicalReportView from './ClinicalReportView';
 import LiveCoach from './LiveCoach';
 import VoiceRecorder from './VoiceRecorder';
 import ConversationChat, { ConversationChatRef } from './ConversationChat';
-import { API_CONFIG } from '../config/api';
-import { connectCaseWS, disconnectCaseWS, sendUtterance, HUD } from '../lib/wsClient';
+import LiveAnalysisPanel from './LiveAnalysisPanel';
 import { processAPIResponse } from '../lib/reportMapper';
-
-const authHeaders = (): Record<string, string> => {
-  const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+import { useLiveCase } from '../hooks/useLiveCase';
 
 const ClinicalInterface: React.FC = () => {
   // State management
@@ -46,13 +41,12 @@ const ClinicalInterface: React.FC = () => {
   const [selectedEhrPatient, setSelectedEhrPatient] = useState<string>('');
   const [appMode, setAppMode] = useState<'demo' | 'clinical'>('demo');
   const [showLogin, setShowLogin] = useState(false);
-  const [activeCaseId, setActiveCaseId] = useState<string>('');
-  const [liveHUD, setLiveHUD] = useState<HUD | null>(null);
-  const [streamingText, setStreamingText] = useState<string>('');
-  const [finalReport, setFinalReport] = useState<string>('');
-  const [isFinalizing, setIsFinalizing] = useState(false);
-  const wsRef = useRef<boolean>(false);
-  const pendingUtterancesRef = useRef<string[]>([]);
+
+  // Live-case lifecycle (case creation, WS, HUD, final report)
+  const {
+    activeCaseId, liveHUD, streamingText, finalReport, isFinalizing,
+    isLive, startLive, stopLive, finalizeCase, resetLiveCase,
+  } = useLiveCase();
 
   // Refs
   const conversationInputRef = useRef<HTMLTextAreaElement>(null);
@@ -125,31 +119,13 @@ const ClinicalInterface: React.FC = () => {
     }
   };
 
-  // Deep final report over the whole conversation once a live case ends.
-  const handleFinalizeCase = async () => {
-    if (!activeCaseId) return;
-    setIsFinalizing(true);
-    try {
-      const res = await fetch(`${API_CONFIG.BASE_URL}/api/case/${activeCaseId}/finalize`, { method: 'POST', headers: authHeaders() });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.detail || 'Report generation failed');
-      setFinalReport(data.report || '');
-      toast.success('Final report generated');
-    } catch (e: any) {
-      toast.error(e?.message || 'Could not generate final report');
-    } finally {
-      setIsFinalizing(false);
-    }
-  };
-
   // Voice recording handling. During a live case the WS echoes each utterance
   // back as transcript_chunk (which feeds the chat), so only add to the chat
-  // here when no live case is active.
+  // here when no live case is active. isLive() reads a ref at call time - the
+  // activeCaseId state here would be a stale closure from record start.
   const handleVoiceTranscription = (transcript: string) => {
     setConversation(prev => [...prev, transcript]);
-    // wsRef is a ref, so this reads the live-case state at call time - the
-    // activeCaseId state here would be a stale closure from record start.
-    if (!wsRef.current) {
+    if (!isLive()) {
       conversationChatRef.current?.addTranscriptMessage(transcript, 'patient');
     }
   };
@@ -416,119 +392,15 @@ const ClinicalInterface: React.FC = () => {
                     </div>
                     
                     {/* RAG Analysis Section */}
-                    {liveHUD && (
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-2">
-                            <Brain className="h-4 w-4 text-blue-600" />
-                            <h3 className="text-sm font-semibold text-blue-900">Live RAG Analysis</h3>
-                          </div>
-                          {liveHUD.alerts?.red_flag && (
-                            <div className="flex items-center space-x-1 text-red-600 text-xs">
-                              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                              <span>Red Flag Alert</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="space-y-3">
-                          {/* Current Diagnosis */}
-                          {liveHUD.dx && (
-                            <div className="p-3 bg-white rounded border">
-                              <div className="text-xs font-medium text-gray-600 mb-1">Current Diagnosis</div>
-                              <div className="text-sm font-semibold text-gray-900">{liveHUD.dx}</div>
-                              {liveHUD.conf && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Confidence: {(liveHUD.conf * 100).toFixed(1)}%
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Quick Facts */}
-                          {liveHUD.quick_facts && (
-                            <div className="p-3 bg-white rounded border">
-                              <div className="text-xs font-medium text-gray-600 mb-1">Key Findings</div>
-                              <div className="text-sm text-gray-800">{liveHUD.quick_facts}</div>
-                            </div>
-                          )}
-                          
-                          {/* Live streaming suggestions (token-by-token) */}
-                          {streamingText && (
-                            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded">
-                              <div className="text-xs font-medium text-indigo-800 mb-1">Coach (streaming)</div>
-                              <div className="text-sm text-indigo-900 whitespace-pre-wrap">
-                                {streamingText}
-                                <span className="inline-block w-2 h-4 bg-indigo-500 ml-0.5 animate-pulse" aria-hidden="true"></span>
-                              </div>
-                            </div>
-                          )}
+                    <LiveAnalysisPanel
+                      hud={liveHUD}
+                      streamingText={streamingText}
+                      activeCaseId={activeCaseId}
+                      finalReport={finalReport}
+                      isFinalizing={isFinalizing}
+                      onFinalize={finalizeCase}
+                    />
 
-                          {/* Next Question */}
-                          {liveHUD.next_question && (
-                            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
-                              <div className="text-xs font-medium text-yellow-800 mb-1">Suggested Next Question</div>
-                              <div className="text-sm text-yellow-900">{liveHUD.next_question}</div>
-                            </div>
-                          )}
-                          
-                          {/* Alternatives */}
-                          {liveHUD.alts && liveHUD.alts.length > 0 && (
-                            <div className="p-3 bg-white rounded border">
-                              <div className="text-xs font-medium text-gray-600 mb-1">Alternative Diagnoses</div>
-                              <div className="text-sm text-gray-800">
-                                {liveHUD.alts.join(' • ')}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Live Summary */}
-                          {liveHUD.summary && (
-                            <div className="p-3 bg-gray-50 rounded border">
-                              <div className="text-xs font-medium text-gray-600 mb-1">Conversation Summary</div>
-                              <div className="text-sm text-gray-700">{liveHUD.summary}</div>
-                            </div>
-                          )}
-                          
-                          {/* Ranked Conditions */}
-                          {liveHUD.ranked && liveHUD.ranked.length > 0 && (
-                            <div className="p-3 bg-white rounded border">
-                              <div className="text-xs font-medium text-gray-600 mb-2">Top Conditions</div>
-                              <div className="space-y-1">
-                                {liveHUD.ranked.slice(0, 3).map((condition, idx) => (
-                                  <div key={idx} className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-800">{condition.condition}</span>
-                                    <span className="text-gray-500 text-xs">
-                                      {(((condition.confidence ?? 0) * 100).toFixed(1))}%
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Deep final report */}
-                          {activeCaseId && (
-                            <div className="p-3 bg-white rounded border">
-                              <button
-                                onClick={handleFinalizeCase}
-                                disabled={isFinalizing}
-                                className="px-3 py-1.5 text-sm rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
-                              >
-                                {isFinalizing ? 'Generating report…' : 'Generate Final Report'}
-                              </button>
-                              {finalReport && (
-                                <div className="mt-3">
-                                  <div className="text-xs font-medium text-gray-600 mb-1">Advisory Case Report</div>
-                                  <div className="text-sm text-gray-800 whitespace-pre-wrap max-h-80 overflow-y-auto">{finalReport}</div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
                     <div className="text-xs text-gray-600 mb-2">
                       💡 <strong>Live Transcribing:</strong> Start recording to begin real-time analysis. Works with or without X-ray images.
                     </div>
@@ -537,63 +409,8 @@ const ClinicalInterface: React.FC = () => {
                       <VoiceRecorder
                         onTranscription={handleVoiceTranscription}
                         onVoiceInference={handleVoiceInference}
-                        onStartLive={() => {
-                          // Return a sender that queues until WS is ready
-                          const sender = (txt: string) => {
-                            if (wsRef.current) sendUtterance(txt);
-                            else pendingUtterancesRef.current.push(txt);
-                          };
-
-                          const ensureCaseAndConnect = async () => {
-                            let id = activeCaseId;
-                            try {
-                              if (!id) {
-                                let res;
-                                if (uploadedImage) {
-                                  // Create case with image
-                                  const fd = new FormData();
-                                  fd.append('file', uploadedImage);
-                                  res = await fetch(`${API_CONFIG.BASE_URL}/api/case?live=1`, { method: 'POST', body: fd, headers: authHeaders() });
-                                } else {
-                                  // Create voice-only case
-                                  res = await fetch(`${API_CONFIG.BASE_URL}/api/case/voice?live=1`, { method: 'POST', headers: authHeaders() });
-                                }
-                                if (!res.ok) throw new Error('Failed to create case');
-                                const data = await res.json();
-                                id = data?.case_id;
-                                if (id) setActiveCaseId(id);
-                              }
-                              if (!id) return;
-                              await connectCaseWS(
-                                id,
-                                (hud) => {
-                                  // A full HUD update supersedes the token stream;
-                                  // transcript-echo frames carry only transcript_chunk
-                                  // and merge into the existing HUD.
-                                  setStreamingText('');
-                                  setLiveHUD((prev) => ({ ...(prev || {}), ...hud }));
-                                },
-                                (token) => setStreamingText((prev) => prev + token)
-                              );
-                              wsRef.current = true;
-                              // Flush any queued utterances
-                              if (pendingUtterancesRef.current.length) {
-                                pendingUtterancesRef.current.forEach(t => sendUtterance(t));
-                                pendingUtterancesRef.current = [];
-                              }
-                            } catch (e) {
-                              console.error(e);
-                              toast.error('Could not start live session');
-                            }
-                          };
-                          void ensureCaseAndConnect();
-                          return sender;
-                        }}
-                        onStopLive={() => {
-                          disconnectCaseWS();
-                          wsRef.current = false;
-                          pendingUtterancesRef.current = [];
-                        }}
+                        onStartLive={() => startLive(uploadedImage)}
+                        onStopLive={stopLive}
                       />
                       <button
                         onClick={() => {
@@ -784,16 +601,8 @@ const ClinicalInterface: React.FC = () => {
                       setConversation([]);
                       setUploadedImage(null);
                       setClinicalReport(null);
-                      setActiveCaseId('');
-                      setLiveHUD(null);
-                      setStreamingText('');
-                      setFinalReport('');
                       setSelectedEhrPatient('');
-
-                      // Disconnect WebSocket
-                      disconnectCaseWS();
-                      wsRef.current = false;
-                      pendingUtterancesRef.current = [];
+                      resetLiveCase();
                       
                       // Clear conversation input
                       if (conversationInputRef.current) {
