@@ -24,6 +24,11 @@ import ConversationChat, { ConversationChatRef } from './ConversationChat';
 import { API_CONFIG } from '../config/api';
 import { connectCaseWS, disconnectCaseWS, sendUtterance, HUD } from '../lib/wsClient';
 
+const authHeaders = (): Record<string, string> => {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const ClinicalInterface: React.FC = () => {
   // State management
   const [currentView, setCurrentView] = useState<'input' | 'results' | 'report'>('input');
@@ -134,7 +139,7 @@ const ClinicalInterface: React.FC = () => {
     if (!activeCaseId) return;
     setIsFinalizing(true);
     try {
-      const res = await fetch(`${API_CONFIG.BASE_URL}/api/case/${activeCaseId}/finalize`, { method: 'POST' });
+      const res = await fetch(`${API_CONFIG.BASE_URL}/api/case/${activeCaseId}/finalize`, { method: 'POST', headers: authHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.detail || 'Report generation failed');
       setFinalReport(data.report || '');
@@ -151,7 +156,9 @@ const ClinicalInterface: React.FC = () => {
   // here when no live case is active.
   const handleVoiceTranscription = (transcript: string) => {
     setConversation(prev => [...prev, transcript]);
-    if (!activeCaseId) {
+    // wsRef is a ref, so this reads the live-case state at call time - the
+    // activeCaseId state here would be a stale closure from record start.
+    if (!wsRef.current) {
       conversationChatRef.current?.addTranscriptMessage(transcript, 'patient');
     }
   };
@@ -821,10 +828,10 @@ const ClinicalInterface: React.FC = () => {
                                   // Create case with image
                                   const fd = new FormData();
                                   fd.append('file', uploadedImage);
-                                  res = await fetch(`${API_CONFIG.BASE_URL}/api/case?live=1`, { method: 'POST', body: fd });
+                                  res = await fetch(`${API_CONFIG.BASE_URL}/api/case?live=1`, { method: 'POST', body: fd, headers: authHeaders() });
                                 } else {
                                   // Create voice-only case
-                                  res = await fetch(`${API_CONFIG.BASE_URL}/api/case/voice?live=1`, { method: 'POST' });
+                                  res = await fetch(`${API_CONFIG.BASE_URL}/api/case/voice?live=1`, { method: 'POST', headers: authHeaders() });
                                 }
                                 if (!res.ok) throw new Error('Failed to create case');
                                 const data = await res.json();
@@ -835,9 +842,11 @@ const ClinicalInterface: React.FC = () => {
                               await connectCaseWS(
                                 id,
                                 (hud) => {
-                                  // A full HUD update supersedes the token stream.
+                                  // A full HUD update supersedes the token stream;
+                                  // transcript-echo frames carry only transcript_chunk
+                                  // and merge into the existing HUD.
                                   setStreamingText('');
-                                  setLiveHUD(hud);
+                                  setLiveHUD((prev) => ({ ...(prev || {}), ...hud }));
                                 },
                                 (token) => setStreamingText((prev) => prev + token)
                               );

@@ -22,6 +22,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
   const [transcript, setTranscript] = useState('');
   const stopSTTRef = useRef<(() => void) | null>(null);
   const liveSendRef = useRef<((text: string) => void) | null>(null);
+  const stopLiveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -40,6 +41,12 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
 
   const startRecording = async () => {
     try {
+      // A pending deferred stop from the previous recording would tear down
+      // the live session we are about to reuse.
+      if (stopLiveTimerRef.current) {
+        clearTimeout(stopLiveTimerRef.current);
+        stopLiveTimerRef.current = null;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -110,9 +117,15 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
-      // Stop live STT + WS
+      // Stop live STT; defer the live-session teardown so the server-side
+      // flush transcript (up to ~3s after Stop) still reaches the case WS.
       if (stopSTTRef.current) { try { stopSTTRef.current(); } catch {} stopSTTRef.current = null; }
-      if (onStopLive) onStopLive();
+      if (onStopLive) {
+        stopLiveTimerRef.current = setTimeout(() => {
+          stopLiveTimerRef.current = null;
+          onStopLive();
+        }, 3500);
+      }
       toast.success('Recording stopped');
     }
   };

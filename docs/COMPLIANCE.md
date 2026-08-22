@@ -68,3 +68,6 @@ conversation-derived text, the EHR summary, and retrieved reference chunks.
   (OIDC) instead.
 - Audit log shipping/immutability is deployment-specific and not automated
   by this repository.
+- The audit middleware attributes patient identifiers from query and path
+  parameters; a patient_id inside a JSON/form body (e.g. POST /infer) is
+  not parsed at the middleware layer.

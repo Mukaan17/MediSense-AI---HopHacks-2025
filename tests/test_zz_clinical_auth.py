@@ -75,3 +75,16 @@ def test_ws_requires_token(clinical_client):
         msg = ws.receive()
         assert msg["type"] == "websocket.close"
         assert msg.get("code") == 4401
+
+
+def test_inference_never_attaches_synthetic_ehr(clinical_client):
+    r = clinical_client.post("/auth/login",
+                             data={"username": "drtest", "password": "correct-horse-9"})
+    token = r.json()["access_token"]
+    resp = clinical_client.post(
+        "/infer",
+        json={"utterances": ["cough"], "patient_id": "MIMIC_10000032"},
+        headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert resp.json().get("ehr") in (None, {}), \
+        "clinical mode must not fuse the synthetic demo EHR into inference"

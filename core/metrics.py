@@ -45,10 +45,14 @@ def timed(name: str, **labels):
         observe(name, (time.perf_counter() - start) * 1000, **labels)
 
 
+def _escape(value: str) -> str:
+    return str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
 def _fmt_labels(labels: Tuple[Tuple[str, str], ...]) -> str:
     if not labels:
         return ""
-    inner = ",".join(f'{k}="{v}"' for k, v in labels)
+    inner = ",".join(f'{k}="{_escape(v)}"' for k, v in labels)
     return "{" + inner + "}"
 
 

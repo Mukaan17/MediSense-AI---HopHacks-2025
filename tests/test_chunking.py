@@ -50,3 +50,9 @@ def test_docs_from_json_chunk_sections(tmp_path):
     assert sections[0] == "item_0.c0"
     assert len(set(sections)) == len(sections), "chunk sections must be unique for citations"
     assert all(len(t.split()) <= DEFAULT_MAX_WORDS for t, _ in docs)
+
+
+def test_dialogue_short_tail_merged_not_dropped():
+    turns = ["speaker: " + "word " * 90, "speaker: " + "word " * 85, "speaker: yes okay"]
+    chunks = chunk_dialogue(turns, max_words=100, overlap=20)
+    assert "yes okay" in "\n".join(chunks), "short tail must merge, not vanish"
