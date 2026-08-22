@@ -11,7 +11,7 @@ Provides structured differential diagnosis with risk factors, red flags, and cli
 import json
 import re
 from typing import Dict, List, Any, Optional
-from .config import load_prompt, load_allowed_labels
+from .config import render_prompt, load_allowed_labels
 from .llm_client import get_llm
 from .utils import parse_llm_json
 
@@ -61,26 +61,23 @@ def generate_structured_differential_diagnosis(
     """
     Generate structured differential diagnosis with enhanced clinical reasoning
     """
-    # Load enhanced prompt for structured diagnosis
-    prompt_tmpl = load_prompt("structured_diagnosis")
-    
     # Prepare context with EHR data if available
     ehr_context = ""
     if ehr_data:
         ehr_context = _format_ehr_for_diagnosis(ehr_data)
-    
+
     # Prepare fusion context
     fusion_context = ""
     if fusion_results:
         fusion_context = _format_fusion_for_diagnosis(fusion_results)
-    
-    prompt = (
-        prompt_tmpl
-        .replace("{{ allowed_labels }}", ", ".join(sorted(ALLOWED)))
-        .replace("{{ extraction }}", json.dumps(extraction.get("extracted", {})))
-        .replace("{{ context }}", retrieved_context or "(no context provided)")
-        .replace("{{ ehr_context }}", ehr_context)
-        .replace("{{ fusion_context }}", fusion_context)
+
+    prompt = render_prompt(
+        "structured_diagnosis",
+        allowed_labels=", ".join(sorted(ALLOWED)),
+        extraction=json.dumps(extraction.get("extracted", {})),
+        context=retrieved_context or "(no context provided)",
+        ehr_context=ehr_context,
+        fusion_context=fusion_context,
     )
 
     fallback = {
