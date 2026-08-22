@@ -9,6 +9,12 @@ point here live in `deploy/prometheus-alerts.yml`; latency budgets in
 - **Backend**: FastAPI, `uvicorn api.server:app` (entrypoint
   `docker/entrypoint.sh`, `UVICORN_WORKERS` processes). State: in-memory or
   Redis case store (`REDIS_URL`), FAISS store on disk (`RAG_PERSIST_DIR`).
+- **Worker**: `arq worker.settings.WorkerSettings` (same image) consumes
+  finalize-report jobs when `FINALIZE_MODE=queue`; results flow back
+  through the shared case store and clients poll
+  `GET /api/case/{id}/report`. Without the worker or Redis, finalize runs
+  inline exactly as before. Live STT concurrency is `STT_WORKERS`
+  (default 1).
 - **Frontend**: nginx serving the CRA build, proxying unknown paths and
   `/ws/` to the backend (`frontend/nginx.conf`).
 - **Modes**: `APP_MODE=demo` (open, synthetic EHR) vs `APP_MODE=clinical`

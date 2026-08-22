@@ -103,6 +103,8 @@ export function useLiveCase(): LiveCase {
   };
 
   // Deep final report over the whole conversation once a live case ends.
+  // Queue-mode deployments return {status: 'queued'} and the report is
+  // polled from /api/case/{id}/report; inline mode returns it directly.
   const finalizeCase = async () => {
     if (!activeCaseId) return;
     setIsFinalizing(true);
@@ -110,6 +112,29 @@ export function useLiveCase(): LiveCase {
       const res = await fetch(`${API_CONFIG.BASE_URL}/api/case/${activeCaseId}/finalize`, { method: 'POST', headers: authHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.detail || 'Report generation failed');
+
+      if (data.status === 'queued') {
+        const deadline = Date.now() + 180_000;
+        while (Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const poll = await fetch(
+            `${API_CONFIG.BASE_URL}/api/case/${activeCaseId}/report`,
+            { headers: authHeaders() }
+          );
+          const status = await poll.json();
+          if (!poll.ok) throw new Error(status?.detail || 'Report status unavailable');
+          if (status.status === 'complete') {
+            setFinalReport(status.report || '');
+            toast.success('Final report generated');
+            return;
+          }
+          if (status.status === 'error') {
+            throw new Error(status.error || 'Report generation failed');
+          }
+        }
+        throw new Error('Report generation timed out');
+      }
+
       setFinalReport(data.report || '');
       toast.success('Final report generated');
     } catch (e: any) {

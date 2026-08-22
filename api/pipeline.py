@@ -352,3 +352,53 @@ def _final_report_prompt(conversation: str, ehr_ctx: str, ranked: List[Dict[str,
         "5. Citations of the reference context used\n\n"
         f"Condition names must come from this closed vocabulary: {allowed}"
     )
+
+
+async def generate_final_report(case: Dict[str, Any]) -> Dict[str, Any]:
+    """Deep advisory report over a full case: recompute the pipeline, then
+    Claude (streamed under the hood) with Gemini fallback. Shared by the
+    inline finalize route and the queued worker job. Raises RuntimeError
+    when no LLM is configured - callers map that to 503 (route) or an
+    error status (worker)."""
+    import asyncio as _asyncio
+
+    from core.llm_client import (
+        anthropic_available, invoke_claude_full, get_llm,
+        get_final_model, get_fallback_final_model,
+    )
+
+    _, _, details = await _asyncio.to_thread(_recompute_case, case)
+    conversation = "\n".join(case.get("utterances", []))
+    ehr_ctx = _summarize_ehr(case.get("ehr")) if case.get("ehr") else ""
+    prompt = _final_report_prompt(conversation, ehr_ctx, details["ranked"], details["ctx"])
+
+    model_used = None
+    report = None
+    if anthropic_available():
+        try:
+            model_used = get_final_model()
+            report = await invoke_claude_full(prompt, model=model_used,
+                                              system=FINAL_REPORT_SYSTEM)
+        except Exception as e:
+            log.warning(f"[finalize] Claude report failed, falling back to Gemini: {e}")
+            report = None
+    if report is None:
+        fallback_model = get_fallback_final_model()
+
+        def _gemini_report() -> str:
+            lm = get_llm(model=fallback_model)
+            return lm.invoke(f"{FINAL_REPORT_SYSTEM}\n\n{prompt}").content
+
+        try:
+            report = await _asyncio.to_thread(_gemini_report)
+            model_used = fallback_model
+        except Exception as e:
+            raise RuntimeError(f"No LLM available for report: {e}")
+
+    return {
+        "report": report,
+        "model": model_used,
+        "fusion": {"top10": details["ranked"], "top_confidence": details["top_conf"],
+                   "margin": details["margin"]},
+        "disclaimer": "Advisory reference only - not a diagnosis. Correlate clinically.",
+    }

@@ -52,9 +52,31 @@ export interface paths {
         put?: never;
         /**
          * Finalize Case
-         * @description Deep advisory report over the full conversation once a live case ends.
+         * @description Deep advisory report over the full conversation once a live case
+         *     ends. FINALIZE_MODE=queue (with Redis + an arq worker) moves the slow
+         *     LLM call off the request path; the default stays inline.
          */
         post: operations["finalize_case_api_case__case_id__finalize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/case/{case_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Report Status
+         * @description Status/result of a queued finalize job (poll after status=queued).
+         */
+        get: operations["report_status_api_case__case_id__report_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -520,9 +542,31 @@ export interface paths {
         put?: never;
         /**
          * Finalize Case
-         * @description Deep advisory report over the full conversation once a live case ends.
+         * @description Deep advisory report over the full conversation once a live case
+         *     ends. FINALIZE_MODE=queue (with Redis + an arq worker) moves the slow
+         *     LLM call off the request path; the default stays inline.
          */
         post: operations["finalize_case_v1_api_case__case_id__finalize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/api/case/{case_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Report Status
+         * @description Status/result of a queued finalize job (poll after status=queued).
+         */
+        get: operations["report_status_v1_api_case__case_id__report_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1258,17 +1302,26 @@ export interface components {
             /** Total */
             total: number;
         };
-        /** FinalizeCaseResponse */
+        /**
+         * FinalizeCaseResponse
+         * @description Inline mode returns the full report (status='complete'); queue mode
+         *     returns status='queued' and the client polls /api/case/{id}/report.
+         */
         FinalizeCaseResponse: {
             /** Case Id */
             case_id: string;
             /** Disclaimer */
             disclaimer: string;
-            fusion: components["schemas"]["FusionSummary"];
+            fusion?: components["schemas"]["FusionSummary"] | null;
             /** Model */
             model?: string | null;
             /** Report */
-            report: string;
+            report?: string | null;
+            /**
+             * Status
+             * @default complete
+             */
+            status: string;
         };
         /** FusionSummary */
         FusionSummary: {
@@ -1368,6 +1421,22 @@ export interface components {
         ReloadRetrieverResponse: {
             /** Doc Count Before */
             doc_count_before: number;
+            /** Status */
+            status: string;
+        };
+        /** ReportStatusResponse */
+        ReportStatusResponse: {
+            /** Case Id */
+            case_id: string;
+            /** Disclaimer */
+            disclaimer?: string | null;
+            /** Error */
+            error?: string | null;
+            fusion?: components["schemas"]["FusionSummary"] | null;
+            /** Model */
+            model?: string | null;
+            /** Report */
+            report?: string | null;
             /** Status */
             status: string;
         };
@@ -1522,6 +1591,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FinalizeCaseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_status_api_case__case_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportStatusResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2233,6 +2333,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FinalizeCaseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_status_v1_api_case__case_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportStatusResponse"];
                 };
             };
             /** @description Validation Error */
