@@ -30,6 +30,12 @@ from fastapi import FastAPI
 from core.auth import validate_clinical_config
 from core.error_tracking import maybe_init_sentry
 from core.retriever import warm_up as retriever_warm_up
+from core.secrets import hydrate_environment
+
+# Managed secrets (AWS SM / *_FILE) become plain env vars before anything
+# reads them; a no-op when the values are already in the environment.
+hydrate_environment(["AUTH_SECRET_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY",
+                     "SENTRY_DSN"])
 
 maybe_init_sentry()
 
