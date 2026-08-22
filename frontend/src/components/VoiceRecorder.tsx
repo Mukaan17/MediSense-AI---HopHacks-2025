@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, Square, Play, Pause, Trash2, Brain } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { startBrowserTranscriber } from '../lib/transcriber';
+import { startWhisperTranscriber } from '../lib/pcmTranscriber';
 
 interface VoiceRecorderProps {
   onTranscription: (transcript: string) => void;
@@ -68,18 +69,25 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
         setRecordingTime(prev => prev + 1);
       }, 1000);
 
-      // Start browser STT immediately and push final utterances live.
-      // The transcriber emits final results only; the live WS echoes each
-      // utterance back as transcript_chunk, which drives the chat display.
+      // Start live STT and push final utterances to notes + the live case WS.
+      // Server-side transcription (AudioWorklet -> PCM -> faster-whisper) is
+      // preferred: it works in every browser. The Chrome-only Web Speech API
+      // remains the fallback when the backend STT socket is unavailable.
       try {
         if (onStartLive) {
           const sender = onStartLive();
           if (typeof sender === 'function') liveSendRef.current = sender;
         }
-        stopSTTRef.current = startBrowserTranscriber((txt: string) => {
+        const onFinalText = (txt: string) => {
           onTranscription(txt);
           liveSendRef.current?.(txt);
-        });
+        };
+        try {
+          stopSTTRef.current = await startWhisperTranscriber(onFinalText);
+        } catch (serverErr) {
+          console.warn('Server STT unavailable, using browser STT:', serverErr);
+          stopSTTRef.current = startBrowserTranscriber(onFinalText);
+        }
       } catch (e) {
         // Fallback: will only do post-stop transcription
         console.warn('Live STT not available:', e);

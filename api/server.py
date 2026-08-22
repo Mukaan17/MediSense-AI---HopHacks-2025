@@ -1588,6 +1588,58 @@ async def finalize_case(case_id: str):
     }
 
 
+# ----------------- WebSocket live speech-to-text ----------------------
+
+@app.websocket("/ws/transcribe")
+async def ws_transcribe(ws: WebSocket):
+    """Raw 16 kHz mono Int16 PCM frames in (binary), utterance transcripts
+    out (JSON). A text frame {"event": "flush"} force-closes the current
+    utterance (sent by the client on Stop Recording)."""
+    from core.live_stt import UtteranceBuffer, transcribe_pcm, stt_executor, fw_available
+
+    await ws.accept()
+    if not await asyncio.get_running_loop().run_in_executor(stt_executor, fw_available):
+        await ws.send_json({"error": "server-side transcription unavailable"})
+        await ws.close()
+        return
+
+    buffer = UtteranceBuffer()
+    loop = asyncio.get_running_loop()
+
+    async def _emit(pcm: Optional[bytes]) -> None:
+        if not pcm:
+            return
+        text = await loop.run_in_executor(stt_executor, transcribe_pcm, pcm)
+        if text:
+            await ws.send_json({"transcript": text, "final": True})
+
+    try:
+        while True:
+            message = await ws.receive()
+            if message.get("type") == "websocket.disconnect":
+                return
+            data = message.get("bytes")
+            if data:
+                await _emit(buffer.add(data))
+                continue
+            text = message.get("text")
+            if text:
+                try:
+                    event = json.loads(text)
+                except Exception:
+                    continue
+                if event.get("event") == "flush":
+                    await _emit(buffer.flush())
+    except WebSocketDisconnect:
+        return
+    except Exception as e:
+        log.warning(f"[STT] transcribe socket error: {e}")
+        try:
+            await ws.close()
+        except Exception:
+            pass
+
+
 # ----------------- WebSocket Live Transcribing ----------------------
 
 @app.websocket("/ws/case/{case_id}")
