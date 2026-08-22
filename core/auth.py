@@ -54,7 +54,8 @@ def _users_file() -> str:
 
 
 def _get_secret() -> str:
-    return os.getenv("AUTH_SECRET_KEY", "")
+    from .secrets import get_secret
+    return get_secret("AUTH_SECRET_KEY", "")
 
 
 def validate_clinical_config() -> None:
