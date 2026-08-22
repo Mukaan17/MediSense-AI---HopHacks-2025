@@ -43,6 +43,26 @@ app = FastAPI(title="Multimodal Clinical Reference (Advisory)")
 
 middleware.install(app)
 
+
+# A backing-store outage (Redis, network) is a retryable operational
+# condition: surface it as an explicit 503, never an anonymous 500.
+def _install_store_outage_handler(app) -> None:
+    from fastapi.responses import JSONResponse
+
+    async def _store_unreachable(request, exc):
+        return JSONResponse(
+            {"detail": f"Backing store unreachable: {exc}"}, status_code=503)
+
+    app.add_exception_handler(ConnectionError, _store_unreachable)
+    try:
+        import redis.exceptions as _redis_exc
+        app.add_exception_handler(_redis_exc.ConnectionError, _store_unreachable)
+    except ImportError:
+        pass
+
+
+_install_store_outage_handler(app)
+
 # Dual-mount: every route is served at its historical root path and under
 # /v1. New clients should use /v1; the root mount stays for compatibility.
 for _router in (system.router, auth.router, inference.router, voice.router,
