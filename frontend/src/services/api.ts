@@ -462,7 +462,7 @@ export const futureAPI = {
     }
   },
 
-  async setKnowledgeBaseMode(mode: 'clinical' | 'research'): Promise<APIResponse<KnowledgeBaseMode>> {
+  async setKnowledgeBaseMode(mode: string): Promise<APIResponse<KnowledgeBaseMode>> {
     try {
       const formData = new FormData();
       formData.append('mode', mode);

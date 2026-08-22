@@ -12,11 +12,26 @@ def test_health_served_on_both_mounts(client):
 def test_health_contract_keys(client):
     body = client.get("/v1/health").json()
     for key in ("status", "app_mode", "ehr_synthetic", "case_store", "top_k",
-                "ehr_loaded", "image_model_loaded", "voice_transcription"):
+                "ehr_loaded", "image_model_loaded", "llm", "voice_transcription"):
         assert key in body
+    assert set(body["llm"].keys()) == {"anthropic", "gemini"}
+    assert all(isinstance(v, bool) for v in body["llm"].values())
     assert set(body["voice_transcription"].keys()) == {
         "whisperx_model_loaded", "diarization_model_loaded", "alignment_model_loaded",
     }
+
+
+def test_knowledge_base_reports_real_facts(client):
+    body = client.get("/knowledge_base/mode").json()
+    # Only what the store manifest actually contains - never invented names.
+    assert "UpToDate" not in body["sources"]
+    assert "PubMed" not in body["sources"]
+    for src in body["sources"]:
+        assert src.endswith(".json"), f"unexpected non-manifest source: {src}"
+    if body["sources"]:
+        assert isinstance(body["doc_count"], int) and body["doc_count"] > 0
+        assert body["built_at"]
+    assert body["description"]
 
 
 def test_openapi_documents_both_mounts(client):

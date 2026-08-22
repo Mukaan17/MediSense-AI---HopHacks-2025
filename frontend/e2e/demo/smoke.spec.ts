@@ -5,6 +5,10 @@ test.describe('demo mode', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Clinical AI Assistant' })).toBeVisible();
     await expect(page.getByText('Demo mode · synthetic data')).toBeVisible();
+    // This environment has no LLM keys: degradation must be visible, not silent.
+    await expect(page.getByText(/AI assistance degraded/)).toBeVisible({ timeout: 15_000 });
+    // Truth-in-UI: the app must never claim sources the deployment lacks.
+    await expect(page.getByText('UpToDate')).toHaveCount(0);
     // EHR selector proves the frontend reached the backend and demo data loaded
     await expect(page.getByText('Select from EHR Patients')).toBeVisible({ timeout: 30_000 });
     const options = page.locator('select.input-field option');
