@@ -19,7 +19,7 @@ from core.domains import bucket_domains
 from core.questioner_llm import (
     propose_questions_llm,
 )
-from core.voice_transcription import voice_service
+from core.voice_transcription import voice_service, TranscriptionResponse
 
 log = logging.getLogger("api")
 
@@ -48,7 +48,7 @@ from api.pipeline import (
 
 router = APIRouter()
 
-@router.post("/voice_transcribe")
+@router.post("/voice_transcribe", response_model=TranscriptionResponse)
 async def voice_transcribe(
     file: UploadFile = File(...),
     description: str = None

@@ -15,9 +15,11 @@ from core.audit import audit_event
 
 log = logging.getLogger("api")
 
+from api.responses import LoginResponse, WsTicketResponse
+
 router = APIRouter()
 
-@router.post("/auth/ws-ticket")
+@router.post("/auth/ws-ticket", response_model=WsTicketResponse)
 def auth_ws_ticket(request: Request):
     """Mint a short-lived WS-scoped ticket for the authenticated session.
     WebSocket URLs carry this instead of the session JWT so proxy access
@@ -26,7 +28,7 @@ def auth_ws_ticket(request: Request):
     return {"ticket": create_ws_ticket(user.get("username", "demo"), user.get("role", "clinician")),
             "expires_in_seconds": WS_TICKET_TTL_SECONDS}
 
-@router.post("/auth/login")
+@router.post("/auth/login", response_model=LoginResponse)
 def auth_login(username: str = Form(...), password: str = Form(...)):
     """Exchange credentials for a bearer token (required in clinical mode)."""
     user = authenticate(username, password)

@@ -24,10 +24,14 @@ from api.guards import (
     _demo_only,
     _guard_synthetic_ehr,
 )
+from api.responses import (
+    EHRPatientDetailResponse,
+    EHRPatientsResponse,
+)
 
 router = APIRouter()
 
-@router.get("/ehr/patients")
+@router.get("/ehr/patients", response_model=EHRPatientsResponse)
 def list_ehr_patients():
     """List all available EHR patients"""
     _guard_synthetic_ehr()
@@ -47,7 +51,7 @@ def list_ehr_patients():
     return {"patients": patients, "total": len(patients),
             "data_source": ("synthetic_demo" if ehr_is_synthetic(EHR_JSON) else "configured")}
 
-@router.get("/ehr/patients/{patient_id}")
+@router.get("/ehr/patients/{patient_id}", response_model=EHRPatientDetailResponse)
 def get_ehr_patient(patient_id: str):
     """Get specific EHR patient data"""
     _guard_synthetic_ehr()

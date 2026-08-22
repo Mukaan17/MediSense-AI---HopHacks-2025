@@ -47,6 +47,10 @@ from api.guards import (
 from api.schemas import (
     TranscribeIn,
 )
+from api.responses import (
+    CaseCreateResponse,
+    FinalizeCaseResponse,
+)
 from api.pipeline import (
     FINAL_REPORT_SYSTEM,
     _compact_live,
@@ -60,7 +64,7 @@ from api.pipeline import (
 
 router = APIRouter()
 
-@router.post("/api/case/voice")
+@router.post("/api/case/voice", response_model=CaseCreateResponse)
 async def create_voice_case(
     live: bool = Query(True),
     max_candidates: int = Query(3, ge=1, le=5),
@@ -99,7 +103,7 @@ async def create_voice_case(
             "fusion": {"top10": ranked, "top_confidence": top_conf, "margin": margin},
             "domains": domains}
 
-@router.post("/api/case")
+@router.post("/api/case", response_model=CaseCreateResponse)
 async def create_case(
     live: bool = Query(True),
     max_candidates: int = Query(3, ge=1, le=5),
@@ -238,7 +242,7 @@ def transcribe_step(
         "coach": {"suggested": questions}
     }
 
-@router.post("/api/case/{case_id}/finalize")
+@router.post("/api/case/{case_id}/finalize", response_model=FinalizeCaseResponse)
 async def finalize_case(case_id: str):
     """Deep advisory report over the full conversation once a live case ends."""
     case = _case_store.get(case_id)
