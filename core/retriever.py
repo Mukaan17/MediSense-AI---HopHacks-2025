@@ -1,8 +1,7 @@
 import json
 import os
-import pickle
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from .config import load_rag
 
@@ -108,6 +107,25 @@ _retriever = None
 _init_attempted = False
 
 
+def _load_store_payload(store_path: Path) -> Tuple[List[str], List[Dict[str, Any]]]:
+    """Load texts + metas: JSON is the current format; .pkl only remains as
+    backward compat for stores built before the JSON migration."""
+    texts_json = store_path / "texts.json"
+    if texts_json.exists():
+        with open(texts_json, "r", encoding="utf-8") as f:
+            texts = json.load(f)
+        with open(store_path / "metas.json", "r", encoding="utf-8") as f:
+            metas = json.load(f)
+        return texts, metas
+    import pickle
+    print("[Retriever] Legacy pickle store detected; rebuild the KB to migrate to JSON")
+    with open(store_path / "texts.pkl", "rb") as f:
+        texts = pickle.load(f)
+    with open(store_path / "metas.pkl", "rb") as f:
+        metas = pickle.load(f)
+    return texts, metas
+
+
 def _ensure_store_initialized() -> bool:
     global _retriever, _init_attempted
     if _retriever is not None:
@@ -126,10 +144,7 @@ def _ensure_store_initialized() -> bool:
             from sentence_transformers import SentenceTransformer
 
             index = faiss.read_index(str(faiss_index_path))
-            with open(store_path / "texts.pkl", "rb") as f:
-                texts = pickle.load(f)
-            with open(store_path / "metas.pkl", "rb") as f:
-                metas = pickle.load(f)
+            texts, metas = _load_store_payload(store_path)
 
             config_path = store_path / "config.json"
             emb_model = EMB_MODEL
