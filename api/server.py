@@ -10,6 +10,7 @@ import json
 import hashlib
 import logging
 import threading
+import asyncio
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -36,7 +37,12 @@ from core.evidence_engine import build_evidence
 from core.domains import bucket_domains
 import uuid
 from core.config import load_allowed_labels, load_mappings, load_symptom_map
-from core.questioner_llm import propose_questions_llm
+from core.questioner_llm import (
+    propose_questions_llm,
+    stream_live_suggestions,
+    parse_bullet_questions,
+)
+from core.llm_client import anthropic_available, invoke_claude_full, get_llm
 from core.summarize import summarize_live
 from core.diagnostic_suggestions import generate_diagnostic_suggestions
 from core.voice_transcription import voice_service
@@ -1408,6 +1414,174 @@ def transcribe_step(
         "coach": {"suggested": questions}
     }
 
+# ----------------- Live-case recompute (shared by WS + finalize) ----------------------
+
+def _recompute_case(case: Dict[str, Any],
+                    latest_utterance: Optional[str] = None,
+                    latest_speaker: Optional[str] = None):
+    """Run the full per-utterance pipeline synchronously.
+
+    Returns (hud, question_state, details): hud is the HUD payload without
+    coach questions (attached by the caller after generation), question_state
+    is the coach input dict when the confidence gate passes (else None), and
+    details carries the ranked list + retrieved context for the finalize
+    report. Runs in a worker thread via asyncio.to_thread so it never blocks
+    the event loop.
+    """
+    utterances = case.get("utterances", [])
+    conversation = "\n".join(utterances)
+
+    extraction = extractor_generate(conversation) if conversation else {"extracted": {}}
+    q = (extraction.get("retrieval_query") or conversation) if conversation else ""
+    docs = _retriever_instance().get_relevant_documents(q) if q else []
+    ctx = render_docs(docs) or ""
+
+    extracted = extraction.get("extracted", {}) or {}
+    text_findings = _scan_text_findings(extracted)
+    ranked = fuse(case["image_findings"], text_findings, topk=10)
+    evidence = build_evidence(
+        image_findings=case["image_findings"],
+        text_findings=text_findings,
+        ehr=case.get("ehr"),
+        extracted=extracted,
+        fused_ranked=ranked,
+        topk=10,
+    )
+    ranked = (evidence.get("posterior_shift") or {}).get("adjusted_top10") or ranked
+    top_conf, margin = _confidence_and_margin(ranked)
+
+    question_state = None
+    if (top_conf < ASK_THRESH) or (margin < MARGIN_THRESH and top_conf < 0.95):
+        question_state = {
+            "top_candidates": ranked[:5],
+            "image_findings": case["image_findings"],
+            "ehr_summary": case["ehr"] or {},
+            "text_findings": text_findings,
+            "extraction": extracted,
+            "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
+            "top_confidence": top_conf,
+            "margin": margin,
+            "scope_hint": _scope_hint(top_conf),
+        }
+
+    diagnostic_suggestions = None
+    try:
+        diagnostic_suggestions = generate_diagnostic_suggestions({
+            "top_candidates": ranked[:5],
+            "image_findings": case["image_findings"],
+            "ehr_summary": case["ehr"] or {},
+            "text_findings": text_findings,
+            "extraction": extracted,
+            "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
+            "top_confidence": top_conf,
+            "margin": margin,
+        }, max_suggestions=4)
+    except Exception as e:
+        log.warning(f"[coach] diagnostic suggestions generation failed: {e}")
+
+    summary = summarize_live(utterances, max_words=40) if utterances else ""
+    hud = _compact_live(ranked, top_conf, margin, case["ehr"], [], max_candidates=3,
+                        min_conf=0.6, diagnostic_suggestions=diagnostic_suggestions)
+    hud["evidence"] = evidence
+    hud["summary"] = summary
+    if latest_utterance:
+        hud["transcript_chunk"] = {"speaker": (latest_speaker or "unknown"), "text": latest_utterance}
+
+    details = {"ranked": ranked, "ctx": ctx, "extraction": extracted,
+               "top_conf": top_conf, "margin": margin}
+    return hud, question_state, details
+
+
+def _apply_questions(hud: Dict[str, Any], questions: List[Dict[str, Any]]) -> None:
+    hud["next_question"] = _pick_question(questions)
+    hud["coach"] = {"suggested": questions}
+    alerts = hud.get("alerts") or {}
+    alerts["red_flag"] = bool(questions and questions[0].get("priority") == "red-flag")
+    hud["alerts"] = alerts
+
+
+# ----------------- Final case report ----------------------
+
+FINAL_REPORT_SYSTEM = (
+    "You are a cautious clinical reference assistant producing an advisory "
+    "case summary for a clinician. You do NOT diagnose or prescribe. Frame "
+    "findings as advisory considerations to correlate clinically, cite the "
+    "provided reference context where used, and use ONLY the information "
+    "provided."
+)
+
+
+def _final_report_prompt(conversation: str, ehr_ctx: str, ranked: List[Dict[str, Any]],
+                         ctx: str) -> str:
+    ranked_lines = "\n".join(
+        f"{i + 1}. {r.get('condition')} (score {r.get('score', 0.0):.2f})"
+        for i, r in enumerate(ranked[:10])
+    ) or "(none)"
+    allowed = ", ".join(sorted(load_allowed_labels()))
+    return (
+        "CONVERSATION TRANSCRIPT (speaker-prefixed lines):\n"
+        f"{conversation}\n\n"
+        f"PATIENT CONTEXT (EHR):\n{ehr_ctx or '(none)'}\n\n"
+        f"MODEL-FUSED CANDIDATE CONDITIONS (advisory signals, not diagnoses):\n{ranked_lines}\n\n"
+        f"RETRIEVED REFERENCE CONTEXT:\n{(ctx or '(none)')[:MAX_CTX_CHARS]}\n\n"
+        "Write a structured advisory case report with sections:\n"
+        "1. Case summary (2-4 sentences)\n"
+        "2. Leading considerations - up to 3, each with supporting evidence "
+        "from the transcript/EHR/imaging and what would help rule it in or out\n"
+        "3. Red flags to screen\n"
+        "4. Suggested next steps (non-prescriptive: assessments, correlations, "
+        "escalation criteria - never medications or doses)\n"
+        "5. Citations of the reference context used\n\n"
+        f"Condition names must come from this closed vocabulary: {allowed}"
+    )
+
+
+@app.post("/api/case/{case_id}/finalize")
+async def finalize_case(case_id: str):
+    """Deep advisory report over the full conversation once a live case ends."""
+    case = _CASES.get(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="case_id not found")
+    utterances = case.get("utterances", [])
+    if not utterances:
+        raise HTTPException(status_code=400, detail="case has no utterances to summarize")
+
+    _, _, details = await asyncio.to_thread(_recompute_case, case)
+    conversation = "\n".join(utterances)
+    ehr_ctx = _summarize_ehr(case.get("ehr")) if case.get("ehr") else ""
+    prompt = _final_report_prompt(conversation, ehr_ctx, details["ranked"], details["ctx"])
+
+    model_used = None
+    report = None
+    if anthropic_available():
+        try:
+            from core.llm_client import DEFAULT_FINAL_MODEL
+            model_used = os.getenv("FINAL_MODEL", DEFAULT_FINAL_MODEL)
+            report = await invoke_claude_full(prompt, model=model_used,
+                                              system=FINAL_REPORT_SYSTEM)
+        except Exception as e:
+            log.warning(f"[finalize] Claude report failed, falling back to Gemini: {e}")
+            report = None
+    if report is None:
+        def _gemini_report() -> str:
+            lm = get_llm()
+            return lm.invoke(f"{FINAL_REPORT_SYSTEM}\n\n{prompt}").content
+        try:
+            report = await asyncio.to_thread(_gemini_report)
+            model_used = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+        except Exception as e:
+            raise HTTPException(status_code=503, detail=f"No LLM available for report: {e}")
+
+    return {
+        "case_id": case_id,
+        "report": report,
+        "model": model_used,
+        "fusion": {"top10": details["ranked"], "top_confidence": details["top_conf"],
+                   "margin": details["margin"]},
+        "disclaimer": "Advisory reference only - not a diagnosis. Correlate clinically.",
+    }
+
+
 # ----------------- WebSocket Live Transcribing ----------------------
 
 @app.websocket("/ws/case/{case_id}")
@@ -1420,86 +1594,30 @@ async def ws_case(ws: WebSocket, case_id: str):
 
     case = _CASES[case_id]
 
-    async def _send_update(latest_utterance: Optional[str] = None, latest_speaker: Optional[str] = None):
-        utterances = case.get("utterances", [])
-        conversation = "\n".join(utterances)
+    async def _send_update(latest_utterance: Optional[str] = None,
+                           latest_speaker: Optional[str] = None):
+        # Heavy pipeline runs in a worker thread; the event loop stays free
+        # for other connections.
+        hud, question_state, _ = await asyncio.to_thread(
+            _recompute_case, case, latest_utterance, latest_speaker)
 
-        extraction = extractor_generate(conversation) if conversation else {"extracted": {}}
-        q = (extraction.get("retrieval_query") or conversation) if conversation else ""
-        docs = _retriever_instance().get_relevant_documents(q) if q else []
-        ctx = render_docs(docs) or ""
-
-        extracted = extraction.get("extracted", {}) or {}
-        text_findings = _scan_text_findings(extracted)
-        ranked = fuse(case["image_findings"], text_findings, topk=10)
-        evidence = build_evidence(
-            image_findings=case["image_findings"],
-            text_findings=text_findings,
-            ehr=case.get("ehr"),
-            extracted=extracted,
-            fused_ranked=ranked,
-            topk=10,
-        )
-        ranked = (evidence.get("posterior_shift") or {}).get("adjusted_top10") or ranked
-        top_conf, margin = _confidence_and_margin(ranked)
-
-        normalized = []
-        for r in (ranked or []):
-            c = r.get("condition")
-            if not c: continue
-            normalized.append(ALIASES.get(c, c.lower().replace(" ", "_")))
-        domains = bucket_domains(normalized) if normalized else {}
-
-        fused_header = ""
-        if ranked:
-            fused_header = "Source=FUSED §Top candidates\n" + "\n".join(
-                [f"{i+1}. {r['condition']} ({r.get('score',0.0):.2f}) – {r.get('why','')}" for i, r in enumerate(ranked)]
-            ) + "\n\n"
-        ehr_ctx = _summarize_ehr(case["ehr"]) if case["ehr"] else ""
-        ctx_full = (ehr_ctx + fused_header + (ctx or ""))[:MAX_CTX_CHARS]
-
-        questions = []
-        diagnostic_suggestions = None
-        
-        if (top_conf < ASK_THRESH) or (margin < MARGIN_THRESH and top_conf < 0.95):
-            state = {
-                "top_candidates": ranked[:5],
-                "image_findings": case["image_findings"],
-                "ehr_summary": case["ehr"] or {},
-                "text_findings": text_findings,
-                "extraction": extracted,
-                "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
-                "top_confidence": top_conf,
-                "margin": margin,
-                "scope_hint": _scope_hint(top_conf),
-            }
-            try:
-                questions = propose_questions_llm(state, max_questions=3)
-            except Exception as e:
-                log.warning(f"[coach] question generation failed: {e}")
-        
-        # Generate enhanced diagnostic suggestions
-        try:
-            diagnostic_state = {
-                "top_candidates": ranked[:5],
-                "image_findings": case["image_findings"],
-                "ehr_summary": case["ehr"] or {},
-                "text_findings": text_findings,
-                "extraction": extracted,
-                "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
-                "top_confidence": top_conf,
-                "margin": margin,
-            }
-            diagnostic_suggestions = generate_diagnostic_suggestions(diagnostic_state, max_suggestions=4)
-        except Exception as e:
-            log.warning(f"[coach] diagnostic suggestions generation failed: {e}")
-
-        summary = summarize_live(utterances, max_words=40) if utterances else ""
-        hud = _compact_live(ranked, top_conf, margin, case["ehr"], questions, max_candidates=3, min_conf=0.6, diagnostic_suggestions=diagnostic_suggestions)
-        hud["evidence"] = evidence
-        hud["summary"] = summary
-        if latest_utterance:
-            hud["transcript_chunk"] = {"speaker": (latest_speaker or "unknown"), "text": latest_utterance}
+        if question_state is not None:
+            questions: List[Dict[str, Any]] = []
+            if anthropic_available():
+                try:
+                    parts: List[str] = []
+                    async for token in stream_live_suggestions(question_state):
+                        parts.append(token)
+                        await ws.send_json({"type": "streaming_token", "token": token})
+                    questions = parse_bullet_questions("".join(parts), max_questions=3)
+                except Exception as e:
+                    log.warning(f"[coach] Claude streaming failed, falling back: {e}")
+            if not questions:
+                try:
+                    questions = await asyncio.to_thread(propose_questions_llm, question_state, 3)
+                except Exception as e:
+                    log.warning(f"[coach] question generation failed: {e}")
+            _apply_questions(hud, questions)
 
         await ws.send_json(hud)
 
@@ -1508,13 +1626,26 @@ async def ws_case(ws: WebSocket, case_id: str):
     try:
         while True:
             msg = await ws.receive_json()
-            utt = msg.get("utterance")
-            speaker = msg.get("speaker")
-            if isinstance(utt, str) and utt.strip():
-                # Store with speaker prefix so downstream LLM sees roles
-                prefixed = f"{speaker}: {utt.strip()}" if speaker in ("patient","doctor") else utt.strip()
-                case.setdefault("utterances", []).append(prefixed)
-                await _send_update(latest_utterance=utt.strip(), latest_speaker=speaker)
+            batch = [msg]
+            # Collapse bursts: drain messages that arrived while the previous
+            # recompute ran, so a fast talker triggers one recompute per burst
+            # instead of one full pipeline per utterance.
+            while True:
+                try:
+                    batch.append(await asyncio.wait_for(ws.receive_json(), timeout=0.05))
+                except asyncio.TimeoutError:
+                    break
+
+            latest_utt, latest_speaker = None, None
+            for m in batch:
+                utt = m.get("utterance")
+                speaker = m.get("speaker")
+                if isinstance(utt, str) and utt.strip():
+                    prefixed = f"{speaker}: {utt.strip()}" if speaker in ("patient", "doctor") else utt.strip()
+                    case.setdefault("utterances", []).append(prefixed)
+                    latest_utt, latest_speaker = utt.strip(), speaker
+            if latest_utt is not None:
+                await _send_update(latest_utterance=latest_utt, latest_speaker=latest_speaker)
     except WebSocketDisconnect:
         return
     except Exception as e:

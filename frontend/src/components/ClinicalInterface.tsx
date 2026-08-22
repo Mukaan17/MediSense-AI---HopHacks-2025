@@ -41,6 +41,9 @@ const ClinicalInterface: React.FC = () => {
   const [selectedEhrPatient, setSelectedEhrPatient] = useState<string>('');
   const [activeCaseId, setActiveCaseId] = useState<string>('');
   const [liveHUD, setLiveHUD] = useState<HUD | null>(null);
+  const [streamingText, setStreamingText] = useState<string>('');
+  const [finalReport, setFinalReport] = useState<string>('');
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const wsRef = useRef<boolean>(false);
   const pendingUtterancesRef = useRef<string[]>([]);
 
@@ -91,6 +94,23 @@ const ClinicalInterface: React.FC = () => {
       toast.error('Please upload a valid image file');
     }
   });
+
+  // Deep final report over the whole conversation once a live case ends.
+  const handleFinalizeCase = async () => {
+    if (!activeCaseId) return;
+    setIsFinalizing(true);
+    try {
+      const res = await fetch(`${API_CONFIG.BASE_URL}/api/case/${activeCaseId}/finalize`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || 'Report generation failed');
+      setFinalReport(data.report || '');
+      toast.success('Final report generated');
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not generate final report');
+    } finally {
+      setIsFinalizing(false);
+    }
+  };
 
   // Voice recording handling. During a live case the WS echoes each utterance
   // back as transcript_chunk (which feeds the chat), so only add to the chat
@@ -588,6 +608,17 @@ const ClinicalInterface: React.FC = () => {
                             </div>
                           )}
                           
+                          {/* Live streaming suggestions (token-by-token) */}
+                          {streamingText && (
+                            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded">
+                              <div className="text-xs font-medium text-indigo-800 mb-1">Coach (streaming)</div>
+                              <div className="text-sm text-indigo-900 whitespace-pre-wrap">
+                                {streamingText}
+                                <span className="inline-block w-2 h-4 bg-indigo-500 ml-0.5 animate-pulse" aria-hidden="true"></span>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Next Question */}
                           {liveHUD.next_question && (
                             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
@@ -630,6 +661,25 @@ const ClinicalInterface: React.FC = () => {
                               </div>
                             </div>
                           )}
+
+                          {/* Deep final report */}
+                          {activeCaseId && (
+                            <div className="p-3 bg-white rounded border">
+                              <button
+                                onClick={handleFinalizeCase}
+                                disabled={isFinalizing}
+                                className="px-3 py-1.5 text-sm rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
+                              >
+                                {isFinalizing ? 'Generating report…' : 'Generate Final Report'}
+                              </button>
+                              {finalReport && (
+                                <div className="mt-3">
+                                  <div className="text-xs font-medium text-gray-600 mb-1">Advisory Case Report</div>
+                                  <div className="text-sm text-gray-800 whitespace-pre-wrap max-h-80 overflow-y-auto">{finalReport}</div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -669,7 +719,15 @@ const ClinicalInterface: React.FC = () => {
                                 if (id) setActiveCaseId(id);
                               }
                               if (!id) return;
-                              await connectCaseWS(id, setLiveHUD);
+                              await connectCaseWS(
+                                id,
+                                (hud) => {
+                                  // A full HUD update supersedes the token stream.
+                                  setStreamingText('');
+                                  setLiveHUD(hud);
+                                },
+                                (token) => setStreamingText((prev) => prev + token)
+                              );
                               wsRef.current = true;
                               // Flush any queued utterances
                               if (pendingUtterancesRef.current.length) {
@@ -881,8 +939,10 @@ const ClinicalInterface: React.FC = () => {
                       setClinicalReport(null);
                       setActiveCaseId('');
                       setLiveHUD(null);
+                      setStreamingText('');
+                      setFinalReport('');
                       setSelectedEhrPatient('');
-                      
+
                       // Disconnect WebSocket
                       disconnectCaseWS();
                       wsRef.current = false;
