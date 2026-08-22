@@ -2,13 +2,8 @@ import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { API_CONFIG } from '../config/api';
-import { getAuthToken } from '../services/api';
+import { fetchAuthOptions } from '../services/api';
 import { connectCaseWS, disconnectCaseWS, sendUtterance, HUD } from '../lib/wsClient';
-
-const authHeaders = (): Record<string, string> => {
-  const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
 
 export interface LiveCase {
   activeCaseId: string;
@@ -59,10 +54,10 @@ export function useLiveCase(): LiveCase {
             // Create case with image
             const fd = new FormData();
             fd.append('file', uploadedImage);
-            res = await fetch(`${API_CONFIG.BASE_URL}/api/case?live=1`, { method: 'POST', body: fd, headers: authHeaders() });
+            res = await fetch(`${API_CONFIG.BASE_URL}/api/case?live=1`, { method: 'POST', body: fd, ...fetchAuthOptions('POST') });
           } else {
             // Create voice-only case
-            res = await fetch(`${API_CONFIG.BASE_URL}/api/case/voice?live=1`, { method: 'POST', headers: authHeaders() });
+            res = await fetch(`${API_CONFIG.BASE_URL}/api/case/voice?live=1`, { method: 'POST', ...fetchAuthOptions('POST') });
           }
           if (!res.ok) throw new Error('Failed to create case');
           const data = await res.json();
@@ -109,7 +104,7 @@ export function useLiveCase(): LiveCase {
     if (!activeCaseId) return;
     setIsFinalizing(true);
     try {
-      const res = await fetch(`${API_CONFIG.BASE_URL}/api/case/${activeCaseId}/finalize`, { method: 'POST', headers: authHeaders() });
+      const res = await fetch(`${API_CONFIG.BASE_URL}/api/case/${activeCaseId}/finalize`, { method: 'POST', ...fetchAuthOptions('POST') });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.detail || 'Report generation failed');
 
@@ -119,7 +114,7 @@ export function useLiveCase(): LiveCase {
           await new Promise((r) => setTimeout(r, 2000));
           const poll = await fetch(
             `${API_CONFIG.BASE_URL}/api/case/${activeCaseId}/report`,
-            { headers: authHeaders() }
+            fetchAuthOptions('GET')
           );
           const status = await poll.json();
           if (!poll.ok) throw new Error(status?.detail || 'Report status unavailable');

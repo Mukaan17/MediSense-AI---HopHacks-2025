@@ -25,5 +25,17 @@ test.describe('clinical mode', () => {
       timeout: 15_000,
     });
     await expect(page.getByText('Clinical mode', { exact: true })).toBeVisible();
+
+    // Cookie sessions: no token may ever land in localStorage (XSS surface).
+    const storedToken = await page.evaluate(() => localStorage.getItem('medisense_token'));
+    expect(storedToken).toBeNull();
+    const cookies = await page.context().cookies();
+    const session = cookies.find((c) => c.name === 'medisense_session');
+    expect(session?.httpOnly).toBe(true);
+
+    // The session survives a reload without re-login.
+    await page.reload();
+    await expect(page.getByText('Clinical mode', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Clinical mode requires authentication.')).toHaveCount(0);
   });
 });
