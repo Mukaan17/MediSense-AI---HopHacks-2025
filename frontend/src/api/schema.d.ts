@@ -105,6 +105,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/case/{case_id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Case Timeline */
+        get: operations["case_timeline_api_case__case_id__timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/case/{case_id}/transcribe": {
         parameters: {
             query?: never;
@@ -116,6 +133,23 @@ export interface paths {
         put?: never;
         /** Transcribe Step */
         post: operations["transcribe_step_api_case__case_id__transcribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Cases */
+        get: operations["list_cases_api_cases_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -661,6 +695,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/api/case/{case_id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Case Timeline */
+        get: operations["case_timeline_v1_api_case__case_id__timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/api/case/{case_id}/transcribe": {
         parameters: {
             query?: never;
@@ -672,6 +723,23 @@ export interface paths {
         put?: never;
         /** Transcribe Step */
         post: operations["transcribe_step_v1_api_case__case_id__transcribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/api/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Cases */
+        get: operations["list_cases_v1_api_cases_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1379,6 +1447,28 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** CaseListResponse */
+        CaseListResponse: {
+            /** Cases */
+            cases: components["schemas"]["CaseSummary"][];
+            /** Count */
+            count: number;
+        };
+        /** CaseSummary */
+        CaseSummary: {
+            /** Case Id */
+            case_id: string;
+            /** Created At */
+            created_at: string;
+            /** Patient Id */
+            patient_id?: string | null;
+            /** Top Condition */
+            top_condition?: string | null;
+            /** Updated At */
+            updated_at: string;
+            /** Utterance Count */
+            utterance_count: number;
+        };
         /** ConversationEntry */
         ConversationEntry: {
             /** Description */
@@ -1601,6 +1691,26 @@ export interface components {
             report?: string | null;
             /** Status */
             status: string;
+        };
+        /** TimelineEvent */
+        TimelineEvent: {
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Ts */
+            ts: string;
+            /** Type */
+            type: string;
+        };
+        /** TimelineResponse */
+        TimelineResponse: {
+            /** Case Id */
+            case_id: string;
+            /** Count */
+            count: number;
+            /** Events */
+            events: components["schemas"]["TimelineEvent"][];
         };
         /** TranscribeIn */
         TranscribeIn: {
@@ -1832,6 +1942,37 @@ export interface operations {
             };
         };
     };
+    case_timeline_api_case__case_id__timeline_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     transcribe_step_api_case__case_id__transcribe_post: {
         parameters: {
             query?: {
@@ -1859,6 +2000,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_cases_api_cases_get: {
+        parameters: {
+            query?: {
+                patient_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2649,6 +2823,37 @@ export interface operations {
             };
         };
     };
+    case_timeline_v1_api_case__case_id__timeline_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     transcribe_step_v1_api_case__case_id__transcribe_post: {
         parameters: {
             query?: {
@@ -2676,6 +2881,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_cases_v1_api_cases_get: {
+        parameters: {
+            query?: {
+                patient_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseListResponse"];
                 };
             };
             /** @description Validation Error */

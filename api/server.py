@@ -34,7 +34,7 @@ from core.retriever import warm_up as retriever_warm_up
 maybe_init_sentry()
 
 from api import middleware
-from api.routes import auth, cases, ehr, inference, system, voice, ws
+from api.routes import auth, cases, ehr, history, inference, system, voice, ws
 
 # Clinical mode must never boot unsigned.
 validate_clinical_config()
@@ -66,7 +66,7 @@ _install_store_outage_handler(app)
 # Dual-mount: every route is served at its historical root path and under
 # /v1. New clients should use /v1; the root mount stays for compatibility.
 for _router in (system.router, auth.router, inference.router, voice.router,
-                ehr.router, cases.router, ws.router):
+                ehr.router, cases.router, history.router, ws.router):
     app.include_router(_router)
     app.include_router(_router, prefix="/v1")
 

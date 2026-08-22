@@ -32,6 +32,8 @@ from api.settings import (
 from api.state import (
     ALIASES,
     _case_store,
+    record_case_event,
+    save_case_report,
     _normalize_image_relpath,
     _predict_image_with_fallback,
     _resolve_ehr_from_uploaded_image,
@@ -93,6 +95,7 @@ async def create_voice_case(
         "domains": domains,
         "utterances": [],
     })
+    record_case_event(case_id, "case_created", {"kind": "voice"})
 
     if live:
         return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, ehr, [], max_candidates, min_conf, None)}
@@ -142,6 +145,8 @@ async def create_case(
         "domains": domains,
         "utterances": [],
     })
+    record_case_event(case_id, "case_created",
+                      {"kind": "image" if filename else "text", "filename": filename})
 
     if live:
         return {"case_id": case_id, **_compact_live(ranked, top_conf, margin, ehr, [], max_candidates, min_conf, None)}
@@ -164,6 +169,7 @@ def transcribe_step(
 
     case["utterances"].append(body.utterance)
     _case_store.put(case_id, case)
+    record_case_event(case_id, "utterance_added", {"text": body.utterance[:500]})
     conversation = "\n".join(case["utterances"])
 
     extraction = extractor_generate(conversation)
@@ -257,6 +263,8 @@ def question_feedback(case_id: str, body: QuestionFeedbackIn):
         "ts": _time.time(),
     })
     _case_store.put(case_id, case)
+    record_case_event(case_id, "question_feedback",
+                      {"question": body.question.strip()[:300], "action": action})
     return {"case_id": case_id, "recorded": len(case["feedback"])}
 
 @router.post("/api/case/{case_id}/finalize", response_model=FinalizeCaseResponse)
@@ -285,6 +293,9 @@ async def finalize_case(case_id: str):
         result = await generate_final_report(case)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
+    save_case_report(case_id, result.get("report") or "", result.get("model"),
+                     result.get("fusion"))
+    record_case_event(case_id, "report_generated", {"model": result.get("model")})
     return {"case_id": case_id, "status": "complete", **result}
 
 @router.get("/api/case/{case_id}/report", response_model=ReportStatusResponse)

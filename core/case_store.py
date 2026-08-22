@@ -84,11 +84,26 @@ class RedisCaseStore:
 
 def make_case_store():
     url = os.getenv("REDIS_URL", "").strip()
+    inner = None
     if url:
         try:
-            store = RedisCaseStore(url)
+            inner = RedisCaseStore(url)
             print(f"[CASES] Redis case store connected: {url.split('@')[-1]}")
-            return store
         except Exception as e:
             print(f"[CASES] Redis unavailable ({e}); falling back to in-memory store")
-    return MemoryCaseStore()
+    if inner is None:
+        inner = MemoryCaseStore()
+
+    # Durable layer (approved decision D3): CASE_DB_URL adds an auditable
+    # SQL timeline + snapshots over the fast store; absent, behavior is
+    # unchanged.
+    db_url = os.getenv("CASE_DB_URL", "").strip()
+    if db_url:
+        try:
+            from core.persistence import DatabaseCaseStore
+            store = DatabaseCaseStore(inner, db_url)
+            print(f"[CASES] durable case store enabled ({store.backend})")
+            return store
+        except Exception as e:
+            print(f"[CASES] durable store unavailable ({e}); continuing with {inner.backend}")
+    return inner

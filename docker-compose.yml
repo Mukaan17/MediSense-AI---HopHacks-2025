@@ -14,6 +14,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       # Deep reports run on the worker service instead of request workers.
       - FINALIZE_MODE=queue
+      # Durable case timeline/snapshots/reports (approved decision D3).
+      - CASE_DB_URL=postgresql+psycopg://medisense:medisense@postgres:5432/medisense
       # The nginx frontend serves same-origin, so no extra CORS origin is
       # needed for it; keep localhost for the dev server.
       - FRONTEND_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173
@@ -37,6 +39,7 @@ services:
     environment:
       - LOGLEVEL=INFO
       - REDIS_URL=redis://redis:6379/0
+      - CASE_DB_URL=postgresql+psycopg://medisense:medisense@postgres:5432/medisense
     volumes:
       - ./data:/app/data
       - ./rag_store:/app/rag_store
@@ -44,6 +47,7 @@ services:
       - model_cache:/app/cache
     depends_on:
       - redis
+      - postgres
 
   frontend:
     build:
@@ -60,5 +64,15 @@ services:
     image: redis:7-alpine
     command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=medisense
+      - POSTGRES_PASSWORD=medisense
+      - POSTGRES_DB=medisense
+    volumes:
+      - case_db:/var/lib/postgresql/data
+
 volumes:
   model_cache:
+  case_db:
