@@ -1,5 +1,5 @@
 import { API_CONFIG } from '../config/api';
-import { getAuthToken } from '../services/api';
+import { getWsTicket } from '../services/api';
 
 export interface RankedCondition {
   condition: string;
@@ -69,10 +69,12 @@ export async function connectCaseWS(
   disconnectCaseWS();
   currentCaseId = caseId;
 
+  // Short-lived WS ticket, never the session JWT, in the URL (CWE-598).
+  const ticket = await getWsTicket();
+
   await new Promise<void>((resolve, reject) => {
-    const token = getAuthToken();
     const wsUrl = `${toWsBase(API_CONFIG.BASE_URL)}/ws/case/${caseId}` +
-      (token ? `?token=${encodeURIComponent(token)}` : '');
+      (ticket ? `?token=${encodeURIComponent(ticket)}` : '');
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => resolve();

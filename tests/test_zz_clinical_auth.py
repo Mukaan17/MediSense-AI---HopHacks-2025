@@ -88,3 +88,31 @@ def test_inference_never_attaches_synthetic_ehr(clinical_client):
     assert resp.status_code == 200
     assert resp.json().get("ehr") in (None, {}), \
         "clinical mode must not fuse the synthetic demo EHR into inference"
+
+
+def test_ws_ticket_flow(clinical_client):
+    r = clinical_client.post("/auth/login",
+                             data={"username": "drtest", "password": "correct-horse-9"})
+    token = r.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    t = clinical_client.post("/auth/ws-ticket", headers=headers)
+    assert t.status_code == 200
+    ticket = t.json()["ticket"]
+    assert ticket and ticket != token
+
+    # The ticket authenticates a WebSocket (auth passes; the socket then
+    # reports STT unavailability or readiness rather than closing 4401).
+    with clinical_client.websocket_connect(f"/ws/transcribe?token={ticket}") as ws:
+        msg = ws.receive()
+        assert not (msg["type"] == "websocket.close" and msg.get("code") == 4401)
+
+    # A WS ticket must NOT work as a REST bearer token (CWE-598 mitigation:
+    # a ticket leaked via an access log is useless outside a socket).
+    rest = clinical_client.post("/infer", json={"utterances": ["x"]},
+                                headers={"Authorization": f"Bearer {ticket}"})
+    assert rest.status_code == 401
+
+
+def test_ws_ticket_requires_auth(clinical_client):
+    assert clinical_client.post("/auth/ws-ticket").status_code == 401

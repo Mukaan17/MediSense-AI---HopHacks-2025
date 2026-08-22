@@ -14,7 +14,7 @@ import asyncio
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -61,8 +61,9 @@ from core.clinical_diagnosis import (
 from core.ehr_integration import create_ehr_integration_summary
 from core.app_mode import APP_MODE, is_demo, is_clinical, ehr_is_synthetic
 from core.auth import (
-    DEMO_USER, PUBLIC_PATHS, TOKEN_TTL_MINUTES,
-    authenticate, create_access_token, user_from_authorization, user_from_ws_token,
+    DEMO_USER, PUBLIC_PATHS, TOKEN_TTL_MINUTES, WS_TICKET_TTL_SECONDS,
+    authenticate, create_access_token, create_ws_ticket,
+    user_from_authorization, user_from_ws_token,
 )
 from core.audit import audit_event, new_request_id
 from core import metrics
@@ -165,6 +166,16 @@ async def _security_middleware(request, call_next):
     metrics.observe("request_latency", duration_ms, path=route)
     response.headers["X-Request-ID"] = request_id
     return response
+
+
+@app.post("/auth/ws-ticket")
+def auth_ws_ticket(request: Request):
+    """Mint a short-lived WS-scoped ticket for the authenticated session.
+    WebSocket URLs carry this instead of the session JWT so proxy access
+    logs never see a long-lived credential."""
+    user = getattr(request.state, "user", DEMO_USER) or DEMO_USER
+    return {"ticket": create_ws_ticket(user.get("username", "demo"), user.get("role", "clinician")),
+            "expires_in_seconds": WS_TICKET_TTL_SECONDS}
 
 
 @app.get("/metrics")
