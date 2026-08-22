@@ -21,6 +21,8 @@ from typing import Any, Dict, Iterable, List, Tuple
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
+from .chunking import docs_from_json
+
 
 def _default_files(repo_root: Path) -> List[Path]:
     candidates = [
@@ -30,52 +32,6 @@ def _default_files(repo_root: Path) -> List[Path]:
         repo_root / "ehr_with_images.json",
     ]
     return [p for p in candidates if p.exists()]
-
-
-def _flatten(obj: Any, sep: str = "\n") -> str:
-    if obj is None:
-        return ""
-    if isinstance(obj, str):
-        return obj
-    if isinstance(obj, (int, float, bool)):
-        return str(obj)
-    if isinstance(obj, list):
-        parts = [_flatten(x, sep) for x in obj]
-        return sep.join([p for p in parts if p])
-    if isinstance(obj, dict):
-        lines = []
-        for k, v in obj.items():
-            t = _flatten(v, sep)
-            if t:
-                lines.append(f"{k}: {t}")
-        return sep.join(lines)
-    return str(obj)
-
-
-def _read_json_docs(path: Path) -> Iterable[Tuple[str, Dict[str, Any]]]:
-    try:
-        with path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception as e:
-        print(f"[WARN] Failed to read {path.name}: {e}")
-        return []
-
-    docs: List[Tuple[str, Dict[str, Any]]] = []
-    if isinstance(data, list):
-        for i, item in enumerate(data):
-            text = _flatten(item)
-            if text.strip():
-                docs.append((text, {"source": path.name, "section": f"item_{i}"}))
-    elif isinstance(data, dict):
-        for k, v in data.items():
-            text = _flatten(v)
-            if text.strip():
-                docs.append((text, {"source": path.name, "section": str(k)}))
-    else:
-        text = _flatten(data)
-        if text.strip():
-            docs.append((text, {"source": path.name}))
-    return docs
 
 
 def build_kb(files: List[Path], emb_model: str, persist_dir: Path, collection: str, reset: bool) -> None:
@@ -101,7 +57,7 @@ def build_kb(files: List[Path], emb_model: str, persist_dir: Path, collection: s
     metas: List[Dict[str, Any]] = []
     for fp in files:
         if fp.suffix.lower() == ".json":
-            for text, meta in _read_json_docs(fp):
+            for text, meta in docs_from_json(fp):
                 texts.append(text)
                 metas.append(meta)
         else:
