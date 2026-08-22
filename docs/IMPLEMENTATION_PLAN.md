@@ -399,10 +399,10 @@ Track 2 scaffolding (I11–I14) interleaved where waiting on review. Roughly
 ## Execution record
 
 All approved packages shipped, one commit each, in order:
-I0 `f930382`, I1 `57de4ce`, I2 `a2eca1a`, I3a `b23f79f`, I3b `1500ec0`,
-I6 `d9f1111`, I4 `3db1e35`, I5 `7b9982a`, I7 `e2a7a67`, I8 `f5ecf79`,
-I10 `238add9`, I9 `7792a97`, I11 `bc5442b`, I12 `42a6f45`, I13 `12df3bd`,
-I14 `df285c4`, I15 `fa01c5f`, I16 `ba55929`, I17 `88c493d`. Every package
+I0 `344527f`, I1 `7bc9a7c`, I2 `dba5e7e`, I3a `c6117a5`, I3b `2310528`,
+I6 `8349e13`, I4 `b6c565f`, I5 `fe92abb`, I7 `afb7dfa`, I8 `613bbdd`,
+I10 `6023eaf`, I9 `ec22db0`, I11 `fdd6468`, I12 `c79b6a0`, I13 `fba83be`,
+I14 `c63c55d`, I15 `9468b68`, I16 `460fe3e`, I17 `07cae18`. Every package
 ended with the full gate suite green (backend pytest + ruff, frontend
 tsc + vitest + build, demo + clinical Playwright E2E, plus
 package-specific gates).
