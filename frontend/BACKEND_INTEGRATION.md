@@ -24,7 +24,7 @@ Health check endpoint
   "status": "ok",
   "collection": "conversations",
   "persist_dir": "./rag_store",
-  "emb_model": "sentence-transformers/all-mpnet-base-v2",
+  "emb_model": "sentence-transformers/all-MiniLM-L6-v2",
   "top_k": 5,
   "doc_count": 150
 }

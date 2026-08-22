@@ -233,19 +233,61 @@ def _resolve_ehr_from_uploaded_image(
     return _ehr_fallback_by_top_label(preds)
 
 
+
+def _call_llm(fn, *args, **kwargs):
+    """Run an LLM-backed step; surface a missing-key config error as an
+    explicit 503 instead of an anonymous 500."""
+    try:
+        return fn(*args, **kwargs)
+    except RuntimeError as e:
+        if "API_KEY" in str(e).upper():
+            raise HTTPException(status_code=503, detail=f"LLM not configured: {e}")
+        raise
+
+
+def _gated_questions(ranked: List[Dict[str, Any]], top_conf: float, margin: float,
+                     image_findings: List[Dict[str, Any]], ehr: Optional[Dict[str, Any]],
+                     text_findings: List[Dict[str, Any]], extracted: Dict[str, Any],
+                     ctx: str, max_questions: int = 3) -> List[Dict[str, Any]]:
+    """Confidence-gated clarifying questions, shared by the batch endpoints.
+    Failures degrade to an empty list; never blocks a response."""
+    if not ((top_conf < ASK_THRESH) or (margin < MARGIN_THRESH and top_conf < 0.95)):
+        return []
+    state = {
+        "top_candidates": ranked[:5],
+        "image_findings": image_findings,
+        "ehr_summary": ehr or {},
+        "text_findings": text_findings,
+        "extraction": extracted,
+        "retrieved_context": (ctx or "")[:MAX_CTX_CHARS],
+        "top_confidence": top_conf,
+        "margin": margin,
+        "scope_hint": _scope_hint(top_conf),
+    }
+    try:
+        return propose_questions_llm(state, max_questions=max_questions)
+    except Exception as e:
+        log.warning(f"[coach] question generation failed: {e}")
+        return []
+
+
 def _predict_image_with_fallback(raw_bytes: bytes, filename: Optional[str]) -> List[Dict[str, Any]]:
     # Primary path: model inference.
     if _img_model is not None:
         return _img_model.predict(raw_bytes)
 
-    # Offline fallback: if the uploaded image can be linked to an EHR row, use its label.
+    # Offline fallback: if the uploaded image can be linked to an EHR row, use
+    # its recorded label. The score is a fixed placeholder, not model output -
+    # flag it so downstream consumers and the UI can say so.
     linked_ehr = _resolve_ehr_from_uploaded_image(raw_bytes, filename, preds=None)
     fallback_label = linked_ehr.get("chexpert_label") if linked_ehr else None
     if fallback_label:
         return [{
             "label": fallback_label,
-            "score": 0.99,
-            "source": "ehr_linked_label_fallback"
+            "score": 0.60,
+            "source": "ehr_linked_label_fallback",
+            "fallback": True,
+            "note": "Imaging model unavailable; label taken from the linked EHR record, score is a placeholder.",
         }]
 
     raise HTTPException(
@@ -529,7 +571,7 @@ def infer(req: InferRequest):
     # Add EHR context if patient_id provided
     ehr = EHR_BY_PATIENT.get(req.patient_id) if req.patient_id else None
     ctx = (_summarize_ehr(ehr) if ehr else "") + (ctx[:MAX_CTX_CHARS] if ctx else "")
-    answer = answerer_generate(extraction, ctx)
+    answer = _call_llm(answerer_generate, extraction, ctx)
     return {
         "extraction": extraction,
         "answer": answer,
@@ -652,7 +694,7 @@ async def structured_diagnosis(
     domains = bucket_domains([r["condition"] for r in ranked]) if ranked else {}
 
     # 6) Generate structured differential diagnosis + brief summary
-    structured_diagnosis = generate_structured_differential_diagnosis(
+    structured_diagnosis = _call_llm(generate_structured_differential_diagnosis, 
         extraction, ctx, ehr, ranked
     )
     brief_summary = generate_brief_diagnosis_summary(extraction, ranked, max_sentences=2)
@@ -664,11 +706,10 @@ async def structured_diagnosis(
     # 8) Create EHR integration summary
     ehr_integration = create_ehr_integration_summary(structured_diagnosis, ehr)
 
-    # 9) Live questions (confidence-gated) - simplified to avoid timeout
+    # 9) Live questions (confidence-gated; degrades to [] on LLM failure)
     top_conf, margin = _confidence_and_margin(ranked)
-    questions = []
-    # Question generation is currently disabled to prevent timeouts
-    questions = []
+    questions = _gated_questions(ranked, top_conf, margin, image_findings, ehr,
+                                 text_findings, extracted, ctx)
 
     return {
         "filename": filename,
@@ -716,7 +757,7 @@ async def test_structured_diagnosis(
     extraction = extractor_generate(conversation)
     
     # Generate structured differential diagnosis with minimal context
-    structured_diagnosis = generate_structured_differential_diagnosis(
+    structured_diagnosis = _call_llm(generate_structured_differential_diagnosis, 
         extraction, "test context", ehr, []
     )
 
@@ -809,13 +850,12 @@ async def multimodal_infer(
     ctx_full = (ehr_ctx + fused_header + (ctx or ""))[:MAX_CTX_CHARS]
 
     # 7) Advisory RAG
-    advisory = answerer_generate(extraction, ctx_full)
+    advisory = _call_llm(answerer_generate, extraction, ctx_full)
 
-    # 8) Live questions (confidence-gated) - simplified to avoid timeout
+    # 8) Live questions (confidence-gated; degrades to [] on LLM failure)
     top_conf, margin = _confidence_and_margin(ranked)
-    questions = []
-    # Question generation is currently disabled to prevent timeouts
-    questions = []
+    questions = _gated_questions(ranked, top_conf, margin, image_findings, ehr,
+                                 text_findings, extracted, ctx)
 
     return {
         "filename": filename,
@@ -907,12 +947,23 @@ async def voice_infer(
         # 6) Text findings from extraction
         text_findings = _scan_text_findings(extracted)
         
-        # 7) Fusion (no image findings for voice-only)
+        # 7) Fusion (no image findings for voice-only) + evidence shift, so
+        # this endpoint's response carries the same posterior_shift
+        # explainability as every other inference route
         image_findings: List[Dict[str, Any]] = []
         ranked = fuse(image_findings, text_findings, topk=10)
+        evidence = build_evidence(
+            image_findings=image_findings,
+            text_findings=text_findings,
+            ehr=ehr,
+            extracted=extracted,
+            fused_ranked=ranked,
+            topk=10,
+        )
+        ranked = (evidence.get("posterior_shift") or {}).get("adjusted_top10") or ranked
         final = ranked[0] if ranked else None
         domains = bucket_domains([r["condition"] for r in ranked]) if ranked else {}
-        
+
         # 8) Context assembly
         fused_header = ""
         if ranked:
@@ -925,7 +976,7 @@ async def voice_infer(
         ctx_full = (ehr_ctx + fused_header + (ctx or ""))[:MAX_CTX_CHARS]
         
         # 9) Advisory RAG
-        advisory = answerer_generate(extraction, ctx_full)
+        advisory = _call_llm(answerer_generate, extraction, ctx_full)
         
         # 10) Live questions (confidence-gated)
         top_conf, margin = _confidence_and_margin(ranked)
@@ -960,6 +1011,7 @@ async def voice_infer(
                     "top_confidence": top_conf,
                     "margin": margin
                 },
+                "evidence": evidence,
                 "rag_advisory": advisory,
                 "summary": _derive_summary(advisory=advisory, ranked=ranked),
                 "coach": {"suggested": questions}
@@ -1058,7 +1110,7 @@ async def multimodal_voice_infer(
         ctx_full = (ehr_ctx + fused_header + (ctx or ""))[:MAX_CTX_CHARS]
         
         # 10) Advisory RAG
-        advisory = answerer_generate(extraction, ctx_full)
+        advisory = _call_llm(answerer_generate, extraction, ctx_full)
         
         # 11) Live questions (confidence-gated)
         top_conf, margin = _confidence_and_margin(ranked)
@@ -1225,12 +1277,12 @@ def reload_ehr():
     return {"ehr_loaded": len(EHR_RECORDS), "ehr_source": EHR_JSON}
 
 # Tip:
-#   uvicorn server:app --host 0.0.0.0 --port 8000
+#   uvicorn api.server:app --host 0.0.0.0 --port 8000
 # Env:
 #   export EHR_JSON="ehr_with_images.json"
 #   export RAG_PERSIST_DIR=./rag_store
 #   export RAG_COLLECTION=conversations
-#   export RAG_EMB_MODEL=sentence-transformers/all-mpnet-base-v2
+#   export RAG_EMB_MODEL=sentence-transformers/all-MiniLM-L6-v2
 #   export GEMINI_API_KEY=...
 #   export GEMINI_MODEL=gemini-2.5-flash-lite
 #   export ASK_THRESH=0.70
@@ -1243,7 +1295,6 @@ async def create_voice_case(
     live: bool = Query(True),
     max_candidates: int = Query(3, ge=1, le=5),
     min_conf: float = Query(0.60, ge=0.0, le=1.0),
-    min_margin: float = Query(0.03, ge=0.0, le=0.2)
 ):
     """Create a case for voice-only transcription (no image)"""
     # No image processing for voice-only cases
@@ -1283,7 +1334,6 @@ async def create_case(
     live: bool = Query(True),
     max_candidates: int = Query(3, ge=1, le=5),
     min_conf: float = Query(0.60, ge=0.0, le=1.0),
-    min_margin: float = Query(0.03, ge=0.0, le=0.2),
     file: UploadFile = File(None)
 ):
     # Handle optional image upload
@@ -1382,7 +1432,7 @@ def transcribe_step(
     ehr_ctx = _summarize_ehr(case["ehr"]) if case["ehr"] else ""
     ctx_full = (ehr_ctx + fused_header + ctx)[:MAX_CTX_CHARS]
 
-    advisory = answerer_generate(extraction, ctx_full)
+    advisory = _call_llm(answerer_generate, extraction, ctx_full)
 
     questions = []
     if (top_conf < ASK_THRESH) or (margin < MARGIN_THRESH and top_conf < 0.95):

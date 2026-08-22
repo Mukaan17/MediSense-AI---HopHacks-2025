@@ -35,7 +35,7 @@ uvicorn api.server:app --host 0.0.0.0 --port 8000
 ### 3. Test the Integration
 
 ```bash
-python test_voice_integration.py
+python3 smoke_test.py
 ```
 
 ## 📋 API Endpoints
@@ -165,7 +165,7 @@ curl http://localhost:8000/health
 Run the test script to verify everything is working:
 
 ```bash
-python test_voice_integration.py
+python3 smoke_test.py
 ```
 
 ### Manual Testing

@@ -69,7 +69,7 @@ flowchart TD
 - Frontend build issues fixed (missing modules, endpoint alignment, Docker output path).
 - Smoke test runner added: `smoke_test.py`.
 
-Detailed change log: `DETAILED_CHANGES_DOCUMENTATION.md`.
+Audit and remediation roadmap: `docs/MASTER_PLAN.md`.
 
 ## Repository Map
 
@@ -265,7 +265,9 @@ Endpoints:
 - `GET /ehr/patients/{patient_id}`
 - `POST /api/case/voice`
 - `POST /api/case`
+- `POST /api/case/{id}/finalize`
 - websocket: `/ws/case/{id}`
+- websocket: `/ws/transcribe` (raw 16 kHz PCM in, transcripts out)
 
 ---
 

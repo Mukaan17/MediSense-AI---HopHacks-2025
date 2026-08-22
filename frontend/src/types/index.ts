@@ -102,6 +102,7 @@ export interface ClinicalReport {
   citations: string[];
   generatedAt: string;
   confidence: number;
+  xai?: XAIExplanation;
 }
 
 export interface EHRIntegration {
