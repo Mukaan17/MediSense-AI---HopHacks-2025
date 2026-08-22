@@ -21,7 +21,7 @@ npm start
 ### 3. Test Integration
 ```bash
 # From project root
-python test_integration.py
+python3 smoke_test.py
 ```
 
 ## 🔗 API Integration Overview
@@ -119,7 +119,7 @@ Comprehensive Analysis → Risk Assessment → Red Flag Detection → Structured
 export EHR_JSON="ehr_with_images.json"
 export RAG_PERSIST_DIR=./rag_store
 export RAG_COLLECTION=conversations
-export RAG_EMB_MODEL=sentence-transformers/all-mpnet-base-v2
+export RAG_EMB_MODEL=sentence-transformers/all-MiniLM-L6-v2
 export GEMINI_API_KEY=your_google_ai_studio_key
 export GEMINI_MODEL=gemini-2.5-flash-lite
 export ASK_THRESH=0.70
@@ -147,7 +147,7 @@ curl -X POST http://localhost:8000/infer -H "Content-Type: application/json" -d 
 ### Frontend Testing
 ```bash
 # Run integration tests
-python test_integration.py
+python3 smoke_test.py
 
 # Manual testing
 # 1. Open http://localhost:3000

@@ -28,8 +28,9 @@ class ImagingModel:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.top_k = int(os.getenv("CXR_TOPK", "6"))
 
-        # load checkpoint
-        payload = torch.load(ckpt_path, map_location="cpu")
+        # load checkpoint; weights_only blocks arbitrary pickle execution
+        # from an untrusted checkpoint file
+        payload = torch.load(ckpt_path, map_location="cpu", weights_only=True)
         repo   = payload.get("repo") or payload.get("model_id") or payload.get("biomedclip_repo")
         labels = payload.get("labels")
         head_sd = payload.get("head_state_dict")

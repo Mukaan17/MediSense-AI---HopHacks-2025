@@ -401,6 +401,39 @@ const ClinicalInterface: React.FC = () => {
       report.confidence = data.fusion.top_confidence;
     }
 
+    // Explainability from the backend's real evidence payload (posterior
+    // shifts + fused scores + citations). The breakdown values are grounded
+    // signals: top imaging score, fused text confidence, and coverage-scaled
+    // indicators for retrieved citations and attached EHR context.
+    const shift = data.evidence?.posterior_shift;
+    const reasoningChain: string[] = [];
+    if (data.fusion?.top10?.length) {
+      const top = data.fusion.top10[0];
+      reasoningChain.push(`Fused image + text evidence ranks ${String(top.condition).replace(/_/g, ' ')} first (score ${(top.score ?? 0).toFixed(2)})`);
+    }
+    if (shift?.shift_reasons?.length) {
+      reasoningChain.push(...shift.shift_reasons);
+    }
+    if (shift?.base_top && shift?.adjusted_top && shift.base_top.condition !== shift.adjusted_top.condition) {
+      reasoningChain.push(`Evidence shifted the leading consideration from ${shift.base_top.condition} to ${shift.adjusted_top.condition}`);
+    }
+    if (reasoningChain.length > 0) {
+      const imageScores = (data.image_findings || []).map((f: any) => f.score || 0);
+      report.xai = {
+        reasoningChain,
+        confidenceBreakdown: {
+          clinicalGuidelines: Math.min(1, (report.citations?.length || 0) * 0.2),
+          imagingEvidence: imageScores.length ? Math.max(...imageScores) : 0,
+          symptomMatch: data.fusion?.top_confidence ?? 0,
+          patientHistory: data.ehr ? Math.min(1, 0.3 + (shift?.shift_reasons?.length || 0) * 0.1) : 0,
+        },
+        sourceAttribution: (report.citations || []).slice(0, 5).map((c: string) => {
+          const [source, section] = String(c).split('§').map((s) => s.trim());
+          return { source: source || String(c), section: section || '', relevance: 0.5, type: 'study' as const };
+        }),
+      };
+    }
+
     return report;
   };
 
@@ -980,30 +1013,10 @@ const ClinicalInterface: React.FC = () => {
               {/* Differential Diagnosis */}
               <DifferentialDiagnosis diagnoses={clinicalReport.differentialDiagnosis || []} />
 
-              {/* XAI Explanation */}
-              <XAIExplanation 
-                explanation={{
-                  reasoningChain: [
-                    "Patient presents with elevated blood pressure readings",
-                    "Associated symptoms suggest uncontrolled hypertension",
-                    "Risk factors include age and family history"
-                  ],
-                  confidenceBreakdown: {
-                    clinicalGuidelines: 0.85,
-                    imagingEvidence: 0.0,
-                    symptomMatch: 0.78,
-                    patientHistory: 0.65
-                  },
-                  sourceAttribution: [
-                    {
-                      source: "American Heart Association Guidelines",
-                      section: "Hypertension Management",
-                      relevance: 0.9,
-                      type: "guideline"
-                    }
-                  ]
-                }}
-              />
+              {/* Explainability, built from the backend's evidence payload */}
+              {clinicalReport.xai && (
+                <XAIExplanation explanation={clinicalReport.xai} />
+              )}
 
               {/* Recommendations */}
               <div className="card">

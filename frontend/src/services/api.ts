@@ -5,14 +5,13 @@
  * @Last Modified time: 2025-09-13 13:17:35
  */
 import axios from 'axios';
-import { 
-  InferRequest, 
-  MultimodalInferRequest, 
-  QuickEntryRequest, 
+import {
+  InferRequest,
+  MultimodalInferRequest,
   ClinicalReport,
   EHRIntegration,
   KnowledgeBaseMode,
-  APIResponse 
+  APIResponse
 } from '../types';
 import { API_CONFIG } from '../config/api';
 
@@ -68,11 +67,13 @@ export const clinicalAPI = {
     }
   },
 
-  // Basic inference
+  // Basic inference. patient_id lets the backend attach the matching EHR
+  // record; the server's InferRequest accepts utterances + patient_id.
   async infer(request: InferRequest): Promise<APIResponse<any>> {
     try {
       const response = await api.post('/infer', {
-        utterances: request.utterances
+        utterances: request.utterances,
+        ...(request.patient?.id ? { patient_id: request.patient.id } : {})
       });
       return {
         success: true,
@@ -274,37 +275,6 @@ export const clinicalAPI = {
 
 // Future API endpoints (to be implemented)
 export const futureAPI = {
-  // Quick entry with structured input
-  async quickEntry(request: QuickEntryRequest): Promise<APIResponse<ClinicalReport>> {
-    try {
-      const formData = new FormData();
-      formData.append('symptoms', JSON.stringify(request.symptoms));
-      formData.append('vitals', JSON.stringify(request.vitals));
-      formData.append('patient', JSON.stringify(request.patient));
-      
-      if (request.voiceNote) {
-        formData.append('voice_note', request.voiceNote);
-      }
-      
-      const response = await api.post('/quick_entry', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return {
-        success: true,
-        data: response.data,
-        timestamp: new Date().toISOString()
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.detail || error.message,
-        timestamp: new Date().toISOString()
-      };
-    }
-  },
-
   // EHR Integration
   async importPatientData(patientId: string, ehrSystem: string): Promise<APIResponse<EHRIntegration>> {
     try {

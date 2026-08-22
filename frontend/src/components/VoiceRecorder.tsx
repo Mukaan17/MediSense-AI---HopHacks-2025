@@ -54,7 +54,10 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' });
+        // Label the blob with the recorder's real container type
+        // (typically audio/webm;codecs=opus) instead of pretending it's WAV.
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const blob = new Blob(chunks, { type: mimeType });
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioURL(url);
@@ -192,7 +195,9 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, onVoiceI
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   if (audioBlob) {
-                    const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
+                    const ext = audioBlob.type.includes('webm') ? 'webm'
+                      : audioBlob.type.includes('ogg') ? 'ogg' : 'wav';
+                    const audioFile = new File([audioBlob], `recording.${ext}`, { type: audioBlob.type });
                     onVoiceInference(audioFile);
                   }
                 }}
