@@ -50,12 +50,18 @@ class ImagingModel:
         self.model.head.load_state_dict(head_sd, strict=True)
         self.model.eval()
 
+        # Temperature calibration (models/registry.yaml): identity (T=1.0)
+        # when no calibration file has been fitted for this checkpoint.
+        from .calibration import TemperatureScaler
+        self.scaler = TemperatureScaler.load(
+            os.getenv("CXR_CALIBRATION", os.path.join("models", "calibration_cxr.json")))
+
     @torch.no_grad()
     def predict(self, img_bytes: bytes) -> List[Dict[str, Any]]:
         img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
         x = self.model.get_preprocess()(img).unsqueeze(0).to(self.model.device)
-        logits = self.model(x)                                   # [1, C]
-        probs  = torch.sigmoid(logits).squeeze(0).float().cpu()  # [C]
+        logits = self.model(x).squeeze(0).float().cpu()          # [C]
+        probs  = torch.tensor(self.scaler.calibrate(logits.tolist()))
         vals, idxs = torch.topk(probs, k=min(self.top_k, len(self.labels)))
         return [{"label": self.labels[i], "score": float(p)} for p, i in zip(vals.tolist(), idxs.tolist())]
 
