@@ -12,7 +12,7 @@ import {
   EHRIntegration,
   APIResponse
 } from '../types';
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG, DEV_CONFIG } from '../config/api';
 import { components } from '../api/schema';
 
 // Response contracts generated from the backend's OpenAPI schema
@@ -95,7 +95,9 @@ export function normalizeAPIError(error: any): string {
 // Request interceptor: logging + CSRF header for mutating requests
 api.interceptors.request.use(
   (config) => {
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    if (DEV_CONFIG.DEBUG) {
+      console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    }
     const csrf = getCsrfToken();
     if (csrf && config.headers && (config.method || 'get').toLowerCase() !== 'get') {
       (config.headers as any)['X-CSRF-Token'] = csrf;
@@ -117,7 +119,9 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
-    console.log(`API Response: ${response.status} ${response.config.url}`);
+    if (DEV_CONFIG.DEBUG) {
+      console.log(`API Response: ${response.status} ${response.config.url}`);
+    }
     return response;
   },
   (error) => {

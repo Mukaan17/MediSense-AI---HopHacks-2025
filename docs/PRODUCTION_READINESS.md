@@ -5,8 +5,9 @@ Rigorous gap analysis after the remediation roadmap (`docs/MASTER_PLAN.md`,
 Direction and sequencing for the open items live in
 `docs/IMPROVEMENT_ROADMAP.md`.
 Items marked **[gate]** should block a real clinical go-live. Items marked
-**[done]** were closed by the follow-up hardening round (R1–R8); what
-remains open is ranked within each category.
+**[done]** were closed by the follow-up hardening round (R1–R8) or the
+approved improvement execution (I0–I17, `docs/IMPLEMENTATION_PLAN.md`);
+what remains open is ranked within each category.
 
 ## 1. Code & architecture
 
@@ -14,7 +15,9 @@ remains open is ranked within each category.
    response models for the stable endpoints (health, auth, EHR, knowledge
    base, reloads, case create/finalize, transcription); evolving payloads
    use `extra="allow"` so documented keys are guaranteed without freezing
-   pipeline output. Next increment: generate a typed client (openapi-ts).
+   pipeline output. The typed client landed in I2: `openapi.json` is the
+   committed contract, `frontend/src/api/schema.d.ts` is generated from it
+   (openapi-typescript), and CI enforces freshness on both sides.
 2. **[done] Further decomposition.** `api/routes/ws.py` split from
    `cases.py`; `core/diagnosis/` package (differential / risk / summary)
    replaced the 580-line module (shim kept); frontend gained
@@ -36,18 +39,21 @@ remains open is ranked within each category.
 
 ## 2. Testing
 
-1. **[gate→partly done] End-to-end browser tests.** Playwright smoke now
-   covers app boot, the degraded quick-analysis flow, and the clinical
-   login gate (`frontend/e2e/`, CI job `test-e2e`) — its first run caught
-   two real production bugs (FormData content-type, error-object toast
-   crash). Still open for the full gate: the live voice flow with a fake
-   media stream (`--use-fake-device-for-media-stream` + WAV fixture).
-2. **LLM contract tests.** Claude/Gemini calls are mocked or degraded in
-   CI; record-and-replay fixtures (VCR-style) for one golden conversation
-   per path would catch prompt/parse regressions without live keys.
-3. **[done] Coverage measurement.** pytest-cov + jest --coverage run in CI;
-   baseline 56% backend lines with blind spots named in
-   `docs/PERF_BASELINE.md`. Ratchet still to be set once CI numbers settle.
+1. **[done] End-to-end browser tests.** Playwright covers app boot, the
+   degraded quick-analysis flow, the clinical login gate, an axe-core
+   accessibility scan, and — closing the former gate item — the live
+   voice flow end-to-end with a fake media stream driving the real STT
+   pipeline (`e2e/demo/voice.spec.ts`, espeak-generated WAV fixture).
+   The first smoke run caught two real production bugs (FormData
+   content-type, error-object toast crash).
+2. **[done] LLM contract tests.** Record-and-replay fixtures
+   (`fixtures/llm/`, `tests/test_llm_replay.py`) pin prompt/parse behavior
+   without live keys; `scripts/record_llm_fixtures.py` refreshes them and
+   the `live-llm-eval` CI job re-records against live models on demand.
+3. **[done] Coverage measurement.** pytest-cov + vitest --coverage run in
+   CI; the backend ratchet is set (`--cov-fail-under=50`, raise
+   deliberately, never lower) with blind spots named in
+   `docs/PERF_BASELINE.md`.
 4. **[partly done] Load baseline.** `scripts/ws_load_test.py` measured and
    recorded (`docs/PERF_BASELINE.md`: p95 2.2 s at 5 cases/worker CPU-only).
    Still open: running it on a schedule against a composed stack.
@@ -62,9 +68,12 @@ remains open is ranked within each category.
 2. **[gate] De-identification/PHI-minimization layer** in front of LLM
    egress (scrub names/MRNs/dates from prompts; the deterministic extractor
    already reduces surface, but nothing enforces it).
-3. **IdP integration.** File-based users + JWTs cannot be revoked; front an
-   OIDC provider (hospital SSO), add refresh/logout semantics, and shorten
-   the 8-hour TTL.
+3. **[partly done] IdP integration.** OIDC authorization-code + PKCE with
+   JWKS validation and role mapping is implemented behind `AUTH_MODE=oidc`
+   (`core/oidc.py`, I13), and sessions now ride httpOnly cookies with
+   logout (`/auth/logout`, I5). Verified against a stub IdP; still open:
+   pointing it at the hospital's real provider, revocation/refresh
+   semantics, and shortening the 8-hour password-mode TTL.
 4. **[done] Supply chain.** Dependabot (pip/npm/actions, weekly, grouped);
    pip-audit and npm-audit are **blocking** with per-ID accepted-findings
    triage in `docs/PERF_BASELINE.md`; image builds gate on a Trivy scan
@@ -81,54 +90,81 @@ remains open is ranked within each category.
 
 ## 4. Operations
 
-1. **[gate→partly done] Alerting.** `deploy/prometheus-alerts.yml` defines
-   error-rate, latency, LLM failure-rate (new `llm_errors` metric), and
-   token-spend alerts wired to runbook anchors. Still open for the gate:
-   actually deploying Prometheus/Alertmanager + a dashboard, and shipping
+1. **[gate→mostly done] Alerting.** `deploy/prometheus-alerts.yml` defines
+   error-rate, latency (real p95 via histogram_quantile), LLM
+   failure-rate, and token-spend alerts wired to runbook anchors, and the
+   stack itself is now deployable config: `docker-compose.observability.yml`
+   brings up Prometheus + Alertmanager + Grafana with the backend
+   dashboard auto-provisioned (I15). Still open for the gate: running it
+   against production (a real Alertmanager receiver) and shipping
    audit/JSON logs to durable storage.
-2. **Error tracking** (Sentry or equivalent) for backend exceptions and
-   frontend errors; today they land in logs only.
-3. **Deploy maturity.** CI pushes SHA-tagged images but there is no
-   promotion, canary/blue-green, or documented rollback; ECS deploy is a
-   manual doc (`aws_ecs_deployment.md`), not IaC — write the Terraform it
-   describes.
+2. **[done] Error tracking.** Sentry integration gated on `SENTRY_DSN`
+   (`core/error_tracking.py`, PII off by default); no-op without the DSN.
+3. **[partly done] Deploy maturity.** `infra/terraform/` (I16, validated)
+   codifies the ECS deployment the manual doc described: VPC, ALB, Fargate
+   backend/worker/frontend, EFS, ElastiCache, RDS, scoped IAM, CPU
+   target-tracking autoscaling, and a deployment circuit breaker
+   (auto-rollback). Still open: CodeDeploy blue/green (deliberately
+   deferred, noted in `infra/terraform/README.md`) and a promotion flow.
 4. **Backups/DR.** No snapshot policy for EFS (rag_store, caches), the
    users file, or Redis; define RPO/RTO (data criticality notes are in
-   `docs/RUNBOOK.md`).
-5. **HA posture.** Single Redis in compose; ElastiCache multi-AZ in prod,
-   plus autoscaling policies keyed to the latency metrics.
+   `docs/RUNBOOK.md`). Case history now also lives in RDS (I9) — include
+   it in the backup policy.
+5. **[partly done] HA posture.** Terraform provisions ElastiCache
+   multi-AZ with failover plus latency-informed CPU autoscaling; compose
+   (dev) still runs a single Redis by design.
 6. **[done] Runbooks.** `docs/RUNBOOK.md`: restart/reload, KB rebuild,
    model refresh, and per-alert triage.
 
 ## 5. Product & data
 
-1. **[gate] Real EHR integration.** Clinical mode correctly refuses the
-   synthetic dataset, which means clinical mode has *no* EHR until a FHIR
-   (SMART-on-FHIR) connector replaces the demo mockups.
+1. **[gate→partly done] Real EHR integration.** A FHIR R4 connector with
+   SMART Backend Services auth (RFC 7523), LOINC vitals mapping, and
+   DocumentReference write-back is implemented behind `EHR_SOURCE=fhir`
+   (`core/fhir/`, I12), verified against a stub server. The gate closes
+   when it runs against the hospital's real FHIR endpoint with owner
+   credentials; until then clinical mode still refuses the synthetic set.
 2. **[gate] Clinical validation + regulatory posture.** Advisory framing is
    enforced in code, but a decision-support tool touching diagnosis needs a
    documented clinical evaluation and a CDS-vs-SaMD regulatory assessment
    before real use.
-3. **Model governance.** The imaging head (val macro AUROC 0.78) has no
-   versioning, eval-set regression check, drift monitoring, or retraining
-   pipeline; LLM prompt/model changes are likewise unversioned beyond git.
+3. **[partly done] Model governance.** `models/registry.yaml` versions
+   the imaging/STT/embedding models with eval numbers;
+   `scripts/model_gate.py` blocks regressions against the registry; a
+   temperature-scaling calibration hook is wired into the imaging head
+   (`CXR_CALIBRATION`, identity until fitted); prompts are registered in
+   `config/prompts/PROMPTS.md`. Still open: drift monitoring and a
+   retraining pipeline (needs production data access).
 4. **KB governance.** Corpus is one COVID-era dialogue set + the synthetic
    EHR; provenance, refresh cadence, and clinical review of retrieved
    content are undefined.
-5. **Accessibility & i18n.** No WCAG audit (contrast, keyboard nav, screen
-   readers on the live HUD); English-only STT and UI.
+5. **[partly done] Accessibility & i18n.** An axe-core scan runs in E2E
+   (`e2e/demo/a11y.spec.ts`) and the violations it found are fixed
+   (labels, roles, aria-live on the HUD). Still open: a full manual WCAG
+   audit (keyboard nav, screen readers) and i18n — STT and UI remain
+   English-only.
 6. **LICENSE file is missing** while the README claims MIT — the owners
    should add the actual license text (a legal choice, deliberately not
    made by this remediation).
 
 ## Suggested sequencing
 
-The session-completable subset is done (R1–R8: JSON salvage, Jinja2,
-JSON store, decomposition round 2, typed contracts + /v1, coverage +
-supply chain + retrieval eval + load baseline, Playwright smoke, runbook +
-alert rules + strict mode). What remains requires external parties or
-infrastructure: deploy the alerting stack, extend E2E to the fake-mic
-voice flow, FHIR connector, BAAs/de-id, IdP, Trivy/SBOM, Terraform, pen
-test, clinical validation — gates first, then the enterprise-hardening
-train, with the rest folded into normal feature work (each touched file
-leaves smaller than it was found).
+Two full remediation rounds are done. R1–R8 covered the code-quality
+train (JSON salvage, Jinja2, JSON store, decomposition, typed contracts
++ /v1, coverage + retrieval eval + load baseline, Playwright smoke,
+runbook + alerts + strict mode). The approved improvement execution
+(I0–I17) then closed the machine-checked contract + typed client, the
+Vite migration with runtime config, cookie-session auth + CSRF, the
+fake-mic voice E2E, property/chaos/mutation testing, real-percentile
+metrics + Sentry + deployable observability stack, queue-mode finalize,
+event-sourced case persistence with history APIs, model registry +
+calibration + benchmarks, LLM replay fixtures + structured outputs,
+FHIR/OIDC/secrets scaffolding (stub-verified), validated Terraform, and
+blocking supply-chain gates with image scan/SBOM/signing.
+
+What remains needs external parties, credentials, or infrastructure the
+repo cannot supply: BAAs and the de-identification layer (the two
+remaining hard gates), live FHIR/IdP/secrets against hospital systems,
+running the observability stack and Terraform in a real account,
+backups/DR policy, in-cluster TLS, pen test, clinical validation, and
+the LICENSE decision — gates first, then the enterprise-hardening train.

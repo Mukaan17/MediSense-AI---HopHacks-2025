@@ -1,7 +1,9 @@
 # Implementation Plan — Roadmap Execution
 
-**Status: APPROVED (2026-08-22) — decisions recorded below; execution in
-progress in package order.**
+**Status: EXECUTED (2026-08-22) — all approved packages (I0–I17) are
+implemented, gated green, and pushed; one commit per package. Outcomes
+and deliberate deviations are recorded at the end of this document
+("Execution record"). Track 3 (E1–E6) remains with the owners.**
 
 Approved decisions:
 
@@ -394,6 +396,51 @@ Track 2 scaffolding (I11–I14) interleaved where waiting on review. Roughly
 
 ---
 
-**To approve**: confirm the decision points (D1–D6, or amendments) and say
-go. Implementation begins at I0 and proceeds in the order above, with the
-same per-package commit/verify/push discipline as the previous rounds.
+## Execution record
+
+All approved packages shipped, one commit each, in order:
+I0 `f930382`, I1 `57de4ce`, I2 `a2eca1a`, I3a `b23f79f`, I3b `1500ec0`,
+I6 `d9f1111`, I4 `3db1e35`, I5 `7b9982a`, I7 `e2a7a67`, I8 `f5ecf79`,
+I10 `238add9`, I9 `7792a97`, I11 `bc5442b`, I12 `42a6f45`, I13 `12df3bd`,
+I14 `df285c4`, I15 `fa01c5f`, I16 `ba55929`, I17 `88c493d`. Every package
+ended with the full gate suite green (backend pytest + ruff, frontend
+tsc + vitest + build, demo + clinical Playwright E2E, plus
+package-specific gates).
+
+**Decision outcomes**: D1(b), D2(a), D3(a), D4(a), D5(a) executed as
+recorded in the header. D6 was executed as *include* (amending the
+original (b) recommendation at the owner's direction): mutation testing
+runs as a report-only weekly/on-demand CI job, baseline kill rate in
+`docs/PERF_BASELINE.md`.
+
+**Deliberate deviations, recorded honestly**:
+
+- **Gemini structured outputs (I11)**: `responseMimeType: application/json`
+  is sent; `responseSchema` deliberately is not — the pinned Gemini model's
+  schema support was not verifiable keylessly, and a wrong schema silently
+  degrades output. Claude uses full JSON-schema output config. Replay
+  fixtures pin both behaviors.
+- **Postgres verification (I9, D3)**: the SQLAlchemy store is verified on
+  SQLite here (no Docker daemon); compose/Terraform provision Postgres.
+  First PG run should execute `alembic upgrade head` and the persistence
+  test suite against it.
+- **CodeDeploy blue/green (I16)**: ECS deployment circuit breaker
+  (auto-rollback) shipped instead; blue/green deferred and noted in
+  `infra/terraform/README.md`.
+- **Supply-chain triage growth (I17)**: making the audits blocking
+  surfaced six starlette advisories fixed only above fastapi 0.116.1's
+  cap (one a Host-header path-check bypass relevant to this app's
+  path-based auth exemptions), so fastapi/starlette were upgraded to
+  0.141.1/1.6.0 inside I17 — contract byte-identical, all gates green.
+  The transformers 4.57.x findings are accepted by exact ID
+  (`.trivyignore`) because their fixes require the sentence-transformers
+  2.7 → 6.0 embedding-stack major (KB rebuild + retrieval re-eval): that
+  upgrade is a dedicated future package, not a rider.
+
+**Track 2 live completion checklist (owner provides)**: hospital FHIR
+endpoint + SMART client credentials (I12); real IdP issuer/client for
+`AUTH_MODE=oidc` (I13); AWS account with Secrets Manager + `medisense/`
+prefix (I14); a deployed Prometheus/Alertmanager receiver (I15); AWS
+account + state backend for `terraform apply` (I16); `COSIGN_PRIVATE_KEY`
+registry signing secret (I17); LLM API keys to run `live-llm-eval` and
+refresh fixtures (I11).

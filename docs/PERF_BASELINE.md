@@ -8,17 +8,28 @@ update this file; a regression against these numbers is a finding.
 ## Live-case WebSocket pipeline (`/ws/case/{id}`)
 
 Per-utterance HUD latency (extraction -> retrieval + rerank -> fusion ->
-evidence -> HUD), measured client-side:
+evidence -> HUD), measured client-side. Re-measured after the I-series
+(fastapi 0.141.1 / starlette 1.6.0), 4-core container:
 
 | Concurrent cases | Utterances/case | p50 | p90 | p95 | max |
 |---|---|---|---|---|---|
-| 5  | 5 | 1,640 ms | 2,002 ms | 2,156 ms | 2,196 ms |
-| 10 | 5 | 2,748 ms | 4,093 ms | 4,384 ms | 5,133 ms |
+| 1  | 5 | 576 ms | 615 ms | 615 ms | 615 ms |
+| 5  | 5 | 2,251 ms | 3,267 ms | 3,295 ms | 3,470 ms |
+| 10 | 5 | 3,629 ms | 5,284 ms | 6,191 ms | 6,890 ms |
 
-Reading: the p95 < 3 s CPU-only budget holds at 5 concurrent live cases
-per worker and is exceeded at 10. Scale-out guidance: size at ~5 live
-cases per CPU worker (`UVICORN_WORKERS`, then ECS task count), and alert
-on the `request_latency` p95 metric rather than assuming this table.
+(Earlier round, quieter container: 5 cases p50 1,640 / p95 2,156 ms;
+10 cases p50 2,748 / p95 4,384 ms.)
+
+Reading: single-case per-utterance cost is ~0.6 s (the CPU cross-encoder
+rerank dominates); the concurrent rows are queueing contention - 5
+rerank inferences sharing 4 cores. The p95 < 3 s budget is marginal at 5
+concurrent cases on 4 cores (3.3 s here vs 2.2 s in the earlier round -
+container load, not a code regression: per-call cost went down).
+Scale-out guidance: size at ~1 live case per core with headroom
+(`UVICORN_WORKERS`, then ECS task count), and alert on the
+`request_latency` p95 metric rather than assuming this table. Measure
+before warm-up completes and you get fantasy numbers - wait for
+`/health` `doc_count` > 0 (an empty retriever answers in microseconds).
 
 Repro:
 
@@ -27,17 +38,20 @@ Repro:
 
 ## Test coverage (full local dependency set)
 
-`pytest --cov=api --cov=core --cov=rag_runtime`: **56% lines** across 71
-tests. Best-covered: chunking, extraction, evidence, retriever, auth,
-routes. Known blind spots (deliberate - degraded-mode environment):
-`voice_transcription` (18%), `modeling_biomedclip` (7%), LLM invoke paths
-in `llm_client` (36%), `diagnosis/differential` + `risk` (LLM-path heavy).
-CI prints coverage on every run; treat drops in the well-covered modules
-as review findings.
+`pytest --cov=api --cov=core --cov=rag_runtime`: **64% lines** across
+147 tests (was 56% / 71 tests before the I-series; the added
+property/chaos/replay/persistence/FHIR/OIDC/secrets suites moved it).
+Best-covered: chunking, extraction, evidence, retriever, auth, routes,
+persistence. Known blind spots (deliberate - degraded-mode environment):
+`voice_transcription`, `modeling_biomedclip`, live LLM invoke paths.
+CI enforces `--cov-fail-under=50` on the light set (floor, not target;
+raise deliberately, never lower) and prints the full report every run;
+treat drops in the well-covered modules as review findings.
 
-Frontend (jest): unit coverage concentrated in `lib/` (reportMapper,
-wsClient normalization); components are covered by the Playwright smoke
-(`frontend/e2e/`), not jest.
+Frontend (vitest): unit coverage concentrated in `lib/` (reportMapper,
+wsClient normalization); components are covered by the Playwright suites
+(`frontend/e2e/`, including the fake-mic voice flow and the axe-core
+accessibility scan), not unit tests.
 
 ## Mutation testing (report-only, decision D6)
 
