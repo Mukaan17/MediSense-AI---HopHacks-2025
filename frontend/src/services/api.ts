@@ -25,6 +25,21 @@ const api = axios.create({
 
 export const TOKEN_STORAGE_KEY = 'medisense_token';
 
+// FastAPI errors carry `detail` as a string OR a list of validation-error
+// objects (422). Always reduce to a string: these values end up in toasts,
+// and rendering an object as a React child crashes the whole tree.
+export function normalizeAPIError(error: any): string {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((d: any) => (typeof d === 'string' ? d : d?.msg || JSON.stringify(d)))
+      .join('; ');
+  }
+  if (detail) return JSON.stringify(detail);
+  return error?.message || 'An unexpected error occurred';
+}
+
 export function getAuthToken(): string | null {
   try {
     return localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -49,6 +64,12 @@ api.interceptors.request.use(
     const token = getAuthToken();
     if (token && config.headers) {
       (config.headers as any)['Authorization'] = `Bearer ${token}`;
+    }
+    // The instance default is application/json; FormData bodies must drop it
+    // so the browser sets multipart/form-data with its boundary. Without
+    // this, every Form/UploadFile endpoint receives an unparseable body.
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
+      delete (config.headers as any)['Content-Type'];
     }
     return config;
   },
@@ -100,7 +121,7 @@ export async function login(username: string, password: string): Promise<APIResp
   } catch (error: any) {
     return {
       success: false,
-      error: error.response?.data?.detail || error.message,
+      error: normalizeAPIError(error),
       timestamp: new Date().toISOString()
     };
   }
@@ -120,7 +141,7 @@ export const clinicalAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -142,7 +163,7 @@ export const clinicalAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -167,7 +188,7 @@ export const clinicalAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -200,7 +221,7 @@ export const clinicalAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -228,7 +249,7 @@ export const clinicalAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -259,7 +280,7 @@ export const clinicalAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -293,7 +314,7 @@ export const clinicalAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -325,7 +346,7 @@ export const clinicalAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -357,7 +378,7 @@ export const futureAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -382,7 +403,7 @@ export const futureAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -400,7 +421,7 @@ export const futureAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -417,7 +438,7 @@ export const futureAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -435,7 +456,7 @@ export const futureAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -459,7 +480,7 @@ export const futureAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -484,7 +505,7 @@ export const futureAPI = {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.detail || error.message,
+        error: normalizeAPIError(error),
         timestamp: new Date().toISOString()
       };
     }
@@ -495,16 +516,10 @@ export const futureAPI = {
 export const apiUtils = {
   // Error handling
   handleAPIError(error: any): string {
-    if (error.response?.data?.detail) {
-      return error.response.data.detail;
-    }
-    if (error.response?.data?.message) {
+    if (error.response?.data?.message && !error.response?.data?.detail) {
       return error.response.data.message;
     }
-    if (error.message) {
-      return error.message;
-    }
-    return 'An unexpected error occurred';
+    return normalizeAPIError(error);
   }
 };
 

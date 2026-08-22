@@ -397,3 +397,7 @@ CLAUDE_MEMORY.md
 # Auth users and audit logs never enter the repo
 config/users.json
 logs/audit.log
+
+# Playwright artifacts
+frontend/test-results/
+frontend/playwright-report/
