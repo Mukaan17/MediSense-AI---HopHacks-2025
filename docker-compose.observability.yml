@@ -1,0 +1,41 @@
+# Observability overlay: run alongside the main stack -
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up
+# Prometheus evaluates deploy/prometheus-alerts.yml; Grafana auto-provisions
+# the MediSense dashboard; Alertmanager routes per
+# deploy/observability/alertmanager.yml (add a real receiver!).
+services:
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    volumes:
+      - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus-alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    volumes:
+      - ./deploy/observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus_data:
+  grafana_data:

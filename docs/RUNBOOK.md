@@ -54,6 +54,18 @@ build log, and `pytest tests/test_retrieval_eval.py` stays green
 - **STT**: faster-whisper model name is in `core/live_stt.py`; changing it
   requires a deploy.
 
+## Observability stack
+
+    docker compose -f docker-compose.yml -f docker-compose.observability.yml up
+
+Prometheus (:9090) scrapes the backend and evaluates
+`deploy/prometheus-alerts.yml`; Grafana (:3001, admin password via
+`GRAFANA_ADMIN_PASSWORD`) auto-provisions the "MediSense Backend"
+dashboard; Alertmanager (:9093) routes alerts - **configure a real
+receiver** in `deploy/observability/alertmanager.yml` before relying on
+it. Clinical mode: give Prometheus a service bearer token for /metrics
+(commented block in `deploy/observability/prometheus.yml`).
+
 ## Triage by alert
 
 ### backend-down
