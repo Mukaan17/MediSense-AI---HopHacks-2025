@@ -9,10 +9,23 @@ Usage:
 import argparse
 import json
 import os
-import pickle
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
+
+from .chunking import (
+    DEFAULT_MAX_WORDS,
+    DEFAULT_OVERLAP_WORDS,
+    docs_from_json,
+)
+
+
+def _load_chunking_cfg() -> Dict[str, Any]:
+    try:
+        from core.config import load_rag
+        return (load_rag() or {}).get("chunking", {}) or {}
+    except Exception:
+        return {}
 
 
 def _default_files(repo_root: Path) -> List[Path]:
@@ -26,43 +39,10 @@ def _default_files(repo_root: Path) -> List[Path]:
     return [p for p in candidates if p.exists()]
 
 
-def _flatten(obj: Any, sep: str = "\n") -> str:
-    if obj is None:
-        return ""
-    if isinstance(obj, str):
-        return obj
-    if isinstance(obj, (int, float, bool)):
-        return str(obj)
-    if isinstance(obj, list):
-        return sep.join([_flatten(x, sep) for x in obj if _flatten(x, sep)])
-    if isinstance(obj, dict):
-        return sep.join([f"{k}: {_flatten(v, sep)}" for k, v in obj.items() if _flatten(v, sep)])
-    return str(obj)
-
-
-def _read_json_docs(path: Path) -> List[Tuple[str, Dict[str, Any]]]:
-    try:
-        with path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception as e:
-        print(f"[WARN] Failed to read {path.name}: {e}")
-        return []
-
-    docs = []
-    if isinstance(data, list):
-        for i, item in enumerate(data):
-            text = _flatten(item)
-            if text.strip():
-                docs.append((text, {"source": path.name, "section": f"item_{i}"}))
-    elif isinstance(data, dict):
-        for k, v in data.items():
-            text = _flatten(v)
-            if text.strip():
-                docs.append((text, {"source": path.name, "section": str(k)}))
-    return docs
-
-
-def build_kb(files: List[Path], emb_model: str, persist_dir: Path, reset: bool) -> None:
+def build_kb(files: List[Path], emb_model: str, persist_dir: Path, reset: bool,
+             max_words: int = DEFAULT_MAX_WORDS,
+             overlap: int = DEFAULT_OVERLAP_WORDS,
+             chunking_enabled: bool = True) -> None:
     # Lazy imports to avoid issues at module level
     import numpy as np
     try:
@@ -80,12 +60,16 @@ def build_kb(files: List[Path], emb_model: str, persist_dir: Path, reset: bool) 
     print(f"[KB] Persist dir    : {persist_dir}")
     print(f"[KB] Files          : {[p.name for p in files]}")
 
-    # Collect documents
+    # Collect documents (chunked so each fits the embedding model's window)
     texts: List[str] = []
     metas: List[Dict[str, Any]] = []
+    item_count = 0
     for fp in files:
         if fp.suffix.lower() == ".json":
-            for text, meta in _read_json_docs(fp):
+            docs = docs_from_json(fp, max_words=max_words, overlap=overlap,
+                                  chunking_enabled=chunking_enabled)
+            item_count += sum(1 for _, m in docs if m.get("chunk_idx", 0) == 0)
+            for text, meta in docs:
                 texts.append(text)
                 metas.append(meta)
         else:
@@ -101,6 +85,8 @@ def build_kb(files: List[Path], emb_model: str, persist_dir: Path, reset: bool) 
         print("[KB] Nothing to index. Aborting.")
         return
 
+    if item_count:
+        print(f"[KB] {item_count} corpus items -> {len(texts)} chunks")
     print(f"[KB] Encoding {len(texts)} documents …")
     model = SentenceTransformer(emb_model)
     embeddings = model.encode(texts, show_progress_bar=True, batch_size=64)
@@ -114,14 +100,28 @@ def build_kb(files: List[Path], emb_model: str, persist_dir: Path, reset: bool) 
     index = faiss.IndexFlatIP(dim)
     index.add(embeddings)
 
-    # Save index, texts, and metadata
+    # Save index, texts, and metadata. JSON, not pickle: the store may sit on
+    # a shared volume, and JSON removes the deserialization attack class.
     faiss.write_index(index, str(persist_dir / "index.faiss"))
-    with open(persist_dir / "texts.pkl", "wb") as f:
-        pickle.dump(texts, f)
-    with open(persist_dir / "metas.pkl", "wb") as f:
-        pickle.dump(metas, f)
+    with open(persist_dir / "texts.json", "w", encoding="utf-8") as f:
+        json.dump(texts, f, ensure_ascii=False)
+    with open(persist_dir / "metas.json", "w", encoding="utf-8") as f:
+        json.dump(metas, f, ensure_ascii=False)
+    from datetime import datetime, timezone
     with open(persist_dir / "config.json", "w") as f:
-        json.dump({"emb_model": emb_model, "dim": dim, "count": len(texts)}, f, indent=2)
+        json.dump({
+            "emb_model": emb_model,
+            "dim": dim,
+            "count": len(texts),
+            "files": [p.name for p in files],
+            "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }, f, indent=2)
+    # Drop stale pickle files from pre-JSON builds so nothing loads them.
+    for legacy in ("texts.pkl", "metas.pkl"):
+        try:
+            (persist_dir / legacy).unlink(missing_ok=True)
+        except OSError as e:
+            print(f"[WARN] Could not remove legacy {legacy}: {e}")
 
     print(f"[KB] Done. Indexed {len(texts)} documents (dim={dim}) → {persist_dir}")
 
@@ -133,6 +133,13 @@ def main() -> None:
     parser.add_argument("--persist_dir", default=os.getenv("RAG_PERSIST_DIR", str(repo_root / "rag_store")))
     parser.add_argument("--files", nargs="*", default=[str(p) for p in _default_files(repo_root)])
     parser.add_argument("--reset", action="store_true")
+    chunk_cfg = _load_chunking_cfg()
+    parser.add_argument("--max_words", type=int,
+                        default=int(chunk_cfg.get("max_words", DEFAULT_MAX_WORDS)))
+    parser.add_argument("--overlap_words", type=int,
+                        default=int(chunk_cfg.get("overlap_words", DEFAULT_OVERLAP_WORDS)))
+    parser.add_argument("--no_chunking", action="store_true",
+                        default=not bool(chunk_cfg.get("enabled", True)))
     args = parser.parse_args()
 
     build_kb(
@@ -140,6 +147,9 @@ def main() -> None:
         emb_model=args.embeddings,
         persist_dir=Path(args.persist_dir),
         reset=args.reset,
+        max_words=args.max_words,
+        overlap=args.overlap_words,
+        chunking_enabled=not args.no_chunking,
     )
 
 

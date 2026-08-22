@@ -1,48 +1,55 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Upload, 
-  FileText, 
-  Stethoscope, 
+import {
+  Upload,
+  FileText,
   Brain
 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 
-import { Patient, ClinicalReport, KnowledgeBaseMode } from '../types';
-import { clinicalAPI, futureAPI, apiUtils } from '../services/api';
+import { Patient, ClinicalReport, KnowledgeBaseMode, LLMStatus } from '../types';
+import { clinicalAPI, futureAPI, apiUtils, getMe } from '../services/api';
+import AppHeader from './AppHeader';
+import LoginModal from './LoginModal';
 import PatientForm from './PatientForm';
 import XAIExplanation from './XAIExplanation';
 import DifferentialDiagnosis from './DifferentialDiagnosis';
 import RedFlagAlerts from './RedFlagAlerts';
 import ClinicalReportView from './ClinicalReportView';
-import EHRIntegration from './EHRIntegration';
 import LiveCoach from './LiveCoach';
-import KnowledgeBaseToggle from './KnowledgeBaseToggle';
 import VoiceRecorder from './VoiceRecorder';
 import ConversationChat, { ConversationChatRef } from './ConversationChat';
-import { API_CONFIG } from '../config/api';
-import { connectCaseWS, disconnectCaseWS, sendUtterance, HUD } from '../lib/wsClient';
+import LiveAnalysisPanel from './LiveAnalysisPanel';
+import CaseHistory from './CaseHistory';
+import { processAPIResponse } from '../lib/reportMapper';
+import { useLiveCase } from '../hooks/useLiveCase';
 
 const ClinicalInterface: React.FC = () => {
   // State management
-  const [currentView, setCurrentView] = useState<'input' | 'results' | 'report'>('input');
+  const [currentView, setCurrentView] = useState<'input' | 'results' | 'report' | 'history'>('input');
   const [isLoading, setIsLoading] = useState(false);
   const [patient, setPatient] = useState<Patient>({});
   const [conversation, setConversation] = useState<string[]>([]);
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [clinicalReport, setClinicalReport] = useState<ClinicalReport | null>(null);
+  // Populated from the backend's store manifest - starts empty, never invented.
   const [knowledgeBaseMode, setKnowledgeBaseMode] = useState<KnowledgeBaseMode>({
-    mode: 'clinical',
-    sources: ['Clinical Guidelines', 'UpToDate'],
-    lastUpdated: new Date().toISOString()
+    mode: 'local',
+    sources: [],
   });
+  const [llmStatus, setLlmStatus] = useState<LLMStatus | null>(null);
   const [ehrPatients, setEhrPatients] = useState<any[]>([]);
   const [selectedEhrPatient, setSelectedEhrPatient] = useState<string>('');
-  const [activeCaseId, setActiveCaseId] = useState<string>('');
-  const [liveHUD, setLiveHUD] = useState<HUD | null>(null);
-  const wsRef = useRef<boolean>(false);
-  const pendingUtterancesRef = useRef<string[]>([]);
+  const [appMode, setAppMode] = useState<'demo' | 'clinical'>('demo');
+  const [showLogin, setShowLogin] = useState(false);
+
+  // Live-case lifecycle (case creation, WS, HUD, final report)
+  const {
+    activeCaseId, liveHUD, streamingText, finalReport, isFinalizing,
+    confidenceHistory, sendQuestionFeedback,
+    isLive, startLive, stopLive, finalizeCase, resetLiveCase,
+  } = useLiveCase();
 
   // Refs
   const conversationInputRef = useRef<HTMLTextAreaElement>(null);
@@ -55,7 +62,21 @@ const ClinicalInterface: React.FC = () => {
         // Health check
         const healthResponse = await clinicalAPI.healthCheck();
         if (healthResponse.success) {
-          console.log('Backend connected:', healthResponse.data);
+          if (healthResponse.data?.app_mode) {
+            const mode = healthResponse.data.app_mode === 'clinical' ? 'clinical' : 'demo';
+            setAppMode(mode);
+            if (mode === 'clinical') {
+              // Cookie sessions survive reloads; /auth/me tells us whether
+              // this browser already holds one.
+              const me = await getMe();
+              if (!me.success) {
+                setShowLogin(true);
+              }
+            }
+          }
+          if (healthResponse.data?.llm) {
+            setLlmStatus(healthResponse.data.llm);
+          }
         } else {
           console.warn('Backend health check failed:', healthResponse.error);
           toast.error('Backend connection failed. Please ensure the server is running.');
@@ -65,6 +86,12 @@ const ClinicalInterface: React.FC = () => {
         const ehrResponse = await futureAPI.listEHRPatients();
         if (ehrResponse.success && ehrResponse.data?.patients) {
           setEhrPatients(ehrResponse.data.patients);
+        }
+
+        // Real knowledge-base facts (sources, doc count, build date)
+        const kbResponse = await futureAPI.getKnowledgeBaseMode();
+        if (kbResponse.success && kbResponse.data) {
+          setKnowledgeBaseMode(kbResponse.data);
         }
       } catch (error) {
         console.error('Initialization error:', error);
@@ -92,12 +119,31 @@ const ClinicalInterface: React.FC = () => {
     }
   });
 
-  // Voice recording handling
+  // Clinical mode requires a bearer token; the API layer fires this event on
+  // any 401 so an expired token re-opens the login.
+  useEffect(() => {
+    const onUnauthorized = () => setShowLogin(true);
+    window.addEventListener('medisense:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('medisense:unauthorized', onUnauthorized);
+  }, []);
+
+  const handleLoginSuccess = async () => {
+    setShowLogin(false);
+    const ehrResponse = await futureAPI.listEHRPatients();
+    if (ehrResponse.success && ehrResponse.data?.patients) {
+      setEhrPatients(ehrResponse.data.patients);
+    }
+  };
+
+  // Voice recording handling. During a live case the WS echoes each utterance
+  // back as transcript_chunk (which feeds the chat), so only add to the chat
+  // here when no live case is active. isLive() reads a ref at call time - the
+  // activeCaseId state here would be a stale closure from record start.
   const handleVoiceTranscription = (transcript: string) => {
     setConversation(prev => [...prev, transcript]);
-    // Also add to chat for real-time display
-    conversationChatRef.current?.addTranscriptMessage(transcript, 'patient');
-    toast.success('Voice note transcribed');
+    if (!isLive()) {
+      conversationChatRef.current?.addTranscriptMessage(transcript, 'patient');
+    }
   };
 
   // Voice inference handling
@@ -216,211 +262,52 @@ const ClinicalInterface: React.FC = () => {
   };
 
   // Process API response into clinical report format
-  const processAPIResponse = (data: any): ClinicalReport => {
-    const advisory = data?.rag_advisory;
-    const advisorySummary =
-      typeof advisory === 'string'
-        ? advisory
-        : (advisory?.follow_up || '');
-
-    // Process the actual backend response
-    const report: ClinicalReport = {
-      patientSummary: data.summary || advisorySummary || "Clinical analysis completed",
-      differentialDiagnosis: [],
-      redFlagAlerts: [],
-      recommendations: [],
-      followUp: "",
-      patientEducation: [],
-      citations: [],
-      generatedAt: new Date().toISOString(),
-      confidence: 0.0
-    };
-
-    // Process differential diagnosis from backend
-    if (data.fusion?.top10) {
-      report.differentialDiagnosis = data.fusion.top10.slice(0, 5).map((item: any) => ({
-        condition: item.condition,
-        probability: item.score || 0.0,
-        confidence: item.score || 0.0,
-        riskFactors: item.risk_factors || [],
-        redFlags: item.red_flags || [],
-        supportingEvidence: [item.why || 'Combined evidence'],
-        reasoning: item.why || 'Based on multimodal analysis'
-      }));
-    }
-
-    // Process structured diagnosis if available
-    if (data.structured_diagnosis) {
-      const structured = data.structured_diagnosis;
-      
-      // Update patient summary
-      if (data.summary) {
-        report.patientSummary = data.summary;
-      } else if (structured.summary) {
-        report.patientSummary = structured.summary;
-      }
-      
-      // Process differential diagnosis from structured response
-      if (structured.differential_diagnosis && structured.differential_diagnosis.top_3_diagnoses) {
-        report.differentialDiagnosis = structured.differential_diagnosis.top_3_diagnoses.map((diag: any) => ({
-          condition: diag.condition || diag.diagnosis,
-          probability: diag.probability || diag.confidence || 0.0,
-          confidence: diag.confidence || diag.probability || 0.0,
-          riskFactors: diag.risk_factors || [],
-          redFlags: diag.red_flags || [],
-          supportingEvidence: diag.supporting_evidence || [diag.reasoning || 'Clinical evidence'],
-          reasoning: diag.reasoning || diag.explanation || 'Based on clinical analysis'
-        }));
-      }
-      
-      // Process recommendations
-      if (structured.recommendations) {
-        report.recommendations = structured.recommendations;
-      } else {
-        // Fallback: extract recommendations from next_steps in diagnoses
-        const nextStepsRecommendations: string[] = [];
-        if (structured.differential_diagnosis && structured.differential_diagnosis.top_3_diagnoses) {
-          structured.differential_diagnosis.top_3_diagnoses.forEach((diag: any) => {
-            if (diag.next_steps && Array.isArray(diag.next_steps)) {
-              nextStepsRecommendations.push(...diag.next_steps);
-            }
-          });
-        }
-        
-        // Also extract from follow_up_plan if available
-        if (structured.clinical_workflow?.follow_up_plan) {
-          structured.clinical_workflow.follow_up_plan.forEach((plan: any) => {
-            if (plan.actions && Array.isArray(plan.actions)) {
-              nextStepsRecommendations.push(...plan.actions);
-            }
-          });
-        }
-        
-        if (nextStepsRecommendations.length > 0) {
-          report.recommendations = nextStepsRecommendations;
-        }
-      }
-      
-      // Process follow-up
-      if (structured.follow_up) {
-        report.followUp = structured.follow_up;
-      } else if (structured.clinical_workflow?.follow_up_plan) {
-        // Fallback: format follow_up_plan as text
-        const followUpText = structured.clinical_workflow.follow_up_plan
-          .map((plan: any) => `${plan.timeline}: ${plan.reason}`)
-          .join('; ');
-        if (followUpText) {
-          report.followUp = followUpText;
-        }
-      }
-    }
-
-    // Process recommendations from backend (note: first_steps_non_prescriptive is stripped from answer endpoint)
-    if (data.answer?.first_steps_non_prescriptive) {
-      report.recommendations = data.answer.first_steps_non_prescriptive;
-    }
-    
-    // Fallback: if no recommendations found, generate basic ones from differential diagnosis
-    if (report.recommendations.length === 0 && report.differentialDiagnosis.length > 0) {
-      const fallbackRecommendations: string[] = [];
-      
-      // Add basic recommendations based on top diagnoses
-      report.differentialDiagnosis.slice(0, 3).forEach((diag, index) => {
-        if (diag.confidence > 0.5) {
-          fallbackRecommendations.push(`Consider evaluation for ${diag.condition.replace(/_/g, ' ')}`);
-        }
-      });
-      
-      // Add general recommendations
-      if (fallbackRecommendations.length === 0) {
-        fallbackRecommendations.push("Obtain detailed history and physical examination");
-        fallbackRecommendations.push("Consider appropriate diagnostic workup based on clinical presentation");
-        fallbackRecommendations.push("Monitor patient response to initial interventions");
-      }
-      
-      report.recommendations = fallbackRecommendations;
-    }
-
-    // Process follow-up from backend
-    if (data.answer?.follow_up) {
-      report.followUp = data.answer.follow_up;
-    }
-
-    // Process citations from backend
-    if (data.answer?.citations) {
-      report.citations = data.answer.citations;
-    }
-
-    // Process red flags from backend
-    if (data.answer?.red_flags_to_screen) {
-      report.redFlagAlerts = data.answer.red_flags_to_screen.map((flag: string) => ({
-        alert: flag,
-        severity: 'medium' as const,
-        trigger: flag,
-        action: 'Clinical assessment recommended'
-      }));
-    }
-
-    // Process risk analysis red flags
-    if (data.risk_analysis?.red_flag_alerts) {
-      report.redFlagAlerts = data.risk_analysis.red_flag_alerts.map((alert: any) => ({
-        alert: alert.alert || alert.message,
-        severity: alert.severity || 'medium',
-        trigger: alert.trigger || alert.condition,
-        action: alert.action || 'Clinical assessment recommended',
-        condition: alert.condition
-      }));
-    }
-
-    // Calculate overall confidence
-    if (report.differentialDiagnosis.length > 0) {
-      report.confidence = report.differentialDiagnosis.reduce((sum, d) => sum + d.confidence, 0) / report.differentialDiagnosis.length;
-    } else if (data.fusion?.top_confidence) {
-      report.confidence = data.fusion.top_confidence;
-    }
-
-    return report;
-  };
 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Stethoscope className="h-8 w-8 text-medical-primary" />
-              <h1 className="text-xl font-semibold text-gray-900">
-                Clinical AI Assistant
-              </h1>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <KnowledgeBaseToggle 
-                mode={knowledgeBaseMode}
-                onModeChange={setKnowledgeBaseMode}
-              />
-              <EHRIntegration 
-                integration={{ system: 'epic', importStatus: 'pending' }}
-                onImport={(patientId) => {
-                  toast.success(`Patient ${patientId} imported`);
-                }}
-                onExport={(report) => {
-                  toast.success('Report exported to EHR');
-                }}
-              />
-            </div>
-          </div>
+      <AppHeader
+        appMode={appMode}
+        knowledgeBaseMode={knowledgeBaseMode}
+        onKnowledgeBaseModeChange={setKnowledgeBaseMode}
+      />
+
+      <LoginModal open={showLogin} onSuccess={handleLoginSuccess} />
+
+      {/* Degraded-mode visibility: never let missing AI configuration fail
+          silently. Both providers absent -> prominent banner; primary absent
+          with fallback present -> quieter notice. */}
+      {llmStatus && !llmStatus.anthropic && !llmStatus.gemini && (
+        <div role="status" className="print:hidden bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 text-center">
+          AI assistance degraded — no language model is configured. Analysis runs on
+          retrieval and deterministic rules only.
         </div>
-      </header>
+      )}
+      {llmStatus && !llmStatus.anthropic && llmStatus.gemini && (
+        <div role="status" className="print:hidden bg-gray-100 border-b border-gray-200 text-gray-700 text-xs px-4 py-1 text-center">
+          Running on the fallback language model only.
+        </div>
+      )}
 
       {/* Live Coach HUD - Always show, minimized when no case */}
-      <LiveCoach caseId={activeCaseId || 'no-case'} />
+      <div className="print:hidden">
+        <LiveCoach caseId={activeCaseId || 'no-case'} />
+      </div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <AnimatePresence mode="wait">
+          {currentView === 'history' && (
+            <motion.div
+              key="history"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <CaseHistory onBack={() => setCurrentView('input')} />
+            </motion.div>
+          )}
+
           {currentView === 'input' && (
             <motion.div
               key="input"
@@ -507,6 +394,7 @@ const ClinicalInterface: React.FC = () => {
                           encounterDate: selectedPatient.encounter_date
                         });
                       }}
+                      aria-label="Select from EHR patients"
                       className="input-field"
                     >
                       <option value="">Select a patient from EHR...</option>
@@ -535,6 +423,7 @@ const ClinicalInterface: React.FC = () => {
                   <div className="space-y-4">
                     <textarea
                       ref={conversationInputRef}
+                      aria-label="Clinical notes"
                       className="input-field h-32 resize-none"
                       placeholder="Enter patient symptoms, history, or clinical findings..."
                       value={conversation.join('\n')}
@@ -549,148 +438,27 @@ const ClinicalInterface: React.FC = () => {
                     </div>
                     
                     {/* RAG Analysis Section */}
-                    {liveHUD && (
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-2">
-                            <Brain className="h-4 w-4 text-blue-600" />
-                            <h3 className="text-sm font-semibold text-blue-900">Live RAG Analysis</h3>
-                          </div>
-                          {liveHUD.alerts?.red_flag && (
-                            <div className="flex items-center space-x-1 text-red-600 text-xs">
-                              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                              <span>Red Flag Alert</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="space-y-3">
-                          {/* Current Diagnosis */}
-                          {liveHUD.dx && (
-                            <div className="p-3 bg-white rounded border">
-                              <div className="text-xs font-medium text-gray-600 mb-1">Current Diagnosis</div>
-                              <div className="text-sm font-semibold text-gray-900">{liveHUD.dx}</div>
-                              {liveHUD.conf && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Confidence: {(liveHUD.conf * 100).toFixed(1)}%
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Quick Facts */}
-                          {liveHUD.quick_facts && (
-                            <div className="p-3 bg-white rounded border">
-                              <div className="text-xs font-medium text-gray-600 mb-1">Key Findings</div>
-                              <div className="text-sm text-gray-800">{liveHUD.quick_facts}</div>
-                            </div>
-                          )}
-                          
-                          {/* Next Question */}
-                          {liveHUD.next_question && (
-                            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
-                              <div className="text-xs font-medium text-yellow-800 mb-1">Suggested Next Question</div>
-                              <div className="text-sm text-yellow-900">{liveHUD.next_question}</div>
-                            </div>
-                          )}
-                          
-                          {/* Alternatives */}
-                          {liveHUD.alts && liveHUD.alts.length > 0 && (
-                            <div className="p-3 bg-white rounded border">
-                              <div className="text-xs font-medium text-gray-600 mb-1">Alternative Diagnoses</div>
-                              <div className="text-sm text-gray-800">
-                                {liveHUD.alts.join(' • ')}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Live Summary */}
-                          {liveHUD.summary && (
-                            <div className="p-3 bg-gray-50 rounded border">
-                              <div className="text-xs font-medium text-gray-600 mb-1">Conversation Summary</div>
-                              <div className="text-sm text-gray-700">{liveHUD.summary}</div>
-                            </div>
-                          )}
-                          
-                          {/* Ranked Conditions */}
-                          {liveHUD.ranked && liveHUD.ranked.length > 0 && (
-                            <div className="p-3 bg-white rounded border">
-                              <div className="text-xs font-medium text-gray-600 mb-2">Top Conditions</div>
-                              <div className="space-y-1">
-                                {liveHUD.ranked.slice(0, 3).map((condition, idx) => (
-                                  <div key={idx} className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-800">{condition.condition}</span>
-                                    <span className="text-gray-500 text-xs">
-                                      {(((condition.confidence ?? 0) * 100).toFixed(1))}%
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
+                    <LiveAnalysisPanel
+                      hud={liveHUD}
+                      streamingText={streamingText}
+                      activeCaseId={activeCaseId}
+                      finalReport={finalReport}
+                      isFinalizing={isFinalizing}
+                      onFinalize={finalizeCase}
+                      confidenceHistory={confidenceHistory}
+                      onQuestionFeedback={sendQuestionFeedback}
+                    />
+
                     <div className="text-xs text-gray-600 mb-2">
                       💡 <strong>Live Transcribing:</strong> Start recording to begin real-time analysis. Works with or without X-ray images.
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <VoiceRecorder 
+                      <VoiceRecorder
                         onTranscription={handleVoiceTranscription}
                         onVoiceInference={handleVoiceInference}
-                        onInterimTranscript={(txt) => {
-                          // Send interim results to chat for real-time display
-                          conversationChatRef.current?.addTranscriptMessage(txt, 'patient');
-                        }}
-                        onStartLive={() => {
-                          // Return a sender that queues until WS is ready
-                          const sender = (txt: string) => {
-                            if (wsRef.current) sendUtterance(txt);
-                            else pendingUtterancesRef.current.push(txt);
-                          };
-
-                          const ensureCaseAndConnect = async () => {
-                            let id = activeCaseId;
-                            try {
-                              if (!id) {
-                                let res;
-                                if (uploadedImage) {
-                                  // Create case with image
-                                  const fd = new FormData();
-                                  fd.append('file', uploadedImage);
-                                  res = await fetch(`${API_CONFIG.BASE_URL}/api/case?live=1`, { method: 'POST', body: fd });
-                                } else {
-                                  // Create voice-only case
-                                  res = await fetch(`${API_CONFIG.BASE_URL}/api/case/voice?live=1`, { method: 'POST' });
-                                }
-                                if (!res.ok) throw new Error('Failed to create case');
-                                const data = await res.json();
-                                id = data?.case_id;
-                                if (id) setActiveCaseId(id);
-                              }
-                              if (!id) return;
-                              await connectCaseWS(id, setLiveHUD);
-                              wsRef.current = true;
-                              // Flush any queued utterances
-                              if (pendingUtterancesRef.current.length) {
-                                pendingUtterancesRef.current.forEach(t => sendUtterance(t));
-                                pendingUtterancesRef.current = [];
-                              }
-                            } catch (e) {
-                              console.error(e);
-                              toast.error('Could not start live session');
-                            }
-                          };
-                          void ensureCaseAndConnect();
-                          return sender;
-                        }}
-                        onStopLive={() => {
-                          disconnectCaseWS();
-                          wsRef.current = false;
-                          pendingUtterancesRef.current = [];
-                        }}
+                        onStartLive={() => startLive(uploadedImage)}
+                        onStopLive={stopLive}
                       />
                       <button
                         onClick={() => {
@@ -755,7 +523,7 @@ const ClinicalInterface: React.FC = () => {
                             : 'border-gray-300 hover:border-medical-primary hover:bg-gray-50'
                         }`}
                       >
-                        <input {...getInputProps()} />
+                        <input {...getInputProps({ 'aria-label': 'Upload medical image' })} />
                         <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                         <div className="space-y-1">
                           <p className="text-sm font-medium text-gray-700">
@@ -819,7 +587,7 @@ const ClinicalInterface: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-center space-x-4">
+              <div className="flex justify-center space-x-4 print:hidden">
                 <button
                   onClick={handleInference}
                   disabled={isLoading || (conversation.length === 0 && !uploadedImage)}
@@ -855,6 +623,13 @@ const ClinicalInterface: React.FC = () => {
                     </div>
                   )}
                 </button>
+
+                <button
+                  onClick={() => setCurrentView('history')}
+                  className="btn-secondary px-6 py-3 text-lg"
+                >
+                  Case History
+                </button>
               </div>
             </motion.div>
           )}
@@ -881,14 +656,8 @@ const ClinicalInterface: React.FC = () => {
                       setConversation([]);
                       setUploadedImage(null);
                       setClinicalReport(null);
-                      setActiveCaseId('');
-                      setLiveHUD(null);
                       setSelectedEhrPatient('');
-                      
-                      // Disconnect WebSocket
-                      disconnectCaseWS();
-                      wsRef.current = false;
-                      pendingUtterancesRef.current = [];
+                      resetLiveCase();
                       
                       // Clear conversation input
                       if (conversationInputRef.current) {
@@ -922,30 +691,10 @@ const ClinicalInterface: React.FC = () => {
               {/* Differential Diagnosis */}
               <DifferentialDiagnosis diagnoses={clinicalReport.differentialDiagnosis || []} />
 
-              {/* XAI Explanation */}
-              <XAIExplanation 
-                explanation={{
-                  reasoningChain: [
-                    "Patient presents with elevated blood pressure readings",
-                    "Associated symptoms suggest uncontrolled hypertension",
-                    "Risk factors include age and family history"
-                  ],
-                  confidenceBreakdown: {
-                    clinicalGuidelines: 0.85,
-                    imagingEvidence: 0.0,
-                    symptomMatch: 0.78,
-                    patientHistory: 0.65
-                  },
-                  sourceAttribution: [
-                    {
-                      source: "American Heart Association Guidelines",
-                      section: "Hypertension Management",
-                      relevance: 0.9,
-                      type: "guideline"
-                    }
-                  ]
-                }}
-              />
+              {/* Explainability, built from the backend's evidence payload */}
+              {clinicalReport.xai && (
+                <XAIExplanation explanation={clinicalReport.xai} />
+              )}
 
               {/* Recommendations */}
               <div className="card">
@@ -973,6 +722,14 @@ const ClinicalInterface: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
+              <div className="print:hidden flex justify-end space-x-2 mb-4">
+                <button onClick={() => setCurrentView('results')} className="btn-secondary">
+                  Back to Results
+                </button>
+                <button onClick={() => window.print()} className="btn-primary">
+                  Export PDF
+                </button>
+              </div>
               {clinicalReport && typeof clinicalReport === 'object' ? (
                 <ClinicalReportView report={clinicalReport} />
               ) : (

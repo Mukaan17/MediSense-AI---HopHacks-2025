@@ -1,0 +1,89 @@
+# Prometheus alert rules for MediSense. Load into a Prometheus that scrapes
+# the backend's /metrics endpoint (clinical mode: give the scraper a service
+# token, /metrics is auth-gated like every non-public path).
+#
+# The exporter (core/metrics.py, prometheus_client) emits counters
+# (medisense_*_total) and latency histograms (medisense_*_ms_bucket/
+# _count/_sum), so the latency rules below use real histogram_quantile
+# percentiles.
+
+groups:
+  - name: medisense-availability
+    rules:
+      - alert: BackendDown
+        expr: up{job="medisense-backend"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Backend target down"
+          runbook: docs/RUNBOOK.md#backend-down
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(medisense_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(medisense_requests_total[5m])), 0.001) > 0.05
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "5xx rate above 5% for 5 minutes"
+          runbook: docs/RUNBOOK.md#high-error-rate
+
+      - alert: AuthFailureSpike
+        expr: sum(rate(medisense_requests_total{status="401"}[5m])) > 1
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Sustained 401 volume - expired tokens or probing"
+          runbook: docs/RUNBOOK.md#auth-failures
+
+  - name: medisense-latency
+    rules:
+      - alert: SlowRequests
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(medisense_request_latency_ms_bucket[5m]))) > 3000
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "p95 request latency above 3 s (see docs/PERF_BASELINE.md)"
+          runbook: docs/RUNBOOK.md#slow-pipeline
+
+      - alert: SlowPipelineStage
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, stage) (rate(medisense_stage_latency_ms_bucket[10m]))) > 2000
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Pipeline stage {{ $labels.stage }} p95 latency above 2 s"
+          runbook: docs/RUNBOOK.md#slow-pipeline
+
+      - alert: SlowLLMCalls
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, provider) (rate(medisense_llm_latency_ms_bucket[10m]))) > 20000
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.provider }} p95 call latency above 20 s"
+          runbook: docs/RUNBOOK.md#llm-failures
+
+  - name: medisense-llm
+    rules:
+      - alert: LLMFailureRate
+        expr: |
+          sum by (provider) (rate(medisense_llm_errors_total[10m]))
+            / clamp_min(sum by (provider) (rate(medisense_llm_calls_total[10m])
+                + rate(medisense_llm_errors_total[10m])), 0.001) > 0.2
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.provider }} failing >20% of calls (fallback is absorbing it)"
+          runbook: docs/RUNBOOK.md#llm-failures
+
+      - alert: LLMTokenSpendHigh
+        expr: sum(increase(medisense_llm_tokens_total{kind="output"}[24h])) > 5000000
+        labels: {severity: warning}
+        annotations:
+          summary: "Output token spend above 5M/day - check for runaway loops"
+          runbook: docs/RUNBOOK.md#token-spend

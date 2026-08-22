@@ -186,6 +186,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
                     <select
                       value={patient.gender || ''}
                       onChange={(e) => updatePatient({ gender: e.target.value as any })}
+                      aria-label="Select gender"
                       className="input-field"
                     >
                       <option value="">Select gender</option>
@@ -204,6 +205,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ patient, onPatientChange, cla
                         type="checkbox"
                         checked={patient.pregnant || false}
                         onChange={(e) => updatePatient({ pregnant: e.target.checked })}
+                        aria-label="Pregnant"
                         className="rounded border-gray-300 text-medical-primary focus:ring-medical-primary"
                       />
                       <span className="text-sm text-gray-700">Pregnant</span>

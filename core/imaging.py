@@ -28,8 +28,9 @@ class ImagingModel:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.top_k = int(os.getenv("CXR_TOPK", "6"))
 
-        # load checkpoint
-        payload = torch.load(ckpt_path, map_location="cpu")
+        # load checkpoint; weights_only blocks arbitrary pickle execution
+        # from an untrusted checkpoint file
+        payload = torch.load(ckpt_path, map_location="cpu", weights_only=True)
         repo   = payload.get("repo") or payload.get("model_id") or payload.get("biomedclip_repo")
         labels = payload.get("labels")
         head_sd = payload.get("head_state_dict")
@@ -49,12 +50,18 @@ class ImagingModel:
         self.model.head.load_state_dict(head_sd, strict=True)
         self.model.eval()
 
+        # Temperature calibration (models/registry.yaml): identity (T=1.0)
+        # when no calibration file has been fitted for this checkpoint.
+        from .calibration import TemperatureScaler
+        self.scaler = TemperatureScaler.load(
+            os.getenv("CXR_CALIBRATION", os.path.join("models", "calibration_cxr.json")))
+
     @torch.no_grad()
     def predict(self, img_bytes: bytes) -> List[Dict[str, Any]]:
         img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
         x = self.model.get_preprocess()(img).unsqueeze(0).to(self.model.device)
-        logits = self.model(x)                                   # [1, C]
-        probs  = torch.sigmoid(logits).squeeze(0).float().cpu()  # [C]
+        logits = self.model(x).squeeze(0).float().cpu()          # [C]
+        probs  = torch.tensor(self.scaler.calibrate(logits.tolist()))
         vals, idxs = torch.topk(probs, k=min(self.top_k, len(self.labels)))
         return [{"label": self.labels[i], "score": float(p)} for p, i in zip(vals.tolist(), idxs.tolist())]
 

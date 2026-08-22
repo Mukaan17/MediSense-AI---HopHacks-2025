@@ -1,4 +1,5 @@
 import { API_CONFIG } from '../config/api';
+import { getWsTicket } from '../services/api';
 
 export interface RankedCondition {
   condition: string;
@@ -24,6 +25,9 @@ export interface HUD {
   };
   diagnostic_suggestions?: string[];
   uncertainty_flags?: string[];
+  coach?: {
+    suggested?: Array<{ q: string; priority?: string; why?: string }>;
+  };
   evidence?: {
     posterior_shift?: {
       base_top?: { condition: string; score: number };
@@ -38,10 +42,12 @@ let ws: WebSocket | null = null;
 let currentCaseId: string | null = null;
 
 function toWsBase(url: string): string {
-  return url.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:').replace(/\/$/, '');
+  // Empty base = same-origin (nginx-proxied deployment): derive from the page.
+  const base = url || window.location.origin;
+  return base.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:').replace(/\/$/, '');
 }
 
-function normalizeHUD(payload: any): HUD {
+export function normalizeHUD(payload: any): HUD {
   const hud: HUD = payload || {};
 
   if (!hud.ranked && Array.isArray(payload?.fusion?.top10)) {
@@ -55,12 +61,20 @@ function normalizeHUD(payload: any): HUD {
   return hud;
 }
 
-export async function connectCaseWS(caseId: string, onUpdate: (hud: HUD) => void): Promise<void> {
+export async function connectCaseWS(
+  caseId: string,
+  onUpdate: (hud: HUD) => void,
+  onStreamingToken?: (token: string) => void
+): Promise<void> {
   disconnectCaseWS();
   currentCaseId = caseId;
 
+  // Short-lived WS ticket, never the session JWT, in the URL (CWE-598).
+  const ticket = await getWsTicket();
+
   await new Promise<void>((resolve, reject) => {
-    const wsUrl = `${toWsBase(API_CONFIG.BASE_URL)}/ws/case/${caseId}`;
+    const wsUrl = `${toWsBase(API_CONFIG.BASE_URL)}/ws/case/${caseId}` +
+      (ticket ? `?token=${encodeURIComponent(ticket)}` : '');
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => resolve();
@@ -68,7 +82,11 @@ export async function connectCaseWS(caseId: string, onUpdate: (hud: HUD) => void
     ws.onmessage = (event) => {
       try {
         const parsed = JSON.parse(event.data);
-        onUpdate(normalizeHUD(parsed));
+        if (parsed?.type === 'streaming_token') {
+          onStreamingToken?.(parsed.token || '');
+        } else {
+          onUpdate(normalizeHUD(parsed));
+        }
       } catch {
         // Ignore malformed payloads to keep live flow stable.
       }

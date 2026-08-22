@@ -1,10 +1,10 @@
-import json
 import os
 import re
 from typing import Any, Dict, List, Optional, Set
 
 from .config import load_mappings, load_symptom_map
 from .llm_client import get_llm
+from .utils import parse_llm_json
 
 
 NEGATION_RE = re.compile(r"\b(no|not|denies|denied|without|never)\b", re.IGNORECASE)
@@ -253,13 +253,7 @@ def _extract_llm_optional(text: str) -> Dict[str, Any]:
         resp = get_llm().invoke(prompt).content.strip()
         if not resp:
             return {}
-        try:
-            return json.loads(resp)
-        except Exception:
-            start, end = resp.find("{"), resp.rfind("}")
-            if start >= 0 and end > start:
-                return json.loads(resp[start : end + 1])
-            return {}
+        return parse_llm_json(resp, {})
     except Exception:
         return {}
 

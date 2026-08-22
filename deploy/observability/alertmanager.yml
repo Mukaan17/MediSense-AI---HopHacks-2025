@@ -1,0 +1,18 @@
+# Alertmanager routing. Fill in a real receiver (Slack webhook, PagerDuty
+# key, SMTP) before relying on it - the blackhole default only proves the
+# pipeline works.
+route:
+  receiver: default
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: default
+      repeat_interval: 1h
+
+receivers:
+  - name: default
+    # webhook_configs:
+    #   - url: https://hooks.slack.com/services/T000/B000/XXXX

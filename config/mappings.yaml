@@ -6,10 +6,10 @@ synonyms_to_issue:
   mi: acute_coronary_syndrome_suspected
   afib: atrial_fibrillation_suspected
   cold: upper_respiratory_infection
-  flu: influenza_suspected
-  strep throat: strep_pharyngitis
-  sinus infection: acute_sinusitis
-  low blood sugar: hypoglycemia
+  flu: influenza_like_illness
+  strep throat: strep_pharyngitis_suspected
+  sinus infection: sinusitis_acute_uncomplicated
+  low blood sugar: hypoglycemia_suspected
   dka: diabetic_ketoacidosis_suspected
   low thyroid: hypothyroidism_suspected
   hyperthyroid: hyperthyroidism_suspected
@@ -18,7 +18,6 @@ synonyms_to_issue:
   stroke: stroke_suspected
   gallbladder attack: cholecystitis_suspected
   appendicitis pain: appendicitis_suspected
-
 imaging_to_issue:
   cardiomegaly: heart_failure_exacerbation
   interstitial_edema: heart_failure_exacerbation
@@ -33,31 +32,27 @@ imaging_to_issue:
   widened_mediastinum: aortic_emergency_red_flags
   rib_fracture: musculoskeletal_chest_pain
   cardiothoracic_ratio_increased: heart_failure_exacerbation
-
-# Extraction signal groups used by deterministic extractor.
 trauma_cues:
-  - fall
-  - fell
-  - injury
-  - impact
-  - hit
-  - trauma
-  - accident
-  - fracture
-  - broken
-  - bruise
-  - contusion
-  - rib pain
-  - chest wall pain
-
+- fall
+- fell
+- injury
+- impact
+- hit
+- trauma
+- accident
+- fracture
+- broken
+- bruise
+- contusion
+- rib pain
+- chest wall pain
 infectious_cues:
-  - fever
-  - cough
-  - chills
-  - sputum
-  - phlegm
-  - productive cough
-  - congestion
-  - infection
-  - sore throat
-
+- fever
+- cough
+- chills
+- sputum
+- phlegm
+- productive cough
+- congestion
+- infection
+- sore throat
