@@ -59,6 +59,7 @@ from core.clinical_diagnosis import (
     generate_brief_diagnosis_summary,
 )
 from core.ehr_integration import create_ehr_integration_summary
+from core.app_mode import APP_MODE, is_demo, is_clinical, ehr_is_synthetic
 
 # ----------------- App & Logging ------------------
 logging.basicConfig(level=os.getenv("LOGLEVEL", "INFO"))
@@ -232,6 +233,25 @@ def _resolve_ehr_from_uploaded_image(
     # 4) Label fallback
     return _ehr_fallback_by_top_label(preds)
 
+
+
+
+def _demo_only(feature: str) -> None:
+    """Mocked integrations exist to showcase the workflow; clinical mode
+    refuses them rather than pretending they are real."""
+    if is_clinical():
+        raise HTTPException(
+            status_code=403,
+            detail=f"{feature} is a demo-mode mockup and is disabled in clinical mode.")
+
+
+def _guard_synthetic_ehr() -> None:
+    """Clinical mode never serves the bundled synthetic dataset (MIMIC demo
+    patients paired with unrelated CheXpert images)."""
+    if is_clinical() and ehr_is_synthetic(EHR_JSON):
+        raise HTTPException(
+            status_code=403,
+            detail="Synthetic demo EHR dataset is disabled in clinical mode; configure EHR_JSON to a real data source.")
 
 
 def _call_llm(fn, *args, **kwargs):
@@ -546,6 +566,8 @@ def health():
     count = get_doc_count()
     return {
         "status": "ok",
+        "app_mode": APP_MODE,
+        "ehr_synthetic": ehr_is_synthetic(EHR_JSON),
         "collection": COLLECTION,
         "persist_dir": PERSIST_DIR,
         "emb_model": EMB_MODEL,
@@ -1161,6 +1183,7 @@ async def multimodal_voice_infer(
 @app.get("/ehr/patients")
 def list_ehr_patients():
     """List all available EHR patients"""
+    _guard_synthetic_ehr()
     patients = []
     for record in EHR_RECORDS:
         patients.append({
@@ -1174,11 +1197,13 @@ def list_ehr_patients():
             "meds": record.get("meds", []),
             "allergies": record.get("allergies", [])
         })
-    return {"patients": patients, "total": len(patients)}
+    return {"patients": patients, "total": len(patients),
+            "data_source": ("synthetic_demo" if ehr_is_synthetic(EHR_JSON) else "configured")}
 
 @app.get("/ehr/patients/{patient_id}")
 def get_ehr_patient(patient_id: str):
     """Get specific EHR patient data"""
+    _guard_synthetic_ehr()
     patient = EHR_BY_PATIENT.get(patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
@@ -1192,6 +1217,7 @@ async def import_patient_data(
     """
     Import patient data from EHR system (mockup for Epic/Cerner integration)
     """
+    _demo_only("EHR import")
     try:
         data = json.loads(payload)
     except Exception:
@@ -1225,6 +1251,7 @@ async def export_clinical_summary(
     """
     Export clinical summary back to EHR system (mockup for Epic/Cerner integration)
     """
+    _demo_only("Clinical summary export")
     try:
         diagnosis_data = json.loads(diagnosis_result)
     except Exception:
@@ -1263,6 +1290,7 @@ def get_knowledge_base_mode():
 @app.post("/knowledge_base/mode")
 def set_knowledge_base_mode(mode: str = Form(...)):
     """Set knowledge base mode"""
+    _demo_only("Knowledge base mode toggle")
     return {
         "mode": mode,
         "sources": ["Clinical Guidelines", "UpToDate", "PubMed"],

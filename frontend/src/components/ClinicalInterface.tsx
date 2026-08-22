@@ -39,6 +39,7 @@ const ClinicalInterface: React.FC = () => {
   });
   const [ehrPatients, setEhrPatients] = useState<any[]>([]);
   const [selectedEhrPatient, setSelectedEhrPatient] = useState<string>('');
+  const [appMode, setAppMode] = useState<'demo' | 'clinical'>('demo');
   const [activeCaseId, setActiveCaseId] = useState<string>('');
   const [liveHUD, setLiveHUD] = useState<HUD | null>(null);
   const [streamingText, setStreamingText] = useState<string>('');
@@ -59,6 +60,9 @@ const ClinicalInterface: React.FC = () => {
         const healthResponse = await clinicalAPI.healthCheck();
         if (healthResponse.success) {
           console.log('Backend connected:', healthResponse.data);
+          if (healthResponse.data?.app_mode) {
+            setAppMode(healthResponse.data.app_mode === 'clinical' ? 'clinical' : 'demo');
+          }
         } else {
           console.warn('Backend health check failed:', healthResponse.error);
           toast.error('Backend connection failed. Please ensure the server is running.');
@@ -449,22 +453,37 @@ const ClinicalInterface: React.FC = () => {
               <h1 className="text-xl font-semibold text-gray-900">
                 Clinical AI Assistant
               </h1>
+              {appMode === 'demo' ? (
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-amber-100 text-amber-800 border border-amber-300">
+                  Demo mode · synthetic data
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-blue-100 text-blue-800 border border-blue-300">
+                  Clinical mode
+                </span>
+              )}
             </div>
-            
+
             <div className="flex items-center space-x-4">
-              <KnowledgeBaseToggle 
-                mode={knowledgeBaseMode}
-                onModeChange={setKnowledgeBaseMode}
-              />
-              <EHRIntegration 
-                integration={{ system: 'epic', importStatus: 'pending' }}
-                onImport={(patientId) => {
-                  toast.success(`Patient ${patientId} imported`);
-                }}
-                onExport={(report) => {
-                  toast.success('Report exported to EHR');
-                }}
-              />
+              {/* Mocked integrations are demo showcases; clinical mode hides
+                  them (the backend refuses them with 403 as well). */}
+              {appMode === 'demo' && (
+                <>
+                  <KnowledgeBaseToggle
+                    mode={knowledgeBaseMode}
+                    onModeChange={setKnowledgeBaseMode}
+                  />
+                  <EHRIntegration
+                    integration={{ system: 'epic', importStatus: 'pending' }}
+                    onImport={(patientId) => {
+                      toast.success(`Patient ${patientId} imported`);
+                    }}
+                    onExport={(report) => {
+                      toast.success('Report exported to EHR');
+                    }}
+                  />
+                </>
+              )}
             </div>
           </div>
         </div>
