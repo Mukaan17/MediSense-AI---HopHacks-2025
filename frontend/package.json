@@ -4,12 +4,12 @@
   "private": true,
   "dependencies": {
     "@sentry/react": "^10.70.0",
-    "@types/react": "^18.2.0",
+    "@types/react": "^19.2.18",
     "@types/react-dom": "^18.2.0",
     "axios": "^1.6.0",
     "framer-motion": "^10.16.0",
     "lucide-react": "^0.294.0",
-    "react": "^18.2.0",
+    "react": "^19.2.8",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.0",
     "react-hot-toast": "^2.4.0"
