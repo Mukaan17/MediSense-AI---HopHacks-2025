@@ -1,5 +1,5 @@
 # ---------- Core math / arrays ----------
-numpy==1.26.4
+numpy==2.5.2
 
 # ---------- PyTorch (CPU) ----------
 torch==2.1.2
