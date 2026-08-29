@@ -283,7 +283,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: docker build -t "$ECR_REGISTRY/clinical-ai-backend:${{ github.sha }}" -f Dockerfile .
       - name: Scan image (Trivy, blocks on fixable HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ steps.login-ecr.outputs.registry }}/clinical-ai-backend:${{ github.sha }}
           severity: HIGH,CRITICAL
@@ -343,7 +343,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: docker build -t "$ECR_REGISTRY/clinical-ai-frontend:${{ github.sha }}" -f Dockerfile.frontend .
       - name: Scan image (Trivy, blocks on fixable HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ steps.login-ecr.outputs.registry }}/clinical-ai-frontend:${{ github.sha }}
           severity: HIGH,CRITICAL
